@@ -380,7 +380,7 @@ fn unique_gap_notes_resources(rows: &[ResourceTableRow]) -> Vec<GapNote> {
     unique_gap_notes(rows.iter().filter_map(|row| row.gap_note.as_ref()))
 }
 
-fn unique_gap_notes<'a>(notes: impl Iterator<Item = &'a GapNote>) -> Vec<GapNote> {
+pub(crate) fn unique_gap_notes<'a>(notes: impl Iterator<Item = &'a GapNote>) -> Vec<GapNote> {
     let mut out = Vec::new();
     for note in notes {
         if !out.contains(note) {
@@ -390,7 +390,7 @@ fn unique_gap_notes<'a>(notes: impl Iterator<Item = &'a GapNote>) -> Vec<GapNote
     out
 }
 
-fn footnote_index(notes: &[GapNote], note: Option<&GapNote>) -> Option<u32> {
+pub(crate) fn footnote_index(notes: &[GapNote], note: Option<&GapNote>) -> Option<u32> {
     let note = note?;
     notes
         .iter()
@@ -398,7 +398,7 @@ fn footnote_index(notes: &[GapNote], note: Option<&GapNote>) -> Option<u32> {
         .map(|index| u32::try_from(index + 1).unwrap_or(1))
 }
 
-fn apply_mark(token: &str, index: Option<u32>, latex: bool) -> String {
+pub(crate) fn apply_mark(token: &str, index: Option<u32>, latex: bool) -> String {
     let Some(index) = index else {
         return token.to_owned();
     };
@@ -409,7 +409,7 @@ fn apply_mark(token: &str, index: Option<u32>, latex: bool) -> String {
     }
 }
 
-fn markdown_footnotes(notes: &[GapNote]) -> String {
+pub(crate) fn markdown_footnotes(notes: &[GapNote]) -> String {
     if notes.is_empty() {
         return String::new();
     }
@@ -420,7 +420,7 @@ fn markdown_footnotes(notes: &[GapNote]) -> String {
     out
 }
 
-fn latex_footnotes(notes: &[GapNote]) -> String {
+pub(crate) fn latex_footnotes(notes: &[GapNote]) -> String {
     if notes.is_empty() {
         return String::new();
     }
@@ -437,15 +437,23 @@ fn latex_footnotes(notes: &[GapNote]) -> String {
     out
 }
 
-fn phase_seconds(samples: &[&LatticeRecord], phase: &str) -> Vec<f64> {
+pub(crate) fn phase_seconds_from<'a, R>(
+    samples: &[&'a R],
+    phase: &str,
+    timings: impl Fn(&'a R) -> &'a BTreeMap<String, u64>,
+) -> Vec<f64> {
     samples
         .iter()
-        .filter_map(|record| record.timings_ns.get(phase).copied())
+        .filter_map(|record| timings(record).get(phase).copied())
         .map(|ns| ns as f64 / 1_000_000_000.0)
         .collect()
 }
 
-fn median_f64(values: &[f64]) -> Option<f64> {
+fn phase_seconds(samples: &[&LatticeRecord], phase: &str) -> Vec<f64> {
+    phase_seconds_from(samples, phase, |record| &record.timings_ns)
+}
+
+pub(crate) fn median_f64(values: &[f64]) -> Option<f64> {
     if values.is_empty() {
         return None;
     }
@@ -459,7 +467,7 @@ fn median_f64(values: &[f64]) -> Option<f64> {
     }
 }
 
-fn median_u64<I>(values: I) -> Option<u64>
+pub(crate) fn median_u64<I>(values: I) -> Option<u64>
 where
     I: Iterator<Item = u64>,
 {
@@ -478,7 +486,7 @@ where
 
 /// Sample standard deviation (Bessel-corrected). `None` when `n < 2`.
 #[must_use]
-fn sample_std(values: &[f64]) -> Option<f64> {
+pub(crate) fn sample_std(values: &[f64]) -> Option<f64> {
     if values.len() < 2 {
         return None;
     }
@@ -509,7 +517,7 @@ pub fn format_seconds(seconds: f64) -> String {
 
 /// Format a standard-deviation in seconds with enough digits to be visible.
 #[must_use]
-fn format_spread_seconds(seconds: f64) -> String {
+pub(crate) fn format_spread_seconds(seconds: f64) -> String {
     if seconds >= 1.0 {
         format!("{seconds:.2}")
     } else if seconds >= 0.01 {
@@ -530,7 +538,7 @@ pub fn format_millis(seconds: f64) -> String {
     }
 }
 
-fn format_spread_millis(seconds: f64) -> String {
+pub(crate) fn format_spread_millis(seconds: f64) -> String {
     let millis = seconds * 1_000.0;
     if millis >= 10.0 {
         format!("{millis:.1}")
@@ -539,7 +547,7 @@ fn format_spread_millis(seconds: f64) -> String {
     }
 }
 
-fn format_pm(median: &str, spread: Option<String>, latex: bool) -> String {
+pub(crate) fn format_pm(median: &str, spread: Option<String>, latex: bool) -> String {
     match spread {
         Some(spread) if latex => format!("${median} \\pm {spread}$"),
         Some(spread) => format!("{median} ± {spread}"),
@@ -547,11 +555,11 @@ fn format_pm(median: &str, spread: Option<String>, latex: bool) -> String {
     }
 }
 
-fn format_kib(bytes: u64) -> String {
+pub(crate) fn format_kib(bytes: u64) -> String {
     format!("{:.1}", bytes as f64 / 1024.0)
 }
 
-fn format_gib(bytes: u64) -> String {
+pub(crate) fn format_gib(bytes: u64) -> String {
     let gib = bytes as f64 / 1_073_741_824.0;
     if gib >= 10.0 {
         format!("{gib:.1}")
@@ -564,7 +572,7 @@ fn format_gib(bytes: u64) -> String {
     }
 }
 
-fn format_prep(seconds: f64) -> String {
+pub(crate) fn format_prep(seconds: f64) -> String {
     if seconds == 0.0 {
         "0".into()
     } else if seconds >= 1.0 {
@@ -613,7 +621,7 @@ fn resource_cell(
     }
 }
 
-fn gap_token(status: RunStatus, latex: bool) -> String {
+pub(crate) fn gap_token(status: RunStatus, latex: bool) -> String {
     match (status, latex) {
         (RunStatus::Unsupported, false) => "—".into(),
         (RunStatus::Oom, true) => r"\evaloom".into(),
@@ -623,7 +631,7 @@ fn gap_token(status: RunStatus, latex: bool) -> String {
     }
 }
 
-fn gap_token_pending(latex: bool) -> String {
+pub(crate) fn gap_token_pending(latex: bool) -> String {
     if latex {
         r"\evalpending".into()
     } else {
@@ -641,7 +649,11 @@ fn log2_n_cell(row: &TimingTableRow, latex: bool, mark: Option<u32>) -> String {
     }
 }
 
-fn timing_seconds_cell(median: Option<f64>, std: Option<f64>, latex: bool) -> Option<String> {
+pub(crate) fn timing_seconds_cell(
+    median: Option<f64>,
+    std: Option<f64>,
+    latex: bool,
+) -> Option<String> {
     Some(format_pm(
         &format_seconds(median?),
         std.map(format_spread_seconds),
@@ -649,7 +661,11 @@ fn timing_seconds_cell(median: Option<f64>, std: Option<f64>, latex: bool) -> Op
     ))
 }
 
-fn timing_millis_cell(median: Option<f64>, std: Option<f64>, latex: bool) -> Option<String> {
+pub(crate) fn timing_millis_cell(
+    median: Option<f64>,
+    std: Option<f64>,
+    latex: bool,
+) -> Option<String> {
     Some(format_pm(
         &format_millis(median?),
         std.map(format_spread_millis),

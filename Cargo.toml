@@ -6,6 +6,8 @@ exclude = [
   "third_party/akita",
   "third_party/akita-pr466",
   "benchmarks/akita-pr466",
+  "benchmarks/whir",
+  "benchmarks/basefold",
 ]
 resolver = "2"
 

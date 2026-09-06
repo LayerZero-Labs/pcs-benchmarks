@@ -1,0 +1,53 @@
+\begin{table}[H]
+\centering
+\caption[Timing comparison with hash-based PCSs]{Commitment, opening, and
+verification time for Akita, WHIR, and BaseFold on matched dense multilinear
+openings.  A dash denotes an unsupported parallel mode.
+Timing cells are the median of fresh processes after warmup, shown as
+median $\pm$ sample standard deviation when $n\ge 2$.
+Scheme names link to the exact git commit that was measured.}
+\label{tab:eval-hash-time}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llcccrrrr@{}}
+\toprule
+Payload & Scheme & Field & $\log_2 N$ & Threads
+& Commit (s) & Open (s) & Total (s) & Verify (ms) \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 22 & 1 & $0.098 \pm 0.0004$ & $0.956 \pm 0.0018$ & $1.05 \pm 0.0022$ & $7.2 \pm 0.01$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 22 & 8 & $0.021 \pm 0.0003$ & $0.251 \pm 0.0090$ & $0.272 \pm 0.0088$ & $5.0 \pm 0.25$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 22 & 1 & $0.087 \pm 0.0011$ & $0.526 \pm 0.0007$ & $0.612 \pm 0.0018$ & $1.5 \pm 0.01$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 22 & 8 & $0.024 \pm 0.0004$ & $0.113 \pm 0.014$ & $0.137 \pm 0.013$ & $1.5 \pm 0.02$ \\
+$2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 22 & 1 & $0.581 \pm 0.0093$ & $0.824 \pm 0.010$ & $1.40 \pm 0.0014$ & $20.0 \pm 0.21$ \\
+$2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 22 & 8 & $0.561 \pm 0.011$ & $0.817 \pm 0.025$ & $1.38 \pm 0.015$ & $19.7 \pm 0.25$ \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 24 & 1 & $0.343 \pm 0.0032$ & $1.43 \pm 0.0012$ & $1.77 \pm 0.0027$ & $11.5 \pm 0.06$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 24 & 8 & $0.055 \pm 0.0010$ & $0.340 \pm 0.0048$ & $0.395 \pm 0.0058$ & $7.0 \pm 0.38$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 24 & 1 & $0.376 \pm 0.0012$ & $5.53 \pm 0.027$ & $5.91 \pm 0.027$ & $1.6 \pm 0.08$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 24 & 8 & $0.109 \pm 0.0011$ & $1.76 \pm 0.126$ & $1.87 \pm 0.127$ & $1.7 \pm 0.00$ \\
+$2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 24 & 1 & $0.864 \pm 0.012$ & $0.887 \pm 0.0054$ & $1.75 \pm 0.015$ & $20.1 \pm 0.07$ \\
+$2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 24 & 8 & $0.862 \pm 0.013$ & $0.837 \pm 0.011$ & $1.69 \pm 0.0037$ & $20.2 \pm 0.40$ \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 26 & 1 & $1.30 \pm 0.0069$ & $2.58 \pm 0.0022$ & $3.88 \pm 0.0088$ & $13.9 \pm 0.05$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 26 & 8 & $0.187 \pm 0.0019$ & $0.523 \pm 0.0039$ & $0.710 \pm 0.0021$ & $6.7 \pm 0.04$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 26 & 1 & $1.52 \pm 0.0032$ & $44.9 \pm 0.236$ & $46.4 \pm 0.239$ & $1.8 \pm 0.02$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 26 & 8 & $0.473 \pm 0.0065$ & $6.39 \pm 1.38$ & $6.86 \pm 1.38$ & $1.9 \pm 0.01$ \\
+$2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 26 & 1 & $2.52 \pm 0.0061$ & $1.01 \pm 0.0021$ & $3.53 \pm 0.0081$ & $20.7 \pm 0.11$ \\
+$2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 26 & 8 & $2.51 \pm 0.113$ & $0.970 \pm 0.017$ & $3.48 \pm 0.102$ & $20.3 \pm 0.64$ \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 28 & 1 & $6.10 \pm 0.029$ & $6.84 \pm 0.012$ & $13.0 \pm 0.035$ & $19.8 \pm 0.41$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 28 & 8 & $0.803 \pm 0.0016$ & $1.18 \pm 0.011$ & $1.99 \pm 0.010$ & $7.0 \pm 0.06$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 28 & 1 & $5.39 \pm 1.93$ & $35.3 \pm 3.63$ & $40.4 \pm 5.05$ & $9.0 \pm 0.78$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 28 & 8 & $1.68 \pm 0.019$ & $8.60 \pm 0.100$ & $10.3 \pm 0.106$ & $8.9 \pm 0.06$ \\
+$2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 28 & 1 & $9.41 \pm 0.0093$ & $1.58 \pm 0.013$ & $11.0 \pm 0.011$ & $22.4 \pm 0.32$ \\
+$2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 28 & 8 & $9.03 \pm 0.167$ & $1.39 \pm 0.016$ & $10.4 \pm 0.155$ & $22.8 \pm 0.40$ \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 30 & 1 & $25.6 \pm 0.250$ & $17.4 \pm 0.357$ & $43.0 \pm 0.603$ & $33.1 \pm 0.88$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 30 & 8 & $3.94 \pm 1.00$ & $3.68 \pm 0.548$ & $7.34 \pm 1.39$ & $11.9 \pm 1.44$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 30 & 1 & $16.7 \pm 0.102$ & $30.4 \pm 0.026$ & $47.1 \pm 0.096$ & $10.0 \pm 0.08$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & $2^{31}-2^{24}+1$ & 30 & 8 & $5.59 \pm 0.018$ & $8.74 \pm 0.034$ & $14.3 \pm 0.037$ & $10.1 \pm 0.06$ \\
+$2^{35}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 30 & 1 & $35.2 \pm 0.549$ & $3.49 \pm 0.022$ & $38.6 \pm 0.541$ & $30.3 \pm 0.30$ \\
+$2^{35}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & $2^{31}-2^{24}+1$ & 30 & 8 & $35.2 \pm 0.588$ & $2.96 \pm 0.166$ & $38.1 \pm 0.718$ & $31.0 \pm 0.77$ \\
+\bottomrule
+\end{tabular}
+\end{table}

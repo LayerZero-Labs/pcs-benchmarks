@@ -74,6 +74,29 @@ Additional rules that apply only to that table:
    commitments are not SIS-secure (`polcom_reduce`), the cell is `err` with a
    footnote, not `oom`.
 
+## Hash PCS comparison
+
+The second experiment is documented in [hash-eval.md](hash-eval.md). Additional
+rules that apply only to that table:
+
+1. **128-bit transcript error.** WHIR uses Plonky3 `p3-whir` with
+   `security_level=128`. Capacity bound at rate 1/2 is used when the derived
+   grind fits 30 bits (KoalaBear); unique decoding at rate 1/2 is used when
+   list-decoding bounds cannot close 128 bits (`log2 N` 28 and 30 in this
+   matrix). BaseFold uses SP1 SLOP FRI
+   parameters whose conjectured soundness is `log_blowup * queries + pow = 128`.
+   Akita uses the same validated `fp32-dense` planner schedule as the lattice
+   table.
+2. **Matched coefficient counts.** WHIR and BaseFold use KoalaBear
+   (`2^{31}-2^{24}+1`) at the same `log2 N` as Akita. That matches dense table
+   length, not bit-identical payload.
+3. **1 and 8 threads.** Each cell is a fresh process with `RAYON_NUM_THREADS`
+   set to the row's thread count. A dash is an unsupported parallel mode.
+4. **Process isolation and 90% RAM** are the same as the lattice table.
+5. **Immutable git pins.** Plonky3 and SP1 are pinned by commit SHA, never a
+   moving branch. Isolated Cargo trees keep those graphs out of the lattice
+   workspace.
+
 ## Statistics
 
 

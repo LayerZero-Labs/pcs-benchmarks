@@ -36,6 +36,11 @@ pub(crate) fn capture() -> Result<Provenance> {
     })
 }
 
+pub(crate) trait ProvenanceExt {
+    fn write(&self, path: &Path) -> Result<()>;
+    fn write_hash(&self, path: &Path) -> Result<()>;
+}
+
 impl ProvenanceExt for Provenance {
     fn write(&self, path: &Path) -> Result<()> {
         let body = format!(
@@ -74,10 +79,44 @@ impl ProvenanceExt for Provenance {
         );
         fs::write(path, body).with_context(|| format!("write {}", path.display()))
     }
-}
 
-pub(crate) trait ProvenanceExt {
-    fn write(&self, path: &Path) -> Result<()>;
+    fn write_hash(&self, path: &Path) -> Result<()> {
+        let body = format!(
+            "harness_revision={}\n\
+             rustc_version={}\n\
+             target={}\n\
+             cpu_model={}\n\
+             threads={}\n\
+             rustflags={}\n\
+             avx512={}\n\
+             isa_notes={}\n\
+             logical_cpus={}\n\
+             memory_bytes={}\n\
+             memory_limit_bytes={}\n\
+             akita={}\n\
+             whir={}\n\
+             basefold={}\n\
+             security_bits={}\n",
+            self.harness_revision,
+            self.rustc_version,
+            self.target,
+            self.cpu_model,
+            self.threads,
+            self.rustflags,
+            self.avx512,
+            self.isa_notes,
+            self.logical_cpus,
+            self.memory_bytes
+                .map_or_else(|| "unknown".into(), |bytes| bytes.to_string()),
+            self.memory_limit_bytes
+                .map_or_else(|| "unknown".into(), |bytes| bytes.to_string()),
+            pcs_bench_core::HashSchemeId::Akita.commit_url(),
+            pcs_bench_core::HashSchemeId::Whir.commit_url(),
+            pcs_bench_core::HashSchemeId::Basefold.commit_url(),
+            pcs_bench_core::HASH_SECURITY_BITS,
+        );
+        fs::write(path, body).with_context(|| format!("write {}", path.display()))
+    }
 }
 
 fn git_revision() -> Option<String> {

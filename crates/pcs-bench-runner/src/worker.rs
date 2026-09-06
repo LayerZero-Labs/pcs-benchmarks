@@ -2,8 +2,9 @@
 
 use anyhow::{bail, Context, Result};
 use pcs_bench_core::{
-    greyhound_ring_len, parse_rokoko_stdout, LatticeCase, LatticeRecord, Provenance, RunStatus,
-    SchemeId, WorkerOutput, RESULT_SCHEMA_VERSION, THREADS_LATTICE_EVAL,
+    greyhound_ring_len, parse_rokoko_stdout, HashCase, HashRecord, HashSchemeId, LatticeCase,
+    LatticeRecord, Provenance, RunStatus, SchemeId, WorkerOutput, RESULT_SCHEMA_VERSION,
+    THREADS_LATTICE_EVAL,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -72,6 +73,79 @@ pub(crate) fn run_case(
     record(case, sample, warmup, provenance, worker)
 }
 
+pub(crate) fn run_hash_case(
+    case: &HashCase,
+    sample: u32,
+    warmup: bool,
+    provenance: Provenance,
+) -> HashRecord {
+    let mut provenance = provenance;
+    provenance.threads = case.threads;
+
+    let mem_limit = provenance.resolved_memory_limit_bytes().unwrap_or(0);
+    let output = match case.scheme {
+        HashSchemeId::Akita => run_akita_hash(case, mem_limit),
+        HashSchemeId::Whir => run_whir(case, mem_limit),
+        HashSchemeId::Basefold => run_basefold(case, mem_limit),
+    };
+
+    let worker = match output {
+        Ok(worker) => worker,
+        Err(error) if is_oom(&error) => WorkerOutput {
+            status: RunStatus::Oom,
+            status_detail: Some(error.to_string()),
+            log2_n: Some(case.log2_n),
+            timings_ns: BTreeMap::new(),
+            proof_bytes: None,
+            commitment_bytes: None,
+            state_bytes: None,
+            peak_rss_bytes: None,
+        },
+        Err(error) => WorkerOutput {
+            status: RunStatus::Error,
+            status_detail: Some(error.to_string()),
+            log2_n: Some(case.log2_n),
+            timings_ns: BTreeMap::new(),
+            proof_bytes: None,
+            commitment_bytes: None,
+            state_bytes: None,
+            peak_rss_bytes: None,
+        },
+    };
+
+    hash_record(case, sample, warmup, provenance, worker)
+}
+
+fn hash_record(
+    case: &HashCase,
+    sample: u32,
+    warmup: bool,
+    provenance: Provenance,
+    worker: WorkerOutput,
+) -> HashRecord {
+    HashRecord {
+        schema_version: RESULT_SCHEMA_VERSION,
+        status: worker.status,
+        status_detail: worker.status_detail,
+        scheme: case.scheme,
+        implementation_revision: case.scheme.revision().to_owned(),
+        payload_log2: case.payload_log2,
+        log2_n: worker.log2_n.or(Some(case.log2_n)),
+        field: case.field.name.to_owned(),
+        native_param: Some(case.native_param.to_owned()),
+        threads: case.threads,
+        sample,
+        warmup,
+        historical: false,
+        timings_ns: worker.timings_ns,
+        proof_bytes: worker.proof_bytes,
+        commitment_bytes: worker.commitment_bytes,
+        state_bytes: worker.state_bytes,
+        peak_rss_bytes: worker.peak_rss_bytes,
+        provenance,
+    }
+}
+
 fn record(
     case: &LatticeCase,
     sample: u32,
@@ -124,6 +198,97 @@ fn run_akita(case: &LatticeCase, package: &str, mem_limit: u64) -> Result<Worker
         .output()
         .context("spawn Akita lattice-eval")?;
     parse_worker_json(&output, "Akita", mem_limit)
+}
+
+fn run_akita_hash(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
+    let threads = case.threads.to_string();
+    let mut command = limited_command(workspace_root()?, mem_limit);
+    command.args([
+        "cargo",
+        "run",
+        "--release",
+        "-p",
+        "pcs-bench-akita",
+        "--bin",
+        "lattice-eval",
+        "--",
+        "--log2-n",
+        &case.log2_n.to_string(),
+        "--payload-log2",
+        &case.payload_log2.to_string(),
+        "--threads",
+        &threads,
+    ]);
+    command.env("RAYON_NUM_THREADS", &threads);
+    if case.threads <= 1 {
+        command.env("AKITA_PARALLEL", "0");
+    }
+    let output = command.output().context("spawn Akita hash-eval")?;
+    parse_worker_json(&output, "Akita", mem_limit)
+}
+
+fn run_whir(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
+    let manifest = workspace_root()?.join("benchmarks/whir/Cargo.toml");
+    if !manifest.exists() {
+        bail!(
+            "WHIR adapter missing at {}. Restore benchmarks/whir",
+            manifest.display()
+        );
+    }
+    let target_dir = workspace_root()?.join("target/whir");
+    let threads = case.threads.to_string();
+    let output = limited_command(workspace_root()?, mem_limit)
+        .args([
+            "cargo",
+            "run",
+            "--release",
+            "--manifest-path",
+            manifest.to_str().context("whir manifest path")?,
+            "--bin",
+            "hash-eval",
+            "--",
+            "--log2-n",
+            &case.log2_n.to_string(),
+            "--threads",
+            &threads,
+        ])
+        .env("CARGO_TARGET_DIR", &target_dir)
+        .env("RAYON_NUM_THREADS", &threads)
+        .output()
+        .context("spawn WHIR hash-eval")?;
+    parse_worker_json(&output, "WHIR", mem_limit)
+}
+
+fn run_basefold(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
+    let manifest = workspace_root()?.join("benchmarks/basefold/Cargo.toml");
+    if !manifest.exists() {
+        bail!(
+            "BaseFold adapter missing at {}. Restore benchmarks/basefold",
+            manifest.display()
+        );
+    }
+    let target_dir = workspace_root()?.join("target/basefold");
+    let threads = case.threads.to_string();
+    let output = limited_command(workspace_root()?, mem_limit)
+        .args([
+            "cargo",
+            "run",
+            "--release",
+            "--manifest-path",
+            manifest.to_str().context("basefold manifest path")?,
+            "--bin",
+            "hash-eval",
+            "--",
+            "--log2-n",
+            &case.log2_n.to_string(),
+            "--threads",
+            &threads,
+        ])
+        .env("CARGO_TARGET_DIR", &target_dir)
+        .env("RAYON_NUM_THREADS", &threads)
+        .output()
+        .context("spawn BaseFold hash-eval")?;
+    parse_worker_json(&output, "BaseFold", mem_limit)
 }
 
 fn run_akita_pr466(case: &LatticeCase, mem_limit: u64) -> Result<WorkerOutput> {

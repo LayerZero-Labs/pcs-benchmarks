@@ -10,4 +10,8 @@ They are cloned at pinned commits and are not part of the Cargo workspace:
 - `rokoko` — RoKoKo PCS chain (`lattice-arguments/rokoko`), with
   `scripts/patch-rokoko-resources.py` printing commitment, CRS, and peak RSS
 
-Do not commit the clones. See `docs/lattice-eval.md`.
+Hash-eval WHIR and BaseFold are **not** cloned here. Isolated crates under
+`benchmarks/whir` and `benchmarks/basefold` fetch the pinned Plonky3 and SP1
+git revisions through Cargo.
+
+Do not commit the clones. See `docs/lattice-eval.md` and `docs/hash-eval.md`.

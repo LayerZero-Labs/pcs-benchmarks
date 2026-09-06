@@ -1,5 +1,6 @@
 //! Persisted benchmark records.
 
+use crate::hash::HashSchemeId;
 use crate::lattice::{worker_memory_limit_bytes, SchemeId};
 use crate::workload::Workload;
 use serde::{Deserialize, Serialize};
@@ -126,6 +127,57 @@ pub struct LatticeRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_param: Option<String>,
     /// Worker thread count. Lattice-eval is always single-threaded.
+    pub threads: u32,
+    /// Zero-based measured sample index.
+    pub sample: u32,
+    /// Whether this sample was discarded as warmup.
+    pub warmup: bool,
+    /// Non-normalized historical measurement; never used for headline ratios.
+    pub historical: bool,
+    /// Phase timings in nanoseconds (`setup`, `commit`, `open`, `verify`).
+    #[serde(default)]
+    pub timings_ns: BTreeMap<String, u64>,
+    /// Serialized opening-proof size, when supported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proof_bytes: Option<u64>,
+    /// Serialized commitment size, when supported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commitment_bytes: Option<u64>,
+    /// Reusable preprocessing / CRS state size, when supported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state_bytes: Option<u64>,
+    /// Peak resident set size, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peak_rss_bytes: Option<u64>,
+    /// Machine and build provenance.
+    pub provenance: Provenance,
+}
+
+/// One hash-eval cell attempt. Same measurement contract as [`LatticeRecord`].
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HashRecord {
+    /// Schema version.
+    pub schema_version: u32,
+    /// Cell outcome.
+    pub status: RunStatus,
+    /// Human-readable reason for a non-ok status.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status_detail: Option<String>,
+    /// Scheme identity.
+    pub scheme: HashSchemeId,
+    /// Exact source revision of the implementation.
+    pub implementation_revision: String,
+    /// Target payload exponent: payload = `2^{payload_log2}` bits.
+    pub payload_log2: u32,
+    /// Native `log2 N` actually executed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub log2_n: Option<u32>,
+    /// Field label, for example `2^{32}-99` or `2^{31}-2^{24}+1`.
+    pub field: String,
+    /// Implementation parameter name such as `fp32-dense` or `whir-capacity-128`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_param: Option<String>,
+    /// Worker thread count (1 or 8 in the headline table).
     pub threads: u32,
     /// Zero-based measured sample index.
     pub sample: u32,

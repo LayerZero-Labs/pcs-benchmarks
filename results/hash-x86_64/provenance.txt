@@ -1,0 +1,15 @@
+harness_revision=uncommitted
+rustc_version=rustc 1.95.0 (59807616e 2026-04-14)
+target=Linux x86_64
+cpu_model=AMD Ryzen 9 9950X 16-Core Processor
+threads=1
+rustflags=-C target-cpu=native
+avx512=true
+isa_notes=AVX-512F activated (-C target-cpu=native)
+logical_cpus=32
+memory_bytes=130142986240
+memory_limit_bytes=117128687616
+akita=https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53
+whir=https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730
+basefold=https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86
+security_bits=128

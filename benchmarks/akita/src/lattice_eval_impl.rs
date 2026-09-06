@@ -28,7 +28,8 @@ const POINT_SEED: u64 = 0xCAFE_BABE;
 const TRANSCRIPT_DOMAIN: &[u8] = b"pcs-benchmark/lattice-eval/v1";
 
 fn main() -> ExitCode {
-    init_single_thread_pool();
+    let threads = parse_u32_flag("--threads").unwrap_or(1).max(1);
+    init_thread_pool(threads);
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
@@ -226,9 +227,9 @@ fn opening_point(num_vars: usize) -> Vec<E> {
         .collect()
 }
 
-fn init_single_thread_pool() {
+fn init_thread_pool(threads: u32) {
     let _ = rayon::ThreadPoolBuilder::new()
-        .num_threads(1)
+        .num_threads(threads.max(1) as usize)
         .stack_size(64 * 1024 * 1024)
         .build_global();
 }
