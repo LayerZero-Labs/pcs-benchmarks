@@ -83,7 +83,7 @@ rules that apply only to that table:
    `security_level=128`. Capacity bound at rate 1/2 is used when the derived
    grind fits 30 bits (KoalaBear); unique decoding at rate 1/2 is used when
    list-decoding bounds cannot close 128 bits (`log2 N` 28 and 30 in this
-   matrix). BaseFold uses SP1 SLOP FRI
+   matrix). Generated tables footnote those WHIR rows. BaseFold uses SP1 SLOP FRI
    parameters whose conjectured soundness is `log_blowup * queries + pow = 128`.
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
    table.

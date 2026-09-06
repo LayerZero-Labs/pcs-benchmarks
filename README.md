@@ -105,7 +105,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \
 ```
 
 Each run writes `records.jsonl`, `table.md`, `table.tex`, `report.md`, `report.tex`,
-and `provenance.txt`.
+and `provenance.txt`. Hash-eval also writes `table-resources.md` and
+`table-resources.tex`.
 
 Greyhound needs Linux x86_64 + AVX-512. RoKoKo needs `rustup` nightly. Full
 methodology, pins, and the LaTeX table command are in
@@ -160,20 +161,21 @@ Checked-in JSONL, Markdown, and LaTeX live in
 | 2^{31} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | \(2^{31}-2^{24}+1\) | 26 | 8 | 2.51 ± 0.113 | 0.970 ± 0.017 | 3.48 ± 0.102 | 20.3 ± 0.64 |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | \(2^{32}-99\) | 28 | 1 | 6.10 ± 0.029 | 6.84 ± 0.012 | 13.0 ± 0.035 | 19.8 ± 0.41 |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | \(2^{32}-99\) | 28 | 8 | 0.803 ± 0.0016 | 1.18 ± 0.011 | 1.99 ± 0.010 | 7.0 ± 0.06 |
-| 2^{33} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 28 | 1 | 5.39 ± 1.93 | 35.3 ± 3.63 | 40.4 ± 5.05 | 9.0 ± 0.78 |
-| 2^{33} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 28 | 8 | 1.68 ± 0.019 | 8.60 ± 0.100 | 10.3 ± 0.106 | 8.9 ± 0.06 |
+| 2^{33} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 28 | 1 | 5.39 ± 1.93 | 35.3 ± 3.63 | 40.4 ± 5.05 | 9.0 ± 0.78 |
+| 2^{33} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 28 | 8 | 1.68 ± 0.019 | 8.60 ± 0.100 | 10.3 ± 0.106 | 8.9 ± 0.06 |
 | 2^{33} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | \(2^{31}-2^{24}+1\) | 28 | 1 | 9.41 ± 0.0093 | 1.58 ± 0.013 | 11.0 ± 0.011 | 22.4 ± 0.32 |
 | 2^{33} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | \(2^{31}-2^{24}+1\) | 28 | 8 | 9.03 ± 0.167 | 1.39 ± 0.016 | 10.4 ± 0.155 | 22.8 ± 0.40 |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | \(2^{32}-99\) | 30 | 1 | 25.6 ± 0.250 | 17.4 ± 0.357 | 43.0 ± 0.603 | 33.1 ± 0.88 |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | \(2^{32}-99\) | 30 | 8 | 3.94 ± 1.00 | 3.68 ± 0.548 | 7.34 ± 1.39 | 11.9 ± 1.44 |
-| 2^{35} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 30 | 1 | 16.7 ± 0.102 | 30.4 ± 0.026 | 47.1 ± 0.096 | 10.0 ± 0.08 |
-| 2^{35} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 30 | 8 | 5.59 ± 0.018 | 8.74 ± 0.034 | 14.3 ± 0.037 | 10.1 ± 0.06 |
+| 2^{35} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 30 | 1 | 16.7 ± 0.102 | 30.4 ± 0.026 | 47.1 ± 0.096 | 10.0 ± 0.08 |
+| 2^{35} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | \(2^{31}-2^{24}+1\) | 30 | 8 | 5.59 ± 0.018 | 8.74 ± 0.034 | 14.3 ± 0.037 | 10.1 ± 0.06 |
 | 2^{35} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | \(2^{31}-2^{24}+1\) | 30 | 1 | 35.2 ± 0.549 | 3.49 ± 0.022 | 38.6 ± 0.541 | 30.3 ± 0.30 |
 | 2^{35} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | \(2^{31}-2^{24}+1\) | 30 | 8 | 35.2 ± 0.588 | 2.96 ± 0.166 | 38.1 ± 0.718 | 31.0 ± 0.77 |
 
-**(1)** WHIR at \(\log_2 N=28\) and \(30\) uses unique decoding so the 128-bit
-transcript-error target still holds on KoalaBear. Capacity bound at those
-sizes needs more than 30 bits of grinding, which the field cannot support.
+**(1)** WHIR uses unique decoding at this size so the 128-bit transcript-error
+target still holds on KoalaBear. Capacity bound and Johnson bound need more
+than 30 bits of grinding, which the field cannot support. The larger proof is
+the unique-decoding query schedule.
 
 | Payload | Scheme | Commitment (B) | Proof (KiB) | Total (KiB) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -187,14 +189,16 @@ sizes needs more than 30 bits of grinding, which the field cannot support.
 | 2^{31} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 110.4 | 110.5 | 2.80 | 2.80 | 0.0269 | 0.0000 |
 | 2^{31} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 911.1 | 911.2 | 1.75 | 1.75 | 0.0000 | 0.0000 |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66.5 | 66.9 | 6.38 | 6.39 | 0.0420 | 0.0107 |
-| 2^{33} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 575.3 | 575.3 | 9.60 | 9.60 | 0.0730 | 0.0000 |
+| 2^{33} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 575.3 | 575.3 | 9.60 | 9.60 | 0.0730 | 0.0000 |
 | 2^{33} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 998.1 | 998.2 | 7.00 | 7.00 | 0.0000 | 0.0000 |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 67.6 | 68.0 | 24.7 | 24.7 | 0.0834 | 0.0215 |
-| 2^{35} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 676.6 | 676.6 | 17.1 | 17.1 | 0.0569 | 0.0000 |
+| 2^{35} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 676.6 | 676.6 | 17.1 | 17.1 | 0.0569 | 0.0000 |
 | 2^{35} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 1346.1 | 1346.2 | 28.0 | 28.0 | 0.0000 | 0.0000 |
 
-**(1)** The WHIR proof-size jump at \(2^{33}\) and \(2^{35}\) is the unique-decoding
-query schedule, not a different payload encoding.
+**(1)** WHIR uses unique decoding at this size so the 128-bit transcript-error
+target still holds on KoalaBear. Capacity bound and Johnson bound need more
+than 30 bits of grinding, which the field cannot support. The larger proof is
+the unique-decoding query schedule.
 
 ```bash
 cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix

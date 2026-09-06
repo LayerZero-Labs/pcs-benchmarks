@@ -7,12 +7,13 @@ use crate::provenance::ProvenanceExt;
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use pcs_bench_core::{
-    aggregate_hash_timing_rows, aggregate_timing_rows, hash_case, hash_matrix, lattice_case,
-    lattice_matrix, render_latex_eval_report, render_latex_hash_eval_report,
+    aggregate_hash_resource_rows, aggregate_hash_timing_rows, aggregate_timing_rows, hash_case,
+    hash_matrix, lattice_case, lattice_matrix, render_latex_eval_report,
+    render_latex_hash_eval_report, render_latex_hash_resource_table,
     render_latex_hash_timing_table, render_latex_timing_table, render_markdown_eval_report,
-    render_markdown_hash_eval_report, render_markdown_hash_timing_table,
-    render_markdown_timing_table, HashRecord, HashSchemeId, LatticeRecord, SchemeId, HASH_THREADS,
-    PAYLOAD_LOG2,
+    render_markdown_hash_eval_report, render_markdown_hash_resource_table,
+    render_markdown_hash_timing_table, render_markdown_timing_table, HashRecord, HashSchemeId,
+    LatticeRecord, SchemeId, HASH_THREADS, PAYLOAD_LOG2,
 };
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
@@ -330,7 +331,15 @@ fn run_hash(args: HashRunArgs) -> Result<()> {
     write_hash_tables(&out_dir, &records)?;
     eprintln!("records: {}", records_path.display());
     eprintln!("markdown: {}", out_dir.join("table.md").display());
+    eprintln!(
+        "markdown resources: {}",
+        out_dir.join("table-resources.md").display()
+    );
     eprintln!("latex: {}", out_dir.join("table.tex").display());
+    eprintln!(
+        "latex resources: {}",
+        out_dir.join("table-resources.tex").display()
+    );
     eprintln!("report: {}", out_dir.join("report.md").display());
     Ok(())
 }
@@ -349,26 +358,10 @@ fn compare_hash(args: CompareArgs) -> Result<()> {
     fs::create_dir_all(&out_dir)?;
     match args.format {
         TableFormat::Markdown => {
-            let rows = aggregate_hash_timing_rows(&records);
-            fs::write(
-                out_dir.join("table.md"),
-                render_markdown_hash_timing_table(&rows),
-            )?;
-            fs::write(
-                out_dir.join("report.md"),
-                render_markdown_hash_eval_report(&records),
-            )?;
+            write_hash_markdown(&out_dir, &records)?;
         }
         TableFormat::Latex => {
-            let rows = aggregate_hash_timing_rows(&records);
-            fs::write(
-                out_dir.join("table.tex"),
-                render_latex_hash_timing_table(&rows),
-            )?;
-            fs::write(
-                out_dir.join("report.tex"),
-                render_latex_hash_eval_report(&records),
-            )?;
+            write_hash_latex(&out_dir, &records)?;
         }
         TableFormat::Both => write_hash_tables(&out_dir, &records)?,
     }
@@ -377,18 +370,39 @@ fn compare_hash(args: CompareArgs) -> Result<()> {
 }
 
 fn write_hash_tables(out_dir: &Path, records: &[HashRecord]) -> Result<()> {
-    let rows = aggregate_hash_timing_rows(records);
+    write_hash_markdown(out_dir, records)?;
+    write_hash_latex(out_dir, records)?;
+    Ok(())
+}
+
+fn write_hash_markdown(out_dir: &Path, records: &[HashRecord]) -> Result<()> {
+    let timing = aggregate_hash_timing_rows(records);
+    let resources = aggregate_hash_resource_rows(records);
     fs::write(
         out_dir.join("table.md"),
-        render_markdown_hash_timing_table(&rows),
+        render_markdown_hash_timing_table(&timing),
     )?;
     fs::write(
-        out_dir.join("table.tex"),
-        render_latex_hash_timing_table(&rows),
+        out_dir.join("table-resources.md"),
+        render_markdown_hash_resource_table(&resources),
     )?;
     fs::write(
         out_dir.join("report.md"),
         render_markdown_hash_eval_report(records),
+    )?;
+    Ok(())
+}
+
+fn write_hash_latex(out_dir: &Path, records: &[HashRecord]) -> Result<()> {
+    let timing = aggregate_hash_timing_rows(records);
+    let resources = aggregate_hash_resource_rows(records);
+    fs::write(
+        out_dir.join("table.tex"),
+        render_latex_hash_timing_table(&timing),
+    )?;
+    fs::write(
+        out_dir.join("table-resources.tex"),
+        render_latex_hash_resource_table(&resources),
     )?;
     fs::write(
         out_dir.join("report.tex"),

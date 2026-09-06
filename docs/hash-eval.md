@@ -79,5 +79,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \
   results/hash-x86_64 --out-dir results/hash-x86_64
 ```
 
-Each run writes `records.jsonl`, `table.md`, `table.tex`, `report.md`,
-`report.tex`, and `provenance.txt`.
+Each run writes `records.jsonl`, `table.md`, `table.tex`, `table-resources.md`,
+`table-resources.tex`, `report.md`, `report.tex`, and `provenance.txt`.
+WHIR unique-decoding rows (`log₂ N` 28 and 30 on this matrix) are marked
+with a table footnote rather than left as unmarked numbers.

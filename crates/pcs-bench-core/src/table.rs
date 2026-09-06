@@ -67,7 +67,7 @@ pub struct ResourceTableRow {
     pub gap_note: Option<GapNote>,
 }
 
-/// Why a table cell is a dash rather than a timing or resource number.
+/// Why a table cell is annotated or dashed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum GapNote {
     /// Akita has no generated fp32-dense row for the requested `nv`.
@@ -76,6 +76,8 @@ pub enum GapNote {
     RokokoNative,
     /// Greyhound's SIS parameter search cannot secure the inner commitment.
     GreyhoundSis,
+    /// WHIR used unique decoding because capacity/Johnson bounds exceed KoalaBear grind.
+    WhirUniqueDecoding,
     /// Some other recorded unsupported reason.
     Custom(String),
 }
@@ -344,6 +346,9 @@ impl GapNote {
             Self::GreyhoundSis => {
                 "Greyhound cannot make the inner Ajtai commitments SIS-secure at $\\log_2 N=30$ (`kappa` $\\le$ 32). Labrador rejects the instance (`polcom_reduce`: inner commitments not secure). This is not an out-of-memory failure.".into()
             }
+            Self::WhirUniqueDecoding => {
+                "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
+            }
             Self::Custom(detail) => detail.clone(),
         }
     }
@@ -358,6 +363,9 @@ impl GapNote {
             }
             Self::GreyhoundSis => {
                 "Greyhound cannot make the inner Ajtai commitments SIS-secure at $\\log_2 N=30$ ($\\kappa \\le 32$). Labrador rejects the instance (\\texttt{polcom\\_reduce}: inner commitments not secure). This is not an out-of-memory failure.".into()
+            }
+            Self::WhirUniqueDecoding => {
+                "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
             }
             Self::Custom(detail) => escape_tex_footnote(detail),
         }

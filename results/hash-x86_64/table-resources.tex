@@ -1,0 +1,41 @@
+\begin{table}[H]
+\centering
+\caption[Communication and memory comparison with hash-based PCSs]{Proof
+communication, prover memory, and reusable preprocessing for the workloads in
+\Cref{tab:eval-hash-time}.}
+\label{tab:eval-hash-resources}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrrrr@{}}
+\toprule
+Payload & Scheme & Commitment (B) & Proof (KiB) & Total (KiB)
+& \multicolumn{2}{c}{Peak RSS (GiB)} & Prep. (s) & State (GiB) \\
+\cmidrule(lr){6-7}
+& & & & & 1 thread & 8 threads & & \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 63.8 & 64.1 & 0.190 & 0.197 & 0.0072 & 0.0017 \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & 33 & 89.1 & 89.2 & 0.179 & 0.178 & 0.0013 & 0.0000 \\
+$2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & 32 & 883.9 & 884.0 & 0.362 & 0.361 & 0.0000 & 0.0000 \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 64.5 & 64.8 & 0.632 & 0.632 & 0.0079 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & 33 & 100.2 & 100.3 & 0.703 & 0.702 & 0.0057 & 0.0000 \\
+$2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & 32 & 889.4 & 889.4 & 0.502 & 0.502 & 0.0000 & 0.0000 \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 65.3 & 65.7 & 1.93 & 1.94 & 0.0197 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR} & 33 & 110.4 & 110.5 & 2.80 & 2.80 & 0.0269 & 0.0000 \\
+$2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & 32 & 911.1 & 911.2 & 1.75 & 1.75 & 0.0000 & 0.0000 \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 66.5 & 66.9 & 6.38 & 6.39 & 0.0420 & 0.0107 \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR}$^{(1)}$ & 33 & 575.3 & 575.3 & 9.60 & 9.60 & 0.0730 & 0.0000 \\
+$2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & 32 & 998.1 & 998.2 & 7.00 & 7.00 & 0.0000 & 0.0000 \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 67.6 & 68.0 & 24.7 & 24.7 & 0.0834 & 0.0215 \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR}$^{(1)}$ & 33 & 676.6 & 676.6 & 17.1 & 17.1 & 0.0569 & 0.0000 \\
+$2^{35}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold} & 32 & 1346.1 & 1346.2 & 28.0 & 28.0 & 0.0000 & 0.0000 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize
+\noindent$^{(1)}$ WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.\\
+}
+\end{table}

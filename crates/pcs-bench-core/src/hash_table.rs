@@ -46,7 +46,7 @@ pub struct HashTimingTableRow {
     pub n_ok: usize,
     /// Whether any sample was recorded for this cell.
     pub measured: bool,
-    /// Footnote for an unsupported dash.
+    /// Footnote for unique decoding or an unsupported dash.
     pub gap_note: Option<GapNote>,
 }
 
@@ -77,7 +77,7 @@ pub struct HashResourceTableRow {
     pub measured_8: bool,
     /// 8-thread cell outcome, when measured.
     pub status_8: RunStatus,
-    /// Footnote for an unsupported dash.
+    /// Footnote for unique decoding or an unsupported dash.
     pub gap_note: Option<GapNote>,
 }
 
@@ -199,7 +199,7 @@ fn hash_timing_row(
             })),
             n_ok: ok.len(),
             measured: true,
-            gap_note: None,
+            gap_note: whir_soundness_note(&ok),
         };
     }
 
@@ -284,7 +284,7 @@ fn hash_resource_row(
             } else {
                 aggregate_gap_status(samples_8)
             },
-            gap_note: hash_gap_note(status, samples_1),
+            gap_note: hash_gap_note(status, samples_1).or_else(|| whir_soundness_note(samples_1)),
         };
     }
 
@@ -310,7 +310,7 @@ fn hash_resource_row(
         } else {
             RunStatus::Ok
         },
-        gap_note: None,
+        gap_note: whir_soundness_note(&ok_comm),
     }
 }
 
@@ -340,15 +340,35 @@ fn hash_gap_note(status: RunStatus, samples: &[&HashRecord]) -> Option<GapNote> 
         .map(GapNote::Custom)
 }
 
-fn scheme_cell(scheme: HashSchemeId, latex: bool) -> String {
+fn whir_soundness_note(samples: &[&HashRecord]) -> Option<GapNote> {
+    samples
+        .iter()
+        .any(|record| {
+            record
+                .status_detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("UniqueDecoding"))
+        })
+        .then_some(GapNote::WhirUniqueDecoding)
+}
+
+fn scheme_cell(scheme: HashSchemeId, latex: bool, mark: Option<u32>) -> String {
     if latex {
-        format!(
-            r"\href{{{}}}{{{}}}",
-            scheme.commit_url(),
-            scheme.latex_name()
+        apply_mark(
+            &format!(
+                r"\href{{{}}}{{{}}}",
+                scheme.commit_url(),
+                scheme.latex_name()
+            ),
+            mark,
+            true,
         )
     } else {
-        format!("[{}]({})", scheme.display_name(), scheme.commit_url())
+        format!(
+            "[{}]({})",
+            apply_mark(scheme.display_name(), mark, false),
+            scheme.commit_url()
+        )
     }
 }
 
@@ -421,7 +441,7 @@ pub fn render_markdown_hash_timing_table(rows: &[HashTimingTableRow]) -> String 
             out,
             "| 2^{{{}}} | {} | ${}$ | {} | {} | {} | {} | {} | {} |",
             row.payload_log2,
-            scheme_cell(row.scheme, false),
+            scheme_cell(row.scheme, false, mark),
             row.field,
             log2_n_cell(row, false, mark),
             row.threads,
@@ -469,7 +489,7 @@ pub fn render_markdown_hash_resource_table(rows: &[HashResourceTableRow]) -> Str
             out,
             "| 2^{{{}}} | {} | {} | {} | {} | {} | {} | {} | {} |",
             row.payload_log2,
-            scheme_cell(row.scheme, false),
+            scheme_cell(row.scheme, false, mark),
             resource_value_cell(
                 row.measured,
                 row.status,
@@ -554,7 +574,7 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
             format!(
                 "$2^{{{}}}$ & {} & ${}$ & {} & {} & {} & {} & {} & {} \\\\",
                 row.payload_log2,
-                scheme_cell(row.scheme, true),
+                scheme_cell(row.scheme, true, mark),
                 row.field,
                 log2_n_cell(row, true, mark),
                 row.threads,
@@ -629,7 +649,7 @@ pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String
                     out,
                     "$2^{{{}}}$ & {} & {} & {} & {} & {} & {} & {} & {} \\\\",
                     row.payload_log2,
-                    scheme_cell(row.scheme, true),
+                    scheme_cell(row.scheme, true, mark),
                     resource_value_cell(
                         row.measured,
                         row.status,
@@ -719,6 +739,7 @@ mod tests {
     };
     use crate::hash::HashSchemeId;
     use crate::observation::{HashRecord, Provenance, RunStatus, RESULT_SCHEMA_VERSION};
+    use crate::table::GapNote;
     use std::collections::BTreeMap;
 
     fn record(
@@ -805,6 +826,41 @@ mod tests {
             .expect("row");
         assert!(akita.peak_rss_bytes_1.is_some());
         assert!(akita.peak_rss_bytes_8.is_some());
+    }
+
+    #[test]
+    fn unique_decoding_whir_rows_carry_a_footnote() {
+        let mut one = record(
+            33,
+            HashSchemeId::Whir,
+            1,
+            RunStatus::Ok,
+            Some(5.0),
+            Some(30.0),
+            Some(0.009),
+        );
+        one.status_detail = Some("soundness=UniqueDecoding,rate=1/2,pow_bits=20".into());
+        let mut eight = one.clone();
+        eight.threads = 8;
+        let rows = aggregate_hash_timing_rows(&[one.clone(), eight]);
+        let whir = rows
+            .iter()
+            .find(|row| {
+                row.payload_log2 == 33 && row.scheme == HashSchemeId::Whir && row.threads == 1
+            })
+            .expect("row");
+        assert_eq!(whir.gap_note, Some(GapNote::WhirUniqueDecoding));
+        let latex = render_latex_hash_timing_table(std::slice::from_ref(whir));
+        assert!(latex.contains(r"$^{(1)}$"));
+        assert!(latex.contains("unique decoding"));
+        let markdown = render_markdown_hash_timing_table(std::slice::from_ref(whir));
+        assert!(markdown.contains("[WHIR(1)]("));
+        let resources = aggregate_hash_resource_rows(std::slice::from_ref(&one));
+        let resource = resources
+            .iter()
+            .find(|row| row.payload_log2 == 33 && row.scheme == HashSchemeId::Whir)
+            .expect("resource row");
+        assert_eq!(resource.gap_note, Some(GapNote::WhirUniqueDecoding));
     }
 
     #[test]
