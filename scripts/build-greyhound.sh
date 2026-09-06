@@ -31,7 +31,7 @@ fi
 
 CC="${CC:-cc}"
 # Match greyhound-reference's Makefile: -march=native -O3 -flto, AVX-512 NTT.
-CFLAGS=(-std=c2x -O3 -flto=auto -fwrapv -pthread -march=native -mtune=native -Wall)
+CFLAGS=(-std=c2x -O3 -flto=auto -fwrapv -pthread -march=native -mtune=native -Wall -Wno-unused-function -D_GNU_SOURCE)
 SOURCES=(
   pack.c pack_wire.c greyhound.c greyhound_wire.c dachshund.c chihuahua.c
   labrador.c proof_wire.c witness_wire.c rice.c data.c jlproj.c polx.c poly.c

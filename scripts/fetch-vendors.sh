@@ -14,10 +14,16 @@ clone_pin() {
   local dest="$2"
   local rev="$3"
   if [[ ! -d "$dest/.git" ]]; then
-    git clone --filter=blob:none --recurse-submodules "$url" "$dest"
+    git clone --filter=blob:none "$url" "$dest"
   fi
   git -C "$dest" fetch --filter=blob:none origin "$rev"
   git -C "$dest" checkout --detach "$rev"
+}
+
+# Greyhound's SIMDe backend is a git submodule. Other vendors either have no
+# submodules or pin them over SSH remotes that this host cannot fetch.
+init_greyhound_submodules() {
+  local dest="$1"
   if [[ -f "$dest/.gitmodules" ]]; then
     git -C "$dest" submodule update --init --recursive
   fi
@@ -44,6 +50,7 @@ if [[ "$AKITA_ONLY" -eq 0 ]]; then
     https://github.com/LayerZero-Labs/greyhound-reference.git \
     "$ROOT/third_party/greyhound-reference" \
     687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397
+  init_greyhound_submodules "$ROOT/third_party/greyhound-reference"
 
   clone_pin \
     https://github.com/lattice-arguments/rokoko.git \
