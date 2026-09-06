@@ -1,0 +1,194 @@
+Measurements were collected on a single AMD Ryzen 9 9950X 16-Core Processor (Linux x86\_64, 32 logical CPUs, 121~GiB RAM). AVX-512F is advertised by the CPU and was activated for this run (Greyhound \texttt{-march=native}; Akita and RoKoKo \texttt{-C target-cpu=native}). Compiler flags: \texttt{-C target-cpu=native}.
+
+Our first experiment compares Akita with prior lattice-based PCSs on dense
+polynomial data at the target volumes above. For each input, Akita
+uses the validated planner schedule selected for that field and size.
+The pinned catalogs omit $n_v=22$ and $n_v=24$; those rows are generated
+with that same planner at the measured commit.
+The comparison is exclusively single-threaded because neither Greyhound nor RoKoKo
+natively supports multithreading.
+Timing cells report median $\pm$ sample standard deviation across fresh processes
+after warmup. Scheme names are hyperlinks to the exact git commit that was measured.
+Akita is reported both at the pinned \texttt{main} commit and at the tip of
+\href{https://github.com/LayerZero-Labs/akita/pull/466}{PR \#466}.
+
+The timing comparison in \Cref{tab:eval-lattice-time} separates commitment,
+opening, and verification, while \Cref{tab:eval-lattice-resources} reports
+communication, memory, and preprocessing.  Released but non-normalized
+measurements are labeled historical when retained and are never used to form
+headline ratios.
+
+RoKoKo uses the field $\mathbb F_{2^{50}-2687}$ and fixed native parameter
+sets, so we report its closest supported input at each target payload.  An
+\evaloom{} entry exceeds the 109~GiB worker memory limit (90\% of host RAM).
+The populated RoKoKo rows contain approximately $25/16$ times the target
+number of logical bits, since their native field has about $50$ bits rather
+than $32$. They report the cost of those native instances.
+
+\begin{table}[H]
+\centering
+\caption[Timing comparison with lattice-based PCSs]{Commitment, opening, and
+verification time for Akita and prior lattice-based PCSs on dense
+polynomial openings. Payload is the target value of
+$N\log_2|\mathbb F|$.  A dash denotes an unsupported input; numbered
+footnotes give the reason.
+Timing cells are the median of fresh processes after warmup, shown as
+median $\pm$ sample standard deviation when $n\ge 2$.
+Scheme names link to the exact git commit that was measured.}
+\label{tab:eval-lattice-time}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llccrrrr@{}}
+\toprule
+Payload & Scheme & Field & $\log_2 N$
+& Commit (s) & Open (s) & Total (s) & Verify (ms) \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 22 & $0.099 \pm 0.0002$ & $0.959 \pm 0.0009$ & $1.06 \pm 0.0007$ & $7.2 \pm 0.01$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & $2^{32}-99$ & 22 & $0.099 \pm 0.0008$ & $0.995 \pm 0.0008$ & $1.09 \pm 0.0013$ & $7.5 \pm 0.00$ \\
+$2^{27}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & $2^{32}-99$ & 22 & $0.097 \pm 0.0028$ & $0.090 \pm 0.0006$ & $0.187 \pm 0.0032$ & $43.5 \pm 0.38$ \\
+$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 24 & $0.345 \pm 0.0004$ & $1.43 \pm 0.015$ & $1.77 \pm 0.015$ & $11.6 \pm 0.29$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & $2^{32}-99$ & 24 & $0.346 \pm 0.0007$ & $1.52 \pm 0.0021$ & $1.87 \pm 0.0026$ & $9.3 \pm 0.04$ \\
+$2^{29}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & $2^{32}-99$ & 24 & $0.381 \pm 0.0026$ & $0.183 \pm 0.0053$ & $0.564 \pm 0.0078$ & $84.4 \pm 0.80$ \\
+$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 26 & $1.29 \pm 0.0036$ & $2.57 \pm 0.0052$ & $3.85 \pm 0.0087$ & $13.9 \pm 0.10$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & $2^{32}-99$ & 26 & $1.28 \pm 0.0063$ & $2.62 \pm 0.018$ & $3.90 \pm 0.012$ & $12.7 \pm 0.53$ \\
+$2^{31}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & $2^{32}-99$ & 26 & $2.03 \pm 0.0095$ & $0.527 \pm 0.0008$ & $2.55 \pm 0.010$ & $214 \pm 0.29$ \\
+$2^{31}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & 26 & $0.876 \pm 0.015$ & $0.743 \pm 0.0055$ & $1.62 \pm 0.015$ & $4.8 \pm 0.08$ \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 28 & $6.06 \pm 0.023$ & $6.78 \pm 0.0063$ & $12.8 \pm 0.027$ & $19.7 \pm 0.51$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & $2^{32}-99$ & 28 & $6.05 \pm 0.021$ & $6.65 \pm 0.027$ & $12.7 \pm 0.040$ & $21.6 \pm 0.47$ \\
+$2^{33}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & $2^{32}-99$ & 28 & $10.5 \pm 0.047$ & $2.02 \pm 0.0100$ & $12.5 \pm 0.048$ & $379 \pm 1.93$ \\
+$2^{33}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & 28 & $3.50 \pm 0.012$ & $1.59 \pm 0.011$ & $5.10 \pm 0.0052$ & $4.9 \pm 0.13$ \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & $2^{32}-99$ & 30 & $24.4 \pm 0.075$ & $16.9 \pm 0.0060$ & $41.2 \pm 0.075$ & $33.0 \pm 0.16$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & $2^{32}-99$ & 30 & $24.6 \pm 0.065$ & $16.0 \pm 0.0045$ & $40.6 \pm 0.063$ & $33.2 \pm 0.11$ \\
+$2^{35}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & $2^{32}-99$ & 30 & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
+$2^{35}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & 30 & $18.0 \pm 0.252$ & $4.94 \pm 0.028$ & $23.0 \pm 0.250$ & $7.6 \pm 0.33$ \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize
+\noindent$^{(1)}$ RoKoKo ships only native sets \texttt{p-26}, \texttt{p-28}, and \texttt{p-30}; no instance matches this payload.\\
+\noindent$^{(2)}$ Greyhound cannot make the inner Ajtai commitments SIS-secure at $\log_2 N=30$ ($\kappa \le 32$). Labrador rejects the instance (\texttt{polcom\_reduce}: inner commitments not secure). This is not an out-of-memory failure.\\
+}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\caption[Communication and memory comparison with lattice-based PCSs]{Proof
+communication, prover memory, and reusable preprocessing for the workloads in
+\Cref{tab:eval-lattice-time}.  Total communication is the commitment plus the
+opening proof.  RoKoKo reports an encoded bit count rather than a materialized
+byte string. Scheme names link to the measured git commit.
+Numbered footnotes mark unsupported inputs.}
+\label{tab:eval-lattice-resources}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Payload & Scheme & Commitment (B) & Proof (KiB) & Total (KiB)
+& Peak RSS (GiB) & Prep. (s) & State (GiB) \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 63.8 & 64.1 & 0.190 & 0.0067 & 0.0017 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & 343 & 59.9 & 60.2 & 0.187 & 0.0080 & 0.0020 \\
+$2^{27}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & 3072 & 50.4 & 53.4 & 0.288 & 0 & 0.0000 \\
+$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 64.5 & 64.8 & 0.632 & 0.0082 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & 343 & 60.3 & 60.7 & 0.633 & 0.0081 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & 3584 & 53.5 & 57.0 & 1.00 & 0 & 0.0000 \\
+$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 65.3 & 65.7 & 1.93 & 0.0186 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & 343 & 61.6 & 61.9 & 1.93 & 0.0190 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & 3584 & 54.7 & 58.2 & 3.78 & 0 & 0.0000 \\
+$2^{31}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & 774 & 112.1 & 112.9 & 4.07 & 0.335 & 1.59 \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 66.5 & 66.9 & 6.38 & 0.0406 & 0.0107 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & 343 & 63.0 & 63.3 & 6.36 & 0.0376 & 0.0098 \\
+$2^{33}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & 3584 & 56.4 & 59.9 & 17.2 & 0 & 0.0000 \\
+$2^{33}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & 773 & 112.2 & 113.0 & 10.9 & 0.698 & 3.19 \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita} & 343 & 67.6 & 68.0 & 24.7 & 0.0812 & 0.0215 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{Akita (\#466)} & 343 & 63.1 & 63.4 & 24.7 & 0.0743 & 0.0195 \\
+$2^{35}$ & \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{Greyhound} & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
+$2^{35}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & 777 & 112.4 & 113.1 & 35.6 & 1.65 & 7.44 \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize
+\noindent$^{(1)}$ RoKoKo ships only native sets \texttt{p-26}, \texttt{p-28}, and \texttt{p-30}; no instance matches this payload.\\
+\noindent$^{(2)}$ Greyhound cannot make the inner Ajtai commitments SIS-secure at $\log_2 N=30$ ($\kappa \le 32$). Labrador rejects the instance (\texttt{polcom\_reduce}: inner commitments not secure). This is not an out-of-memory failure.\\
+}
+\end{table}
+
+
+\medskip
+\noindent\textbf{Measured commits.}
+\begin{itemize}\setlength{\itemsep}{0pt}
+\item Akita: \href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{\texttt{f9f7de87}}
+\item Akita (\#466): \href{https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740}{\texttt{bb68275e}}
+\item Greyhound: \href{https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf}{\texttt{8b6626b2}}
+\item RoKoKo: \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{\texttt{1baa91e9}}
+\item Akita PR: \url{https://github.com/LayerZero-Labs/akita/pull/466}
+\end{itemize}
+
+
+\medskip
+\noindent\textbf{Commands used for these numbers.}
+These tables were produced on a Linux x86\_64 AVX-512 host (AMD Ryzen~9 9950X) from
+this repository. The toolchain pin is Rust 1.95 (\texttt{rust-toolchain.toml}).
+RoKoKo uses \texttt{rustup} nightly. Every timed worker is a fresh process wrapped
+in \texttt{scripts/with-memlimit.sh} at 109~GiB (\texttt{ulimit -v}, 90\% of host RAM) with
+\texttt{RAYON\_NUM\_THREADS=1}. The runner defaults are 1 warmup and 3 measured
+samples per cell; warmup rows are stored with \texttt{warmup: true} and excluded
+from the median. Checked-in numbers live in \texttt{results/lattice-x86\_64/}.
+\begin{verbatim}
+# On an AVX-512 Linux x86_64 host
+source "$HOME/.cargo/env"   # if cargo is not on PATH
+cd /path/to/akita-benchmark
+
+rustup toolchain install nightly -c rustc,cargo   # once, for RoKoKo
+export CARGO_NET_GIT_FETCH_WITH_CLI=true
+export RUSTFLAGS="-C target-cpu=native"
+export RAYON_NUM_THREADS=1
+
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 catalogs
+./scripts/build-greyhound.sh
+
+# Full 20-cell matrix (Akita main, Akita #466, Greyhound, RoKoKo)
+./scripts/lattice-eval.sh run --out results/lattice-x86_64
+
+# Rebuild Markdown + LaTeX from the JSONL already in that directory
+cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \
+  results/lattice-x86_64 --out-dir results/lattice-x86_64
+\end{verbatim}
+\noindent Sanity-check the harness before a full run.
+\texttt{lattice-eval matrix} prints the 20-cell plan.
+A single supported cell should verify and emit JSON with \texttt{status: ok}.
+Unit tests cover the RoKoKo log parser, OOM classification, and table tokens.
+\begin{verbatim}
+export RUSTFLAGS="-C target-cpu=native"
+export RAYON_NUM_THREADS=1
+
+cargo test --workspace --locked
+cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
+
+# One measured sample of a supported cell (payload 2^31, log2 N = 26)
+./scripts/lattice-eval.sh run --scheme akita --payload 31 --runs 1 --warmups 0
+./scripts/lattice-eval.sh run --scheme greyhound --payload 31 --runs 1 --warmups 0
+./scripts/lattice-eval.sh run --scheme rokoko --payload 31 --runs 1 --warmups 0
+./scripts/lattice-eval.sh run --scheme akita-pr466 --payload 31 --runs 1 --warmups 0
+
+# Direct workers (what each harness sample wraps with with-memlimit.sh)
+./scripts/with-memlimit.sh 117128687616 \
+  env RAYON_NUM_THREADS=1 AKITA_PARALLEL=0 \
+  cargo run --release -p pcs-bench-akita --bin lattice-eval -- \
+    --log2-n 26 --payload-log2 31
+./scripts/with-memlimit.sh 117128687616 target/greyhound/lattice-eval --log2-n 26
+\end{verbatim}
+

@@ -1,0 +1,31 @@
+# Standalone adapter so Cargo can depend on a second Akita git revision
+# without unifying it with the pinned main worker.
+[workspace]
+
+[package]
+name = "pcs-bench-akita-pr466"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+publish = false
+description = "Akita adapter pinned to PR #466 (quotient-free ring relations)"
+
+[[bin]]
+name = "lattice-eval"
+path = "src/bin/lattice_eval.rs"
+
+[dependencies]
+# Path to the PR #466 checkout after `./scripts/fetch-vendors.sh`, including
+# planner-generated fp32-dense rows for nv=22 and nv=24.
+akita-algebra = { path = "../../third_party/akita-pr466/crates/akita-algebra" }
+akita-config = { path = "../../third_party/akita-pr466/crates/akita-config" }
+akita-pcs = { path = "../../third_party/akita-pr466/crates/akita-pcs" }
+akita-prover = { path = "../../third_party/akita-pr466/crates/akita-prover" }
+akita-serialization = { path = "../../third_party/akita-pr466/crates/akita-serialization" }
+akita-transcript = { path = "../../third_party/akita-pr466/crates/akita-transcript" }
+akita-types = { path = "../../third_party/akita-pr466/crates/akita-types" }
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "72dc6451628d8b1dd794147a1f1cc40be0d77963", default-features = false, features = ["asm", "solinas"] }
+pcs-bench-core = { path = "../../crates/pcs-bench-core" }
+rand = "0.8"
+rayon = "1.10"
+serde_json = "1.0"

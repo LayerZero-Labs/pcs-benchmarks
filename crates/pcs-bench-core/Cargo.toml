@@ -1,0 +1,16 @@
+[package]
+name = "pcs-bench-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+description = "Shared workload and result schema for reproducible PCS benchmarks"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
+

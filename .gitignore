@@ -1,0 +1,13 @@
+/target/
+/results/*
+!/results/lattice-x86_64/
+!/results/lattice-x86_64/**
+/third_party/labrador/
+/third_party/rokoko/
+/third_party/akita/
+/third_party/akita-pr466/
+/benchmarks/akita-pr466/target/
+/benchmarks/akita-pr466/Cargo.lock
+*.profraw
+*.perf
+.DS_Store

@@ -1,0 +1,39 @@
+[package]
+name = "pcs-bench-akita"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+description = "Akita adapter for the PCS benchmark suite"
+
+[dependencies]
+# Path to the pinned checkout after `./scripts/fetch-vendors.sh`. That script
+# installs planner-generated fp32-dense rows for nv=22 and nv=24; upstream
+# catalogs omit those keys.
+akita-algebra = { path = "../../third_party/akita/crates/akita-algebra" }
+akita-config = { path = "../../third_party/akita/crates/akita-config" }
+akita-pcs = { path = "../../third_party/akita/crates/akita-pcs" }
+akita-prover = { path = "../../third_party/akita/crates/akita-prover" }
+akita-serialization = { path = "../../third_party/akita/crates/akita-serialization" }
+akita-transcript = { path = "../../third_party/akita/crates/akita-transcript" }
+akita-types = { path = "../../third_party/akita/crates/akita-types" }
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "72dc6451628d8b1dd794147a1f1cc40be0d77963", default-features = false, features = ["asm", "solinas"] }
+pcs-bench-core = { path = "../../crates/pcs-bench-core" }
+rand.workspace = true
+rayon = "1.10"
+serde_json.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "e2e"
+harness = false
+
+[[bin]]
+name = "lattice-eval"
+path = "src/bin/lattice_eval.rs"
+
+[lints]
+workspace = true
