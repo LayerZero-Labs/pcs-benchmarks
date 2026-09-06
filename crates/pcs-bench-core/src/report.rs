@@ -110,8 +110,11 @@ fn markdown_prose(provenance: &Provenance) -> String {
          uses the validated planner schedule selected for that field and size.\n\
          The pinned catalogs omit $n_v=22$ and $n_v=24$; those rows are generated\n\
          with that same planner at the measured commit.\n\
-         The comparison is exclusively single-threaded because neither Greyhound nor RoKoKo\n\
-         natively supports multithreading. Timing cells report median ± sample standard\n\
+         The comparison is exclusively single-threaded: RoKoKo has no native multithreaded\n\
+         prover, and Greyhound is pinned to `LATTICE_DOGS_THREADS=1` even though the\n\
+         reference can parallelize extension products. Greyhound uses the\n\
+         `l2-quantum128-adps16` Euclidean SIS policy and reports contextual proof bytes.\n\
+         Timing cells report median ± sample standard\n\
          deviation across fresh processes after warmup. Scheme names link to the exact\n\
          git commit that was measured. Akita is reported both at the pinned `main` commit\n\
          and at the tip of [PR #466]({AKITA_PR466_URL}).\n\n\
@@ -137,8 +140,10 @@ fn latex_prose(provenance: &Provenance) -> String {
          uses the validated planner schedule selected for that field and size.\n\
          The pinned catalogs omit $n_v=22$ and $n_v=24$; those rows are generated\n\
          with that same planner at the measured commit.\n\
-         The comparison is exclusively single-threaded because neither Greyhound nor RoKoKo\n\
-         natively supports multithreading.\n\
+         The comparison is exclusively single-threaded: RoKoKo has no native multithreaded\n\
+         prover, and Greyhound is pinned to \\texttt{{LATTICE\\_DOGS\\_THREADS=1}} even though the\n\
+         reference can parallelize extension products. Greyhound uses the\n\
+         \\texttt{{l2-quantum128-adps16}} Euclidean SIS policy and reports contextual proof bytes.\n\
          Timing cells report median $\\pm$ sample standard deviation across fresh processes\n\
          after warmup. Scheme names are hyperlinks to the exact git commit that was measured.\n\
          Akita is reported both at the pinned \\texttt{{main}} commit and at the tip of\n\
@@ -258,8 +263,10 @@ from this repository. The toolchain pin is Rust **1.95** (`rust-toolchain.toml`)
 RoKoKo uses `rustup` **nightly**. Every timed worker is a fresh process wrapped
 in `scripts/with-memlimit.sh` at {MEMORY_LIMIT_GIB}~GiB (`ulimit -v`, 90% of host RAM) with `RAYON_NUM_THREADS=1`.
 The runner defaults are **1 warmup + 3 measured** samples per cell; warmup rows
-are stored with `warmup: true` and excluded from the median. Greyhound is built
-with `-march=native -O3 -flto`. Akita and RoKoKo inherit `RUSTFLAGS=-C target-cpu=native`.
+are stored with `warmup: true` and excluded from the median. Greyhound is
+`LayerZero-Labs/greyhound-reference`, built with `-march=native -O3 -flto`,
+and run with `LATTICE_DOGS_THREADS=1` and `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`.
+Proof sizes are contextual wire bytes. Akita and RoKoKo inherit `RUSTFLAGS=-C target-cpu=native`.
 Akita PR #466 is a separate Cargo tree (`benchmarks/akita-pr466`,
 `CARGO_TARGET_DIR=target/akita-pr466`) so it does not unify with the pinned
 `main` revision. `./scripts/fetch-vendors.sh` clones both Akita pins,

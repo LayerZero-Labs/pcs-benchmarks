@@ -344,7 +344,7 @@ impl GapNote {
                 "RoKoKo ships only native sets `p-26`, `p-28`, and `p-30`; no instance matches this payload.".into()
             }
             Self::GreyhoundSis => {
-                "Greyhound cannot make the inner Ajtai commitments SIS-secure at $\\log_2 N=30$ (`kappa` $\\le$ 32). Labrador rejects the instance (`polcom_reduce`: inner commitments not secure). This is not an out-of-memory failure.".into()
+                "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the `l2-quantum128-adps16` policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
             }
             Self::WhirUniqueDecoding => {
                 "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
@@ -362,7 +362,7 @@ impl GapNote {
                 "RoKoKo ships only native sets \\texttt{p-26}, \\texttt{p-28}, and \\texttt{p-30}; no instance matches this payload.".into()
             }
             Self::GreyhoundSis => {
-                "Greyhound cannot make the inner Ajtai commitments SIS-secure at $\\log_2 N=30$ ($\\kappa \\le 32$). Labrador rejects the instance (\\texttt{polcom\\_reduce}: inner commitments not secure). This is not an out-of-memory failure.".into()
+                "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the \\texttt{l2-quantum128-adps16} policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
             }
             Self::WhirUniqueDecoding => {
                 "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
@@ -1129,11 +1129,12 @@ mod tests {
         assert!(!looks_like_oom(failed.status_detail.as_deref()));
         let markdown = render_markdown_timing_table(std::slice::from_ref(greyhound));
         assert!(markdown.contains("err(1)"));
-        assert!(markdown.contains("inner Ajtai commitments SIS-secure"));
+        assert!(markdown.contains("Ajtai commitments SIS-secure"));
+        assert!(markdown.contains("l2-quantum128-adps16"));
         assert!(markdown.contains("not an out-of-memory"));
         let latex = render_latex_timing_table(std::slice::from_ref(greyhound));
         assert!(latex.contains(r"\evalunsupported$^{(1)}$"));
-        assert!(latex.contains("inner Ajtai commitments SIS-secure"));
+        assert!(latex.contains("Ajtai commitments SIS-secure"));
         let resource_rows = aggregate_resource_rows(std::slice::from_ref(&failed));
         let greyhound_res = resource_rows
             .iter()
@@ -1141,6 +1142,6 @@ mod tests {
             .expect("resource row");
         let resources = render_markdown_resource_table(std::slice::from_ref(greyhound_res));
         assert!(resources.contains("err(1)"));
-        assert!(resources.contains("inner Ajtai commitments SIS-secure"));
+        assert!(resources.contains("Ajtai commitments SIS-secure"));
     }
 }

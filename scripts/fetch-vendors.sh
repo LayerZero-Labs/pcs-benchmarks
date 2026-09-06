@@ -14,10 +14,13 @@ clone_pin() {
   local dest="$2"
   local rev="$3"
   if [[ ! -d "$dest/.git" ]]; then
-    git clone --filter=blob:none "$url" "$dest"
+    git clone --filter=blob:none --recurse-submodules "$url" "$dest"
   fi
   git -C "$dest" fetch --filter=blob:none origin "$rev"
   git -C "$dest" checkout --detach "$rev"
+  if [[ -f "$dest/.gitmodules" ]]; then
+    git -C "$dest" submodule update --init --recursive
+  fi
 }
 
 install_fp32_dense_catalog() {
@@ -38,9 +41,9 @@ install_fp32_dense_catalog() {
 
 if [[ "$AKITA_ONLY" -eq 0 ]]; then
   clone_pin \
-    https://github.com/lattice-dogs/labrador.git \
-    "$ROOT/third_party/labrador" \
-    8b6626b26afd4c0162ddd089759d21d3d51bfbdf
+    https://github.com/LayerZero-Labs/greyhound-reference.git \
+    "$ROOT/third_party/greyhound-reference" \
+    687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397
 
   clone_pin \
     https://github.com/lattice-arguments/rokoko.git \

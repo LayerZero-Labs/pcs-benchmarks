@@ -22,13 +22,18 @@ because the native field is ~50 bits rather than 32.
 | \(2^{33}\) | 28 | `p-28` (\(\log_2 N = 28\)) |
 | \(2^{35}\) | 30 | `p-30` (\(\log_2 N = 30\)) |
 
-The comparison is **single-threaded**. Neither Greyhound nor RoKoKo natively
-supports multithreading. Every worker is launched as a fresh process. The
+The comparison is **single-threaded**. RoKoKo has no native multithreaded
+prover. Greyhound's reference can parallelize extension products; this harness
+sets `LATTICE_DOGS_THREADS=1` so the ratio is not a parallel-scaling artifact.
+Every worker is launched as a fresh process. The
 virtual-memory ceiling is **90% of host RAM** (`scripts/with-memlimit.sh` /
 `ulimit -v`), so a 121~GiB machine grants about 109~GiB to each worker. An
 OOM cell is recorded as `oom` / `\evaloom` and is never treated as a timing.
-If Greyhound rejects an instance because the inner Ajtai commitment is not
-SIS-secure (`polcom_reduce`), the cell is `err` with a footnote; that is not OOM.
+Greyhound uses the `l2-quantum128-adps16` Euclidean SIS policy (128-bit
+quantum ADPS16 core-SVP). Proof sizes are the contextual wire encoding:
+public `u1` and the fold schedule are verifier context. If Greyhound still
+cannot secure the Ajtai commitments, the cell is `err` with a footnote; that
+is not OOM.
 
 Akita uses the generated `fp32-dense` planner schedule for the requested size.
 The catalogs shipped in the pinned Akita revisions have production rows at
@@ -43,14 +48,16 @@ substituted.
 | --- | --- | --- |
 | Akita (`main` pin) | https://github.com/LayerZero-Labs/akita | [`f9f7de87`](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) |
 | Akita (PR #466) | https://github.com/LayerZero-Labs/akita/pull/466 | [`bb68275e`](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) |
-| Greyhound / Labrador | https://github.com/lattice-dogs/labrador | [`8b6626b2`](https://github.com/lattice-dogs/labrador/commit/8b6626b26afd4c0162ddd089759d21d3d51bfbdf) |
+| Greyhound | https://github.com/LayerZero-Labs/greyhound-reference | [`687a6f8b`](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) |
 | RoKoKo | https://github.com/lattice-arguments/rokoko | [`1baa91e9`](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) |
 
 ## Machine requirements
 
 - **Akita:** Rust 1.95, any host that can build the crate graph.
-- **Greyhound:** Linux x86_64 with AVX-512F. The upstream README forbids any
-  other ISA. Apple Silicon cannot run this worker.
+- **Greyhound:** Linux x86_64 with AVX-512F for headline numbers (`BACKEND=auto`
+  uses the upstream AVX-512 NTT). The reference also has a portable backend;
+  do not mix that ISA into this table. Apple Silicon cannot produce headline
+  Greyhound rows.
 - **RoKoKo:** `rustup` nightly, and the `incomplete-rexl` backend (portable).
   Headline numbers should still be gathered on the same AVX-512 Linux box as
   Greyhound. Set `MIMALLOC_PURGE_DELAY=-1` (the wrapper does this).

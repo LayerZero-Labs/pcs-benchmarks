@@ -49,6 +49,7 @@ pub fn looks_like_greyhound_sis(detail: Option<&str>) -> bool {
     let text = text.to_ascii_lowercase();
     text.contains("inner commitments not secure")
         || text.contains("cannot make inner commitments secure")
+        || text.contains("cannot make outer commitments secure")
 }
 
 /// One raw, process-isolated benchmark observation from a Criterion path.
@@ -281,6 +282,9 @@ mod tests {
         assert!(!looks_like_oom(detail));
         assert!(looks_like_greyhound_sis(Some(
             "Cannot make inner commitments secure"
+        )));
+        assert!(looks_like_greyhound_sis(Some(
+            "Cannot make outer commitments secure"
         )));
         assert!(looks_like_oom(Some("ERROR: Not enough memory")));
         assert!(!looks_like_greyhound_sis(Some("ERROR: Not enough memory")));

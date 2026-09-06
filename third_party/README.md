@@ -6,7 +6,7 @@ They are cloned at pinned commits and are not part of the Cargo workspace:
   `fp32-dense` rows for `nv=22` and `nv=24` installed from
   `vendor/akita-catalogs/`
 - `akita-pr466` — the same overlay on the PR #466 pin
-- `labrador` — Greyhound Pack (`lattice-dogs/labrador`)
+- `greyhound-reference` — Greyhound Pack (`LayerZero-Labs/greyhound-reference`)
 - `rokoko` — RoKoKo PCS chain (`lattice-arguments/rokoko`), with
   `scripts/patch-rokoko-resources.py` printing commitment, CRS, and peak RSS
 

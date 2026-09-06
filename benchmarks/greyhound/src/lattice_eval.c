@@ -1,4 +1,11 @@
-/* Greyhound Pack worker: commit / open / verify one dense instance. */
+/* Greyhound Pack worker: commit / open / verify one dense instance.
+ *
+ * Pins LayerZero greyhound-reference. The runner and this binary force
+ * LATTICE_DOGS_THREADS=1 and LABRADOR_SIS_SECURITY=l2-quantum128-adps16 so
+ * lattice-eval stays single-threaded and uses the 128-bit ADPS16 Euclidean
+ * SIS policy. Proof bytes are the contextual wire encoding (public u1 and
+ * the fold schedule are verifier context, not charged to the proof).
+ */
 
 #define _POSIX_C_SOURCE 200809L
 
@@ -11,6 +18,7 @@
 
 #include "malloc.h"
 #include "randombytes.h"
+#include "data.h"
 #include "labrador.h"
 #include "chihuahua.h"
 #include "pack.h"
@@ -41,6 +49,16 @@ static int parse_log2_n(int argc, char **argv, uint32_t *log2_n) {
         }
     }
     return 1;
+}
+
+static const char *commit_error(int ret) {
+    if (ret == 1) {
+        return "Cannot make inner commitments secure";
+    }
+    if (ret == 2) {
+        return "Cannot make outer commitments secure";
+    }
+    return "polcom_commit failed";
 }
 
 static void emit(
@@ -74,6 +92,14 @@ static void emit(
 }
 
 int main(int argc, char **argv) {
+    /* Headline lattice-eval is single-threaded and uses the 128-bit ADPS16
+     * Euclidean SIS policy, even if the parent shell exported something else. */
+    if (setenv("LATTICE_DOGS_THREADS", "1", 1) != 0
+        || setenv("LABRADOR_SIS_SECURITY", "l2-quantum128-adps16", 1) != 0) {
+        emit("error", "failed to set Greyhound lattice-eval environment", 0, 0, 0, 0, 0, 0, 0);
+        return 1;
+    }
+
     uint32_t log2_n = 0;
     if (parse_log2_n(argc, argv, &log2_n) != 0 || log2_n < 6 || log2_n >= 63) {
         emit("error", "missing or invalid --log2-n (need >= 6)", log2_n, 0, 0, 0, 0, 0, 0);
@@ -81,9 +107,9 @@ int main(int argc, char **argv) {
     }
 
     const size_t len = (size_t)1 << (log2_n - 6);
-    /* Labrador's SIS parameter search is randomized; a prove/verify pair
-     * occasionally fails `sis_secure` even at supported sizes. Retry with a
-     * fresh polynomial and do not include failed attempts in the timings. */
+    /* SIS search and fold grinding are randomized; a prove/verify pair can
+     * fail even at supported sizes. Retry with a fresh polynomial and do not
+     * include failed attempts in the timings. */
     enum { kMaxAttempts = 8 };
     const char *last_error = "greyhound attempts exhausted";
 
@@ -110,7 +136,7 @@ int main(int argc, char **argv) {
         int ret = polcom_commit(&ctx, s, len);
         uint64_t commit_ns = monotonic_ns() - t0;
         if (ret) {
-            last_error = "polcom_commit failed";
+            last_error = commit_error(ret);
             free(s);
             free_comkey();
             continue;
@@ -132,9 +158,11 @@ int main(int argc, char **argv) {
         t0 = monotonic_ns();
         ret = composite_verify_polcom(&proof, &pi);
         uint64_t verify_ns = monotonic_ns() - t0;
-        const uint64_t proof_bytes = (uint64_t)(proof.size * 1024.0);
-        /* Two outer commitments (u1, u2), ring degree 64, LOGQ=32. */
-        const uint64_t commitment_bytes = (uint64_t)2 * ctx.cpp->kappa1 * 64ull * 4ull;
+        const uint64_t proof_bytes =
+            (uint64_t)greyhound_pack_contextual_serialized_size(&pi, &proof);
+        /* Public commitment u1 (verifier context). u2 lives in the proof. */
+        const uint64_t commitment_bytes =
+            (uint64_t)ctx.cpp->kappa1 * (uint64_t)N * (uint64_t)QBYTES;
         if (ret) {
             last_error = "composite_verify_polcom failed";
             free(s);

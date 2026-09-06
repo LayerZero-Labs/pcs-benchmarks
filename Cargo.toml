@@ -3,6 +3,7 @@ members = ["crates/pcs-bench-core", "crates/pcs-bench-runner", "benchmarks/akita
 exclude = [
   "third_party/rokoko",
   "third_party/labrador",
+  "third_party/greyhound-reference",
   "third_party/akita",
   "third_party/akita-pr466",
   "benchmarks/akita-pr466",

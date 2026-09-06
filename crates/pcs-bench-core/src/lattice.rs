@@ -14,8 +14,9 @@ pub const fn worker_memory_limit_bytes(host_ram_bytes: u64) -> u64 {
     host_ram_bytes.saturating_mul(WORKER_RAM_NUMERATOR) / WORKER_RAM_DENOMINATOR
 }
 
-/// Lattice-eval is exclusively single-threaded: Greyhound and RoKoKo have no
-/// native multithreaded prover.
+/// Lattice-eval is exclusively single-threaded. RoKoKo has no native
+/// multithreaded prover. Greyhound can parallelize extension products; the
+/// worker pins `LATTICE_DOGS_THREADS=1` so the ratio is not a scaling artifact.
 pub const THREADS_LATTICE_EVAL: u32 = 1;
 
 /// Target payload exponents `N log_2 |F|` in the headline table.
@@ -58,8 +59,11 @@ pub const AKITA_PR466_REVISION: &str = "bb68275e90ea280c19ad572b1653724a04656740
 /// GitHub pull request that `AKITA_PR466_REVISION` belongs to.
 pub const AKITA_PR466_URL: &str = "https://github.com/LayerZero-Labs/akita/pull/466";
 
-/// Pinned Greyhound / Labrador revision.
-pub const GREYHOUND_REVISION: &str = "8b6626b26afd4c0162ddd089759d21d3d51bfbdf";
+/// Pinned Greyhound reference revision (`LayerZero-Labs/greyhound-reference`).
+pub const GREYHOUND_REVISION: &str = "687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397";
+
+/// Euclidean SIS policy used by the Greyhound lattice-eval worker.
+pub const GREYHOUND_SIS_POLICY: &str = "l2-quantum128-adps16";
 
 /// Pinned RoKoKo revision.
 pub const ROKOKO_REVISION: &str = "1baa91e901fc37b5fa59e65c26a630cb93849b3e";
@@ -72,7 +76,7 @@ pub enum SchemeId {
     Akita,
     /// Akita at the tip of PR #466 (quotient-free ring relations).
     AkitaPr466,
-    /// Greyhound Pack on Labrador (`lattice-dogs/labrador`).
+    /// Greyhound Pack (`LayerZero-Labs/greyhound-reference`).
     Greyhound,
     /// RoKoKo PCS chain (`lattice-arguments/rokoko`).
     Rokoko,
@@ -133,7 +137,7 @@ impl SchemeId {
     pub const fn source_repo(self) -> &'static str {
         match self {
             Self::Akita | Self::AkitaPr466 => "https://github.com/LayerZero-Labs/akita",
-            Self::Greyhound => "https://github.com/lattice-dogs/labrador",
+            Self::Greyhound => "https://github.com/LayerZero-Labs/greyhound-reference",
             Self::Rokoko => "https://github.com/lattice-arguments/rokoko",
         }
     }
@@ -346,6 +350,10 @@ mod tests {
         assert_eq!(
             SchemeId::AkitaPr466.commit_url(),
             "https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740"
+        );
+        assert_eq!(
+            SchemeId::Greyhound.commit_url(),
+            "https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397"
         );
     }
 }

@@ -3,8 +3,8 @@
 use anyhow::{bail, Context, Result};
 use pcs_bench_core::{
     greyhound_ring_len, parse_rokoko_stdout, HashCase, HashRecord, HashSchemeId, LatticeCase,
-    LatticeRecord, Provenance, RunStatus, SchemeId, WorkerOutput, RESULT_SCHEMA_VERSION,
-    THREADS_LATTICE_EVAL,
+    LatticeRecord, Provenance, RunStatus, SchemeId, WorkerOutput, GREYHOUND_SIS_POLICY,
+    RESULT_SCHEMA_VERSION, THREADS_LATTICE_EVAL,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -331,6 +331,8 @@ fn run_greyhound(case: &LatticeCase, mem_limit: u64) -> Result<WorkerOutput> {
     let output = limited_command(workspace_root()?, mem_limit)
         .arg(binary.as_os_str())
         .args(["--log2-n", &log2_n.to_string()])
+        .env("LATTICE_DOGS_THREADS", "1")
+        .env("LABRADOR_SIS_SECURITY", GREYHOUND_SIS_POLICY)
         .output()
         .context("spawn Greyhound lattice-eval")?;
     parse_worker_json(&output, "Greyhound", mem_limit)
@@ -400,9 +402,6 @@ fn run_rokoko(case: &LatticeCase, mem_limit: u64) -> Result<WorkerOutput> {
 fn greyhound_binary() -> Result<PathBuf> {
     let root = workspace_root()?;
     let binary = root.join("target/greyhound/lattice-eval");
-    if binary.exists() {
-        return Ok(binary);
-    }
     let status = Command::new(root.join("scripts/build-greyhound.sh"))
         .status()
         .context("build Greyhound")?;

@@ -3,7 +3,7 @@
 Reproducible benchmarks for polynomial commitment schemes, starting with
 lattice PCSs
 ([Akita](https://github.com/LayerZero-Labs/akita),
-[Greyhound](https://github.com/lattice-dogs/labrador),
+[Greyhound](https://github.com/LayerZero-Labs/greyhound-reference),
 [RoKoKo](https://github.com/lattice-arguments/rokoko))
 and hash-based PCSs
 ([WHIR](https://github.com/Plonky3/Plonky3) via Plonky3 `p3-whir`,
@@ -19,11 +19,11 @@ The first experiment compares Akita, Greyhound, and RoKoKo on **dense** polynomi
 Payload is \(N \log_2|\mathbb F|\). Akita and Greyhound use \(q=2^{32}-99\).
 RoKoKo uses \(q=2^{50}-2687\) and reports its closest native instance
 (`p-26`, `p-28`, `p-30`). Those native rows carry about \(25/16\) times the
-target number of logical bits. The run is **single-threaded** because neither
-Greyhound nor RoKoKo natively supports multithreading. A cell that exceeds
+target number of logical bits. The run is **single-threaded** because RoKoKo has no native multithreaded
+prover and Greyhound is pinned to one thread (`LATTICE_DOGS_THREADS=1`). A cell that exceeds
 90% of host RAM is recorded as OOM and is not used as a timing.
-If Greyhound rejects an instance because the inner Ajtai commitment is not
-SIS-secure, the cell is `err` with a footnote; that is not OOM.
+If Greyhound rejects an instance because the Ajtai commitments are not
+SIS-secure under `l2-quantum128-adps16`, the cell is `err` with a footnote; that is not OOM.
 
 Headline numbers in this repository were collected on one **Linux x86_64**
 AVX-512 machine (AMD Ryzen 9 9950X, 121~GiB RAM, 90% worker cap ≈ 109~GiB).
@@ -113,8 +113,8 @@ methodology, pins, and the LaTeX table command are in
 [docs/lattice-eval.md](docs/lattice-eval.md).
 
 RoKoKo has no native instance at payload \(2^{27}\) or \(2^{29}\). Greyhound at
-payload \(2^{35}\) (`log₂ N = 30`) fails Labrador's inner-commitment SIS check;
-that row is `err`, not OOM.
+payload \(2^{35}\) (`log₂ N = 30`) may fail the SIS check under
+`l2-quantum128-adps16`; that row is `err`, not OOM.
 
 ## Hash comparison (WHIR and BaseFold)
 

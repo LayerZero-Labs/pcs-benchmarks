@@ -51,9 +51,10 @@ label the comparison directional rather than equivalent.
 The headline experiment is documented in [lattice-eval.md](lattice-eval.md).
 Additional rules that apply only to that table:
 
-1. **Single-threaded.** Set `RAYON_NUM_THREADS=1`. Greyhound and RoKoKo have no
-   native multithreaded prover; Akita is pinned to one thread so the ratio is
-   not a parallel-scaling artifact.
+1. **Single-threaded.** Set `RAYON_NUM_THREADS=1` and Greyhound
+   `LATTICE_DOGS_THREADS=1`. RoKoKo has no native multithreaded prover; Akita
+   and Greyhound are pinned to one thread so the ratio is not a
+   parallel-scaling artifact.
 2. **Process isolation.** One fresh process per sample. Discard warmup
    processes. Median of the measured processes is the table entry, reported
    with the sample standard deviation when \(n \ge 2\).
@@ -70,9 +71,12 @@ Additional rules that apply only to that table:
    `nv`, record unsupported. Do not silently run a nearby size. For the
    lattice table, `nv=22` and `nv=24` are generated with the pinned revision's
    planner rather than omitted.
-7. **Greyhound SIS.** If Labrador rejects an instance because the inner Ajtai
-   commitments are not SIS-secure (`polcom_reduce`), the cell is `err` with a
-   footnote, not `oom`.
+7. **Greyhound reference.** Use `LayerZero-Labs/greyhound-reference` at the
+   pinned commit, not `lattice-dogs/labrador`. Run with
+   `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`. Report contextual proof
+   bytes (public `u1` is verifier context). If the instance still cannot
+   make Ajtai commitments SIS-secure, the cell is `err` with a footnote, not
+   `oom`.
 
 ## Hash PCS comparison
 
