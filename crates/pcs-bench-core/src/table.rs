@@ -563,10 +563,6 @@ pub(crate) fn format_pm(median: &str, spread: Option<String>, latex: bool) -> St
     }
 }
 
-pub(crate) fn format_kib(bytes: u64) -> String {
-    format!("{:.1}", bytes as f64 / 1024.0)
-}
-
 pub(crate) fn format_gib(bytes: u64) -> String {
     let gib = bytes as f64 / 1_073_741_824.0;
     if gib >= 10.0 {
@@ -733,7 +729,7 @@ pub fn render_markdown_timing_table(rows: &[TimingTableRow]) -> String {
 pub fn render_markdown_resource_table(rows: &[ResourceTableRow]) -> String {
     let notes = unique_gap_notes_resources(rows);
     let mut out = String::from(
-        "| Payload | Scheme | Commitment (B) | Proof (KiB) | Total (KiB) | Peak RSS (GiB) | Prep. (s) | State (GiB) |\n",
+        "| Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS (GiB) | Prep. (s) | State (GiB) |\n",
     );
     out.push_str("| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
@@ -749,8 +745,8 @@ pub fn render_markdown_resource_table(rows: &[ResourceTableRow]) -> String {
                 false,
                 mark
             ),
-            resource_cell(row, row.proof_bytes.map(format_kib), false, mark),
-            resource_cell(row, total_kib(row).map(|v| format!("{v:.1}")), false, mark),
+            resource_cell(row, row.proof_bytes.map(|v| v.to_string()), false, mark),
+            resource_cell(row, total_bytes(row).map(|v| v.to_string()), false, mark),
             resource_cell(row, row.peak_rss_bytes.map(format_gib), false, mark),
             resource_cell(row, row.prep_s.map(format_prep), false, mark),
             resource_cell(row, row.state_bytes.map(format_gib), false, mark),
@@ -760,10 +756,8 @@ pub fn render_markdown_resource_table(rows: &[ResourceTableRow]) -> String {
     out
 }
 
-fn total_kib(row: &ResourceTableRow) -> Option<f64> {
-    let commitment = row.commitment_bytes?;
-    let proof = row.proof_bytes?;
-    Some((commitment + proof) as f64 / 1024.0)
+fn total_bytes(row: &ResourceTableRow) -> Option<u64> {
+    Some(row.commitment_bytes? + row.proof_bytes?)
 }
 
 /// LaTeX `tabular` matching `tab:eval-lattice-time`.
@@ -848,7 +842,7 @@ pub fn render_latex_resource_table(rows: &[ResourceTableRow]) -> String {
          \\setlength{\\tabcolsep}{4pt}\n\
          \\begin{tabular}{@{}llrrrrrr@{}}\n\
          \\toprule\n\
-         Payload & Scheme & Commitment (B) & Proof (KiB) & Total (KiB)\n\
+         Payload & Scheme & Commitment (B) & Proof (B) & Total (B)\n\
          & Peak RSS (GiB) & Prep. (s) & State (GiB) \\\\\n\
          \\midrule\n",
     );
@@ -870,8 +864,8 @@ pub fn render_latex_resource_table(rows: &[ResourceTableRow]) -> String {
                     row.payload_log2,
                     scheme_cell(row.scheme, true),
                     resource_cell(row, row.commitment_bytes.map(|v| v.to_string()), true, mark),
-                    resource_cell(row, row.proof_bytes.map(format_kib), true, mark),
-                    resource_cell(row, total_kib(row).map(|v| format!("{v:.1}")), true, mark),
+                    resource_cell(row, row.proof_bytes.map(|v| v.to_string()), true, mark),
+                    resource_cell(row, total_bytes(row).map(|v| v.to_string()), true, mark),
                     resource_cell(row, row.peak_rss_bytes.map(format_gib), true, mark),
                     resource_cell(row, row.prep_s.map(format_prep), true, mark),
                     resource_cell(row, row.state_bytes.map(format_gib), true, mark),
@@ -1033,7 +1027,14 @@ mod tests {
 
         let resources = render_latex_resource_table(&aggregate_resource_rows(&records));
         assert!(resources.contains(r"\label{tab:eval-lattice-resources}"));
+        assert!(resources.contains("Proof (B)"));
+        assert!(resources.contains("Total (B)"));
+        assert!(!resources.contains("KiB"));
         assert!(resources.contains("3072"));
+        assert!(resources.contains("61337"));
+        let resources_md = render_markdown_resource_table(&aggregate_resource_rows(&records));
+        assert!(resources_md.contains("Proof (B)"));
+        assert!(resources_md.contains("| 61337 |"));
     }
 
     #[test]

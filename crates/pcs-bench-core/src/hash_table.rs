@@ -4,7 +4,7 @@ use crate::hash::{hash_matrix, HashSchemeId};
 use crate::lattice::PAYLOAD_LOG2;
 use crate::observation::{looks_like_oom, HashRecord, RunStatus};
 use crate::table::{
-    apply_mark, footnote_index, format_gib, format_kib, format_prep, gap_token, gap_token_pending,
+    apply_mark, footnote_index, format_gib, format_prep, gap_token, gap_token_pending,
     latex_footnotes, markdown_footnotes, median_f64, median_u64, phase_seconds_from, sample_std,
     timing_millis_cell, timing_seconds_cell, unique_gap_notes, GapNote,
 };
@@ -413,10 +413,8 @@ fn log2_n_cell(row: &HashTimingTableRow, latex: bool, mark: Option<u32>) -> Stri
     }
 }
 
-fn total_kib(row: &HashResourceTableRow) -> Option<f64> {
-    let commitment = row.commitment_bytes?;
-    let proof = row.proof_bytes?;
-    Some((commitment + proof) as f64 / 1024.0)
+fn total_bytes(row: &HashResourceTableRow) -> Option<u64> {
+    Some(row.commitment_bytes? + row.proof_bytes?)
 }
 
 fn unique_gap_notes_timing(rows: &[HashTimingTableRow]) -> Vec<GapNote> {
@@ -480,7 +478,7 @@ pub fn render_markdown_hash_timing_table(rows: &[HashTimingTableRow]) -> String 
 pub fn render_markdown_hash_resource_table(rows: &[HashResourceTableRow]) -> String {
     let notes = unique_gap_notes_resources(rows);
     let mut out = String::from(
-        "| Payload | Scheme | Commitment (B) | Proof (KiB) | Total (KiB) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |\n",
+        "| Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |\n",
     );
     out.push_str("| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
@@ -500,14 +498,14 @@ pub fn render_markdown_hash_resource_table(rows: &[HashResourceTableRow]) -> Str
             resource_value_cell(
                 row.measured,
                 row.status,
-                row.proof_bytes.map(format_kib),
+                row.proof_bytes.map(|v| v.to_string()),
                 false,
                 mark
             ),
             resource_value_cell(
                 row.measured,
                 row.status,
-                total_kib(row).map(|v| format!("{v:.1}")),
+                total_bytes(row).map(|v| v.to_string()),
                 false,
                 mark
             ),
@@ -627,7 +625,7 @@ pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String
          \\setlength{\\tabcolsep}{4pt}\n\
          \\begin{tabular}{@{}llrrrrrrr@{}}\n\
          \\toprule\n\
-         Payload & Scheme & Commitment (B) & Proof (KiB) & Total (KiB)\n\
+         Payload & Scheme & Commitment (B) & Proof (B) & Total (B)\n\
          & \\multicolumn{2}{c}{Peak RSS (GiB)} & Prep. (s) & State (GiB) \\\\\n\
          \\cmidrule(lr){6-7}\n\
          & & & & & 1 thread & 8 threads & & \\\\\n\
@@ -660,14 +658,14 @@ pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String
                     resource_value_cell(
                         row.measured,
                         row.status,
-                        row.proof_bytes.map(format_kib),
+                        row.proof_bytes.map(|v| v.to_string()),
                         true,
                         mark
                     ),
                     resource_value_cell(
                         row.measured,
                         row.status,
-                        total_kib(row).map(|v| format!("{v:.1}")),
+                        total_bytes(row).map(|v| v.to_string()),
                         true,
                         mark
                     ),
@@ -734,7 +732,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        aggregate_hash_resource_rows, aggregate_hash_timing_rows, render_latex_hash_timing_table,
+        aggregate_hash_resource_rows, aggregate_hash_timing_rows, render_latex_hash_resource_table,
+        render_latex_hash_timing_table, render_markdown_hash_resource_table,
         render_markdown_hash_timing_table,
     };
     use crate::hash::HashSchemeId;
@@ -826,6 +825,13 @@ mod tests {
             .expect("row");
         assert!(akita.peak_rss_bytes_1.is_some());
         assert!(akita.peak_rss_bytes_8.is_some());
+        let resource_md = render_markdown_hash_resource_table(&resources);
+        assert!(resource_md.contains("Proof (B)"));
+        assert!(!resource_md.contains("KiB"));
+        assert!(resource_md.contains("| 61337 |"));
+        let resource_tex = render_latex_hash_resource_table(&resources);
+        assert!(resource_tex.contains("Proof (B)"));
+        assert!(resource_tex.contains("61337"));
     }
 
     #[test]

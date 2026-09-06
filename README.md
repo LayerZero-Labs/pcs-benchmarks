@@ -62,28 +62,28 @@ Checked-in JSONL, Markdown, and LaTeX live in
 
 **(1)** RoKoKo ships only native sets `p-26`, `p-28`, and `p-30`; no instance matches this payload.
 
-| Payload | Scheme | Commitment (B) | Proof (KiB) | Total (KiB) | Peak RSS (GiB) | Prep. (s) | State (GiB) |
+| Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS (GiB) | Prep. (s) | State (GiB) |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 63.8 | 64.1 | 0.190 | 0.0067 | 0.0017 |
-| 2^{27} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 59.9 | 60.2 | 0.187 | 0.0080 | 0.0020 |
-| 2^{27} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2048 | 57.9 | 59.9 | 0.329 | 0 | 0.0000 |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 65283 | 65626 | 0.190 | 0.0067 | 0.0017 |
+| 2^{27} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 61299 | 61642 | 0.187 | 0.0080 | 0.0020 |
+| 2^{27} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2048 | 59284 | 61332 | 0.329 | 0 | 0.0000 |
 | 2^{27} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) |
-| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 64.5 | 64.8 | 0.632 | 0.0082 | 0.0020 |
-| 2^{29} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 60.3 | 60.7 | 0.633 | 0.0081 | 0.0020 |
-| 2^{29} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2304 | 57.7 | 60.0 | 1.08 | 0 | 0.0000 |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66052 | 66395 | 0.632 | 0.0082 | 0.0020 |
+| 2^{29} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 61763 | 62106 | 0.633 | 0.0081 | 0.0020 |
+| 2^{29} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2304 | 59089 | 61393 | 1.08 | 0 | 0.0000 |
 | 2^{29} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) |
-| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 65.3 | 65.7 | 1.93 | 0.0186 | 0.0049 |
-| 2^{31} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 61.6 | 61.9 | 1.93 | 0.0190 | 0.0049 |
-| 2^{31} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2304 | 63.1 | 65.3 | 4.66 | 0 | 0.0000 |
-| 2^{31} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | 774 | 112.1 | 112.9 | 4.07 | 0.335 | 1.59 |
-| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66.5 | 66.9 | 6.38 | 0.0406 | 0.0107 |
-| 2^{33} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 63.0 | 63.3 | 6.36 | 0.0376 | 0.0098 |
-| 2^{33} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2304 | 63.0 | 65.3 | 20.7 | 0 | 0.0000 |
-| 2^{33} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | 773 | 112.2 | 113.0 | 10.9 | 0.698 | 3.19 |
-| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 67.6 | 68.0 | 24.7 | 0.0812 | 0.0215 |
-| 2^{35} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 63.1 | 63.4 | 24.7 | 0.0743 | 0.0195 |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66884 | 67227 | 1.93 | 0.0186 | 0.0049 |
+| 2^{31} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 63081 | 63424 | 1.93 | 0.0190 | 0.0049 |
+| 2^{31} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2304 | 64600 | 66904 | 4.66 | 0 | 0.0000 |
+| 2^{31} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | 774 | 114830 | 115604 | 4.07 | 0.335 | 1.59 |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 68143 | 68486 | 6.38 | 0.0406 | 0.0107 |
+| 2^{33} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 64487 | 64830 | 6.36 | 0.0376 | 0.0098 |
+| 2^{33} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2304 | 64525 | 66829 | 20.7 | 0 | 0.0000 |
+| 2^{33} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | 773 | 114910 | 115683 | 10.9 | 0.698 | 3.19 |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 69264 | 69607 | 24.7 | 0.0812 | 0.0215 |
+| 2^{35} | [Akita (#466)](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) | 343 | 64605 | 64948 | 24.7 | 0.0743 | 0.0195 |
 | 2^{35} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | OOM | OOM | OOM | OOM | OOM | OOM |
-| 2^{35} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | 777 | 112.4 | 113.1 | 35.6 | 1.65 | 7.44 |
+| 2^{35} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | 777 | 115056 | 115833 | 35.6 | 1.65 | 7.44 |
 
 **(1)** RoKoKo ships only native sets `p-26`, `p-28`, and `p-30`; no instance matches this payload.
 
@@ -177,23 +177,23 @@ target still holds on KoalaBear. Capacity bound and Johnson bound need more
 than 30 bits of grinding, which the field cannot support. The larger proof is
 the unique-decoding query schedule.
 
-| Payload | Scheme | Commitment (B) | Proof (KiB) | Total (KiB) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |
+| Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 63.8 | 64.1 | 0.190 | 0.197 | 0.0072 | 0.0017 |
-| 2^{27} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 89.1 | 89.2 | 0.179 | 0.178 | 0.0013 | 0.0000 |
-| 2^{27} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 883.9 | 884.0 | 0.362 | 0.361 | 0.0000 | 0.0000 |
-| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 64.5 | 64.8 | 0.632 | 0.632 | 0.0079 | 0.0020 |
-| 2^{29} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 100.2 | 100.3 | 0.703 | 0.702 | 0.0057 | 0.0000 |
-| 2^{29} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 889.4 | 889.4 | 0.502 | 0.502 | 0.0000 | 0.0000 |
-| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 65.3 | 65.7 | 1.93 | 1.94 | 0.0197 | 0.0049 |
-| 2^{31} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 110.4 | 110.5 | 2.80 | 2.80 | 0.0269 | 0.0000 |
-| 2^{31} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 911.1 | 911.2 | 1.75 | 1.75 | 0.0000 | 0.0000 |
-| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66.5 | 66.9 | 6.38 | 6.39 | 0.0420 | 0.0107 |
-| 2^{33} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 575.3 | 575.3 | 9.60 | 9.60 | 0.0730 | 0.0000 |
-| 2^{33} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 998.1 | 998.2 | 7.00 | 7.00 | 0.0000 | 0.0000 |
-| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 67.6 | 68.0 | 24.7 | 24.7 | 0.0834 | 0.0215 |
-| 2^{35} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 676.6 | 676.6 | 17.1 | 17.1 | 0.0569 | 0.0000 |
-| 2^{35} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 1346.1 | 1346.2 | 28.0 | 28.0 | 0.0000 | 0.0000 |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 65283 | 65626 | 0.190 | 0.197 | 0.0072 | 0.0017 |
+| 2^{27} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 91274 | 91307 | 0.179 | 0.178 | 0.0013 | 0.0000 |
+| 2^{27} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 905160 | 905192 | 0.362 | 0.361 | 0.0000 | 0.0000 |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66052 | 66395 | 0.632 | 0.632 | 0.0079 | 0.0020 |
+| 2^{29} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 102655 | 102688 | 0.703 | 0.702 | 0.0057 | 0.0000 |
+| 2^{29} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 910728 | 910760 | 0.502 | 0.502 | 0.0000 | 0.0000 |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 66884 | 67227 | 1.93 | 1.94 | 0.0197 | 0.0049 |
+| 2^{31} | [WHIR](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 113068 | 113101 | 2.80 | 2.80 | 0.0269 | 0.0000 |
+| 2^{31} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 933000 | 933032 | 1.75 | 1.75 | 0.0000 | 0.0000 |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 68143 | 68486 | 6.38 | 6.39 | 0.0420 | 0.0107 |
+| 2^{33} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 589081 | 589114 | 9.60 | 9.60 | 0.0730 | 0.0000 |
+| 2^{33} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 1022088 | 1022120 | 7.00 | 7.00 | 0.0000 | 0.0000 |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) | 343 | 69264 | 69607 | 24.7 | 24.7 | 0.0834 | 0.0215 |
+| 2^{35} | [WHIR(1)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 33 | 692790 | 692823 | 17.1 | 17.1 | 0.0569 | 0.0000 |
+| 2^{35} | [BaseFold](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 1378440 | 1378472 | 28.0 | 28.0 | 0.0000 | 0.0000 |
 
 **(1)** WHIR uses unique decoding at this size so the 128-bit transcript-error
 target still holds on KoalaBear. Capacity bound and Johnson bound need more
