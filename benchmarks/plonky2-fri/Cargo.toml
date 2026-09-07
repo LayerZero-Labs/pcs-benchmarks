@@ -6,6 +6,8 @@ name = "pcs-bench-plonky2-fri"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/LayerZero-Labs/pcs-benchmarks"
 publish = false
 description = "Plonky2 univariate FRI adapter for the hash PCS comparison"
 

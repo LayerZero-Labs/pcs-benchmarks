@@ -324,3 +324,9 @@ under `results/<timestamp>/` (gitignored except `results/lattice-x86_64/` and
 5. Document field, security, threading, and any payload mismatch.
 
 See [methodology](docs/methodology.md) and [contributing](CONTRIBUTING.md).
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Third-party
+components retain their original licenses; see
+[third-party notices](THIRD_PARTY_NOTICES.md).

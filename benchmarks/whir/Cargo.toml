@@ -6,6 +6,8 @@ name = "pcs-bench-whir"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/LayerZero-Labs/pcs-benchmarks"
 publish = false
 description = "Plonky3 p3-whir adapter for the hash PCS comparison"
 

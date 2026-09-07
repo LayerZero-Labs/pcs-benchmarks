@@ -13,6 +13,8 @@ import argparse
 import sys
 from pathlib import Path
 
+MODIFICATION_NOTICE = "// Modified for PCS Benchmarks to report resource measurements.\n"
+
 COMMIT_NEEDLE = """\
     let commit_duration = start.elapsed().as_nanos();
     println!("TOTAL Commit time: {:?} ns", commit_duration);
@@ -107,6 +109,8 @@ RSS_PATCH = """\
 
 
 def patch(text: str) -> str:
+    if not text.startswith(MODIFICATION_NOTICE):
+        text = MODIFICATION_NOTICE + text
     if "TOTAL Commitment size:" in text and "TOTAL CRS size:" in text and "Peak RSS:" in text:
         return text
     for needle, replacement, label in (
