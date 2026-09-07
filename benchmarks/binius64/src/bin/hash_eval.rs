@@ -86,18 +86,26 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
     let t0 = Instant::now();
     let codeword = encode_interleaved(&fri_params, 0, &ntt, witness.as_view(), &GlobalAllocator);
     let mut prover_transcript = ProverTranscript::new(StdChallenger::default());
-    let mut prover_channel =
-        ProverMerkleTranscriptChannel::<_, StdChallenger, _, StdHashSuite>::with_merkle_prover(
-            &mut prover_transcript,
-            merkle_prover,
-        );
-    let codeword_commitment = prover_channel.send_merkle_commitment(codeword.as_view(), leaf_width);
+    let codeword_commitment = {
+        let mut prover_channel =
+            ProverMerkleTranscriptChannel::<_, StdChallenger, _, StdHashSuite>::with_merkle_prover(
+                &mut prover_transcript,
+                merkle_prover,
+            );
+        prover_channel.send_merkle_commitment(codeword.as_view(), leaf_width)
+    };
     let commit_ns = elapsed_ns(t0);
+    let commitment_bytes = prover_transcript.clone().finalize().len() as u64;
 
     let eval_point_eq = eq_ind_partial_eval::<P>(&evaluation_point);
     let eval_claim = inner_product_buffers(&witness, &eval_point_eq);
 
     let t0 = Instant::now();
+    let mut prover_channel =
+        ProverMerkleTranscriptChannel::<_, StdChallenger, _, StdHashSuite>::with_merkle_prover(
+            &mut prover_transcript,
+            BinaryMerkleTreeProver::<F, StdHashSuite>::new(),
+        );
     let fri_folder =
         FRIFoldProver::new_batch(&fri_params, &ntt, vec![(codeword, codeword_commitment)]);
     prove_mlecheck_basefold(
@@ -112,7 +120,8 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
     );
     let open_ns = elapsed_ns(t0);
     prover_channel.into_transcript();
-    let proof_bytes = prover_transcript.clone().finalize().len() as u64;
+    let transcript_bytes = prover_transcript.clone().finalize().len() as u64;
+    let proof_bytes = transcript_bytes.saturating_sub(commitment_bytes);
     let mut verifier_transcript = prover_transcript.into_verifier();
     let mut verifier_channel =
         VerifierMerkleTranscriptChannel::<_, StdChallenger, _, StdHashSuite>::new(
@@ -149,7 +158,7 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof_bytes),
-        commitment_bytes: None,
+        commitment_bytes: Some(commitment_bytes),
         state_bytes: Some(0),
         peak_rss_bytes: peak_rss_bytes(),
     })

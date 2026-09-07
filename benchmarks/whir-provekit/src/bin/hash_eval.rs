@@ -18,7 +18,7 @@ use whir::parameters::ProtocolParameters;
 use whir::protocols::params::DecodingRegime;
 use whir::protocols::whir::Config;
 use whir::transcript::codecs::Empty;
-use whir::transcript::{DomainSeparator, ProverState, VerifierState};
+use whir::transcript::{DomainSeparator, NargSerialize, ProverState, VerifierState};
 
 type M = Basefield<Field64_3>;
 
@@ -85,6 +85,14 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let t0 = Instant::now();
     let witness = params.commit(&mut prover_state, &[&vector_buffer]);
     let commit_ns = elapsed_ns(t0);
+    let mut root_narg = Vec::new();
+    hash::Hash::default().serialize_into_narg(&mut root_narg);
+    let mut ood_narg = Vec::new();
+    evaluation.serialize_into_narg(&mut ood_narg);
+    let commitment_bytes = (root_narg.len()
+        + params.initial_out_domain_samples
+            * params.initial_committer.num_vectors()
+            * ood_narg.len()) as u64;
 
     let t0 = Instant::now();
     let _ = params.prove(
@@ -96,7 +104,8 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     );
     let open_ns = elapsed_ns(t0);
     let proof = prover_state.proof();
-    let proof_bytes = (proof.narg_string.len() + proof.hints.len()) as u64;
+    let transcript_and_hints = (proof.narg_string.len() + proof.hints.len()) as u64;
+    let proof_bytes = transcript_and_hints.saturating_sub(commitment_bytes);
 
     let t0 = Instant::now();
     let mut verifier_state = VerifierState::new_std(&ds, &proof);
@@ -131,7 +140,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof_bytes),
-        commitment_bytes: None,
+        commitment_bytes: Some(commitment_bytes),
         state_bytes: Some(0),
         peak_rss_bytes: peak_rss_bytes(),
     })

@@ -45,15 +45,16 @@ not \(\lambda\)-comparable.
   meet 128 bits within the grind limit, it tries the Johnson bound, then
   unique decoding, and then rate \(1/4\).
 - **Binius64 BaseFold:** \(\mathbb F_{2^{128}}\), rate \(1/2\), SHA-256,
-  unique decoding at 100 bits (not the 96-bit product default). The worker
-  reports the Fiat–Shamir transcript as proof bytes and does not export a
-  standalone commitment size.
+  unique decoding at 100 bits (not the 96-bit product default). The
+  commitment is the SHA-256 Merkle root (32 bytes) written at commit time;
+  proof bytes are the rest of the Fiat–Shamir transcript.
 - **Flock Ligerito:** native Fast profile (`mXX_fast.toml`), SHA-256,
   Johnson+OOD. `m` is the bit-variable count; packed length is \(2^{m-7}\).
 - **WHIR (ProveKit):** `worldfnd/whir` Goldilocks3 (`Basefield<Field64_3>`),
   Johnson bound, rate \(1/4\), fold 8, SHA-256, 133-bit internal target.
-  Proof bytes are the transcript (`narg_string` plus hints); a standalone
-  commitment size is not exported.
+  The commit-phase narg is a SHA-256 Merkle root (32 bytes) plus one
+  Goldilocks3 OOD evaluation (24 bytes). Proof bytes are the remaining
+  narg string plus Merkle-path hints.
 - **BaseFold (SP1):** SLOP stacked BaseFold, FRI `log_blowup=1`, 112 queries,
   16 bits of grinding (conjectured soundness \(1\cdot 112+16=128\)),
   stacking height 20.
