@@ -47,8 +47,7 @@ substituted.
 
 | Implementation | Source | Revision |
 | --- | --- | --- |
-| Akita (`main` pin) | https://github.com/LayerZero-Labs/akita | [`f9f7de87`](https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53) |
-| Akita (PR #466) | https://github.com/LayerZero-Labs/akita/pull/466 | [`bb68275e`](https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740) |
+| Akita (`main` pin) | https://github.com/LayerZero-Labs/akita | [`d1b224d8`](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) |
 | Greyhound | https://github.com/LayerZero-Labs/greyhound-reference | [`687a6f8b`](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) |
 | RoKoKo | https://github.com/lattice-arguments/rokoko | [`1baa91e9`](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) |
 
@@ -90,7 +89,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
 # One scheme, one payload, one measured sample (must verify, status ok)
 ./scripts/lattice-eval.sh run --scheme akita --payload 31 --runs 1 --warmups 0
 
-# Full 20-cell table (hours, 90% of host RAM cap, AVX-512 Linux x86_64)
+# Full 15-cell table (hours, 90% of host RAM cap, AVX-512 Linux x86_64)
 ./scripts/lattice-eval.sh run --out results/lattice-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL in that directory

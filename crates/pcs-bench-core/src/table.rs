@@ -78,6 +78,8 @@ pub enum GapNote {
     GreyhoundSis,
     /// WHIR used unique decoding because capacity/Johnson bounds exceed KoalaBear grind.
     WhirUniqueDecoding,
+    /// Plonky3 univariate FRI/STIR packed a degree-\(2^n\) claim into a shorter matrix.
+    PackedUnivariate,
     /// Some other recorded unsupported reason.
     Custom(String),
 }
@@ -319,7 +321,7 @@ fn gap_note(scheme: SchemeId, status: RunStatus, samples: &[&LatticeRecord]) -> 
         return None;
     }
     match scheme {
-        SchemeId::Akita | SchemeId::AkitaPr466 => Some(GapNote::AkitaCatalog),
+        SchemeId::Akita => Some(GapNote::AkitaCatalog),
         SchemeId::Rokoko => Some(GapNote::RokokoNative),
         SchemeId::Greyhound => Some(
             samples
@@ -349,6 +351,9 @@ impl GapNote {
             Self::WhirUniqueDecoding => {
                 "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
             }
+            Self::PackedUnivariate => {
+                "KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.".into()
+            }
             Self::Custom(detail) => detail.clone(),
         }
     }
@@ -366,6 +371,9 @@ impl GapNote {
             }
             Self::WhirUniqueDecoding => {
                 "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
+            }
+            Self::PackedUnivariate => {
+                "KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.".into()
             }
             Self::Custom(detail) => escape_tex_footnote(detail),
         }
@@ -1014,7 +1022,7 @@ mod tests {
         ];
         let rows = aggregate_timing_rows(&records);
         let latex = render_latex_timing_table(&rows);
-        assert!(latex.contains(r"\href{https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53}{Akita}"));
+        assert!(latex.contains(r"\href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita}"));
         assert!(latex.contains("0.159"));
         assert!(latex.contains("2.07"));
         assert!(latex.contains(r"\evalunsupported"));
@@ -1060,14 +1068,14 @@ mod tests {
     #[test]
     fn unmeasured_supported_cells_render_as_pending() {
         let rows = aggregate_timing_rows(&[]);
-        let pr466 = rows
+        let akita = rows
             .iter()
-            .find(|row| row.payload_log2 == 31 && row.scheme == SchemeId::AkitaPr466)
+            .find(|row| row.payload_log2 == 31 && row.scheme == SchemeId::Akita)
             .expect("row");
-        assert!(!pr466.measured);
-        let markdown = render_markdown_timing_table(std::slice::from_ref(pr466));
+        assert!(!akita.measured);
+        let markdown = render_markdown_timing_table(std::slice::from_ref(akita));
         assert!(markdown.contains("pending"));
-        let latex = render_latex_timing_table(std::slice::from_ref(pr466));
+        let latex = render_latex_timing_table(std::slice::from_ref(akita));
         assert!(latex.contains(r"\evalpending"));
     }
 

@@ -5,10 +5,13 @@ exclude = [
   "third_party/labrador",
   "third_party/greyhound-reference",
   "third_party/akita",
-  "third_party/akita-pr466",
-  "benchmarks/akita-pr466",
   "benchmarks/whir",
   "benchmarks/basefold",
+  "benchmarks/plonky2-fri",
+  "benchmarks/plonky3-uni",
+  "benchmarks/binius64",
+  "benchmarks/flock-ligerito",
+  "benchmarks/whir-provekit",
 ]
 resolver = "2"
 

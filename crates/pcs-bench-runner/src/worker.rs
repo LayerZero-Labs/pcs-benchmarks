@@ -41,7 +41,6 @@ pub(crate) fn run_case(
     let mem_limit = provenance.resolved_memory_limit_bytes().unwrap_or(0);
     let output = match case.scheme {
         SchemeId::Akita => run_akita(case, "pcs-bench-akita", mem_limit),
-        SchemeId::AkitaPr466 => run_akita_pr466(case, mem_limit),
         SchemeId::Greyhound => run_greyhound(case, mem_limit),
         SchemeId::Rokoko => run_rokoko(case, mem_limit),
     };
@@ -83,11 +82,7 @@ pub(crate) fn run_hash_case(
     provenance.threads = case.threads;
 
     let mem_limit = provenance.resolved_memory_limit_bytes().unwrap_or(0);
-    let output = match case.scheme {
-        HashSchemeId::Akita => run_akita_hash(case, mem_limit),
-        HashSchemeId::Whir => run_whir(case, mem_limit),
-        HashSchemeId::Basefold => run_basefold(case, mem_limit),
-    };
+    let output = spawn_hash_worker(case, mem_limit);
 
     let worker = match output {
         Ok(worker) => worker,
@@ -200,6 +195,84 @@ fn run_akita(case: &LatticeCase, package: &str, mem_limit: u64) -> Result<Worker
     parse_worker_json(&output, "Akita", mem_limit)
 }
 
+fn spawn_hash_worker(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
+    match case.scheme {
+        HashSchemeId::Akita => run_akita_hash(case, mem_limit),
+        HashSchemeId::Whir => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/whir",
+            "hash-eval",
+            &[],
+            &[],
+            "WHIR (Plonky3)",
+        ),
+        HashSchemeId::Basefold => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/basefold",
+            "hash-eval",
+            &[],
+            &[],
+            "BaseFold (SP1)",
+        ),
+        HashSchemeId::Plonky2Fri => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/plonky2-fri",
+            "hash-eval",
+            &[],
+            &[("RUSTC_BOOTSTRAP", "1")],
+            "Plonky2 FRI",
+        ),
+        HashSchemeId::Plonky3Fri => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/plonky3-uni",
+            "hash-eval-fri",
+            &[],
+            &[],
+            "Plonky3 FRI",
+        ),
+        HashSchemeId::Plonky3Stir => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/plonky3-uni",
+            "hash-eval-stir",
+            &[],
+            &[],
+            "Plonky3 STIR",
+        ),
+        HashSchemeId::Binius64 => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/binius64",
+            "hash-eval",
+            &[],
+            &[],
+            "Binius64 BaseFold",
+        ),
+        HashSchemeId::FlockLigerito => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/flock-ligerito",
+            "hash-eval",
+            &[],
+            &[],
+            "Flock Ligerito",
+        ),
+        HashSchemeId::WhirProvekit => run_isolated_hash(
+            case,
+            mem_limit,
+            "benchmarks/whir-provekit",
+            "hash-eval",
+            &[],
+            &[],
+            "WHIR (ProveKit)",
+        ),
+    }
+}
+
 fn run_akita_hash(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
     let threads = case.threads.to_string();
     let mut command = limited_command(workspace_root()?, mem_limit);
@@ -227,101 +300,57 @@ fn run_akita_hash(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
     parse_worker_json(&output, "Akita", mem_limit)
 }
 
-fn run_whir(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
-    let manifest = workspace_root()?.join("benchmarks/whir/Cargo.toml");
+fn run_isolated_hash(
+    case: &HashCase,
+    mem_limit: u64,
+    crate_dir: &str,
+    bin: &str,
+    extra_args: &[&str],
+    extra_env: &[(&str, &str)],
+    label: &str,
+) -> Result<WorkerOutput> {
+    let root = workspace_root()?;
+    let manifest = root.join(crate_dir).join("Cargo.toml");
     if !manifest.exists() {
         bail!(
-            "WHIR adapter missing at {}. Restore benchmarks/whir",
+            "{label} adapter missing at {}. Restore {crate_dir}",
             manifest.display()
         );
     }
-    let target_dir = workspace_root()?.join("target/whir");
+    let target_dir = root
+        .join("target")
+        .join(crate_dir.trim_start_matches("benchmarks/"));
     let threads = case.threads.to_string();
-    let output = limited_command(workspace_root()?, mem_limit)
-        .args([
-            "cargo",
-            "run",
-            "--release",
-            "--manifest-path",
-            manifest.to_str().context("whir manifest path")?,
-            "--bin",
-            "hash-eval",
-            "--",
-            "--log2-n",
-            &case.log2_n.to_string(),
-            "--threads",
-            &threads,
-        ])
+    let log2_n = case.log2_n.to_string();
+    let mut args = vec![
+        "run",
+        "--release",
+        "--manifest-path",
+        manifest
+            .to_str()
+            .with_context(|| format!("{label} manifest path"))?,
+        "--bin",
+        bin,
+        "--",
+        "--log2-n",
+        &log2_n,
+        "--threads",
+        &threads,
+    ];
+    args.extend(extra_args.iter().copied());
+    let mut command = limited_command(root, mem_limit);
+    command
+        .args(["cargo"])
+        .args(&args)
         .env("CARGO_TARGET_DIR", &target_dir)
-        .env("RAYON_NUM_THREADS", &threads)
-        .output()
-        .context("spawn WHIR hash-eval")?;
-    parse_worker_json(&output, "WHIR", mem_limit)
-}
-
-fn run_basefold(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
-    let manifest = workspace_root()?.join("benchmarks/basefold/Cargo.toml");
-    if !manifest.exists() {
-        bail!(
-            "BaseFold adapter missing at {}. Restore benchmarks/basefold",
-            manifest.display()
-        );
+        .env("RAYON_NUM_THREADS", &threads);
+    for (key, value) in extra_env {
+        command.env(key, value);
     }
-    let target_dir = workspace_root()?.join("target/basefold");
-    let threads = case.threads.to_string();
-    let output = limited_command(workspace_root()?, mem_limit)
-        .args([
-            "cargo",
-            "run",
-            "--release",
-            "--manifest-path",
-            manifest.to_str().context("basefold manifest path")?,
-            "--bin",
-            "hash-eval",
-            "--",
-            "--log2-n",
-            &case.log2_n.to_string(),
-            "--threads",
-            &threads,
-        ])
-        .env("CARGO_TARGET_DIR", &target_dir)
-        .env("RAYON_NUM_THREADS", &threads)
+    let output = command
         .output()
-        .context("spawn BaseFold hash-eval")?;
-    parse_worker_json(&output, "BaseFold", mem_limit)
-}
-
-fn run_akita_pr466(case: &LatticeCase, mem_limit: u64) -> Result<WorkerOutput> {
-    let log2_n = case.log2_n.context("akita-pr466 cell is supported")?;
-    let manifest = workspace_root()?.join("benchmarks/akita-pr466/Cargo.toml");
-    if !manifest.exists() {
-        bail!(
-            "Akita PR #466 adapter missing at {}. Restore benchmarks/akita-pr466",
-            manifest.display()
-        );
-    }
-    let target_dir = workspace_root()?.join("target/akita-pr466");
-    let output = limited_command(workspace_root()?, mem_limit)
-        .args([
-            "cargo",
-            "run",
-            "--release",
-            "--manifest-path",
-            manifest.to_str().context("akita-pr466 manifest path")?,
-            "--bin",
-            "lattice-eval",
-            "--",
-            "--log2-n",
-            &log2_n.to_string(),
-            "--payload-log2",
-            &case.payload_log2.to_string(),
-        ])
-        .env("CARGO_TARGET_DIR", &target_dir)
-        .env("RAYON_NUM_THREADS", "1")
-        .env("AKITA_PARALLEL", "0")
-        .output()
-        .context("spawn Akita PR #466 lattice-eval")?;
-    parse_worker_json(&output, "Akita PR #466", mem_limit)
+        .with_context(|| format!("spawn {label} hash-eval"))?;
+    parse_worker_json(&output, label, mem_limit)
 }
 
 fn run_greyhound(case: &LatticeCase, mem_limit: u64) -> Result<WorkerOutput> {
@@ -426,14 +455,26 @@ fn limited_command(dir: impl AsRef<Path>, mem_limit: u64) -> Command {
 }
 
 fn parse_worker_json(output: &Output, label: &str, mem_limit: u64) -> Result<WorkerOutput> {
-    classify_status(output, label, mem_limit)?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json_line = stdout
         .lines()
         .rev()
-        .find(|line| line.trim_start().starts_with('{'))
-        .with_context(|| format!("{label} produced no JSON object on stdout"))?;
-    serde_json::from_str(json_line).with_context(|| format!("parse {label} worker JSON"))
+        .find(|line| line.trim_start().starts_with('{'));
+    match classify_status(output, label, mem_limit) {
+        Ok(()) => {
+            let json_line =
+                json_line.with_context(|| format!("{label} produced no JSON object on stdout"))?;
+            serde_json::from_str(json_line).with_context(|| format!("parse {label} worker JSON"))
+        }
+        Err(error) => {
+            if let Some(json_line) = json_line {
+                if let Ok(worker) = serde_json::from_str::<WorkerOutput>(json_line) {
+                    return Ok(worker);
+                }
+            }
+            Err(error)
+        }
+    }
 }
 
 fn classify_status(output: &Output, label: &str, mem_limit: u64) -> Result<()> {

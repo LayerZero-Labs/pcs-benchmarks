@@ -1,4 +1,4 @@
-harness_revision=uncommitted
+harness_revision=07e4a9668622704c809990ace3f5bbfb91ad9667
 rustc_version=rustc 1.95.0 (59807616e 2026-04-14)
 target=Linux x86_64
 cpu_model=AMD Ryzen 9 9950X 16-Core Processor
@@ -9,7 +9,15 @@ isa_notes=AVX-512F activated (-C target-cpu=native)
 logical_cpus=32
 memory_bytes=130142986240
 memory_limit_bytes=117128687616
-akita=https://github.com/LayerZero-Labs/akita/commit/f9f7de87bcf230436193dbf6ba5a3bdc077b8f53
+akita=https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b
 whir=https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730
 basefold=https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86
-security_bits=128
+plonky2_fri=https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa
+plonky3_fri_stir=https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36
+binius64=https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176
+flock=https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430
+whir_provekit=https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9
+whir_provekit_whir=https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d
+security_bits_128=128
+security_bits_100=100
+provekit_security_bits=133

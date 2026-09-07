@@ -1,0 +1,23 @@
+# Isolated ProveKit WHIR worker (worldfnd/whir Goldilocks3).
+[workspace]
+
+[package]
+name = "pcs-bench-whir-provekit"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+publish = false
+description = "ProveKit / worldfnd whir adapter for the hash PCS comparison"
+
+[[bin]]
+name = "hash-eval"
+path = "src/bin/hash_eval.rs"
+
+[dependencies]
+blake3 = { version = "=1.5.5", features = ["digest", "traits-preview"] }
+digest = "=0.10.7"
+pcs-bench-core = { path = "../../crates/pcs-bench-core" }
+rand = { version = "0.8", features = ["std", "std_rng"] }
+rayon = "1.10"
+serde_json = "1.0"
+whir = { git = "https://github.com/worldfnd/whir", rev = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d", default-features = false, features = ["parallel"] }

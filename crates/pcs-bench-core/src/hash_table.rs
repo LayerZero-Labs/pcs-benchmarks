@@ -1,6 +1,6 @@
 //! Render the hash timing and resource comparison as Markdown or LaTeX.
 
-use crate::hash::{hash_matrix, HashSchemeId};
+use crate::hash::{hash_case, hash_matrix, plonky3_is_packed, HashSchemeId};
 use crate::lattice::PAYLOAD_LOG2;
 use crate::observation::{looks_like_oom, HashRecord, RunStatus};
 use crate::table::{
@@ -103,7 +103,7 @@ pub fn aggregate_hash_timing_rows(records: &[HashRecord]) -> Vec<HashTimingTable
 /// Aggregate measured hash records into the communication / memory table.
 #[must_use]
 pub fn aggregate_hash_resource_rows(records: &[HashRecord]) -> Vec<HashResourceTableRow> {
-    let mut rows = Vec::with_capacity(15);
+    let mut rows = Vec::with_capacity(45);
     for payload in PAYLOAD_LOG2 {
         for scheme in HashSchemeId::all() {
             let samples_1 = measured_samples(records, payload, scheme, 1);
@@ -158,7 +158,7 @@ fn hash_timing_row(
             verify_s_std: None,
             n_ok: 0,
             measured: false,
-            gap_note: None,
+            gap_note: planned_gap_note(scheme, planned_log2_n.unwrap_or(0)),
         };
     }
 
@@ -199,7 +199,8 @@ fn hash_timing_row(
             })),
             n_ok: ok.len(),
             measured: true,
-            gap_note: whir_soundness_note(&ok),
+            gap_note: whir_soundness_note(&ok)
+                .or_else(|| planned_gap_note(scheme, ok[0].log2_n.or(planned_log2_n).unwrap_or(0))),
         };
     }
 
@@ -221,7 +222,8 @@ fn hash_timing_row(
         verify_s_std: None,
         n_ok: 0,
         measured: true,
-        gap_note: hash_gap_note(status, samples),
+        gap_note: hash_gap_note(status, samples)
+            .or_else(|| planned_gap_note(scheme, planned_log2_n.unwrap_or(0))),
     }
 }
 
@@ -284,7 +286,9 @@ fn hash_resource_row(
             } else {
                 aggregate_gap_status(samples_8)
             },
-            gap_note: hash_gap_note(status, samples_1).or_else(|| whir_soundness_note(samples_1)),
+            gap_note: hash_gap_note(status, samples_1)
+                .or_else(|| whir_soundness_note(samples_1))
+                .or_else(|| planned_gap_note(scheme, planned_log2_n(scheme, payload_log2))),
         };
     }
 
@@ -310,7 +314,8 @@ fn hash_resource_row(
         } else {
             RunStatus::Ok
         },
-        gap_note: whir_soundness_note(&ok_comm),
+        gap_note: whir_soundness_note(&ok_comm)
+            .or_else(|| planned_gap_note(scheme, planned_log2_n(scheme, payload_log2))),
     }
 }
 
@@ -338,6 +343,17 @@ fn hash_gap_note(status: RunStatus, samples: &[&HashRecord]) -> Option<GapNote> 
         .find_map(|record| record.status_detail.clone())
         .filter(|detail| !detail.is_empty())
         .map(GapNote::Custom)
+}
+
+fn planned_log2_n(scheme: HashSchemeId, payload_log2: u32) -> u32 {
+    hash_case(payload_log2, scheme, 1).map_or(0, |case| case.log2_n)
+}
+
+fn planned_gap_note(scheme: HashSchemeId, log2_n: u32) -> Option<GapNote> {
+    matches!(scheme, HashSchemeId::Plonky3Fri | HashSchemeId::Plonky3Stir)
+        .then(|| plonky3_is_packed(log2_n))
+        .filter(|packed| *packed)
+        .map(|_| GapNote::PackedUnivariate)
 }
 
 fn whir_soundness_note(samples: &[&HashRecord]) -> Option<GapNote> {
@@ -398,7 +414,7 @@ fn resource_value_cell(
         return gap_token_pending(latex);
     }
     match status {
-        RunStatus::Ok => value.unwrap_or_else(|| gap_token_pending(latex)),
+        RunStatus::Ok => value.unwrap_or_else(|| gap_token(RunStatus::Unsupported, latex)),
         other => apply_mark(&gap_token(other, latex), mark, latex),
     }
 }
@@ -551,8 +567,8 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
         "\\begin{table}[H]\n\
          \\centering\n\
          \\caption[Timing comparison with hash-based PCSs]{Commitment, opening, and\n\
-         verification time for Akita, WHIR, and BaseFold on matched dense multilinear\n\
-         openings.  A dash denotes an unsupported parallel mode.\n\
+         verification time for the hash-based PCS roster on matched dense payloads.\n\
+         A dash denotes an unsupported parallel mode.\n\
          Timing cells are the median of fresh processes after warmup, shown as\n\
          median $\\pm$ sample standard deviation when $n\\ge 2$.\n\
          Scheme names link to the exact git commit that was measured.}\n\
@@ -860,7 +876,7 @@ mod tests {
         assert!(latex.contains(r"$^{(1)}$"));
         assert!(latex.contains("unique decoding"));
         let markdown = render_markdown_hash_timing_table(std::slice::from_ref(whir));
-        assert!(markdown.contains("[WHIR(1)]("));
+        assert!(markdown.contains("[WHIR (Plonky3)(1)]("));
         let resources = aggregate_hash_resource_rows(std::slice::from_ref(&one));
         let resource = resources
             .iter()
@@ -872,7 +888,7 @@ mod tests {
     #[test]
     fn hash_matrix_unmeasured_cells_are_pending() {
         let rows = aggregate_hash_timing_rows(&[]);
-        assert_eq!(rows.len(), 30);
+        assert_eq!(rows.len(), 90);
         let whir = rows
             .iter()
             .find(|row| {
@@ -882,5 +898,24 @@ mod tests {
         assert!(!whir.measured);
         let markdown = render_markdown_hash_timing_table(std::slice::from_ref(whir));
         assert!(markdown.contains("pending"));
+    }
+
+    #[test]
+    fn packed_plonky3_univariate_rows_carry_a_footnote() {
+        let rows = aggregate_hash_timing_rows(&[]);
+        let packed = rows
+            .iter()
+            .find(|row| {
+                row.payload_log2 == 29 && row.scheme == HashSchemeId::Plonky3Fri && row.threads == 1
+            })
+            .expect("packed fri");
+        assert_eq!(packed.gap_note, Some(GapNote::PackedUnivariate));
+        let unpacked = rows
+            .iter()
+            .find(|row| {
+                row.payload_log2 == 27 && row.scheme == HashSchemeId::Plonky3Fri && row.threads == 1
+            })
+            .expect("unpacked fri");
+        assert_eq!(unpacked.gap_note, None);
     }
 }

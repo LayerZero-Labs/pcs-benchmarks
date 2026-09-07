@@ -106,22 +106,24 @@ fn machine_sentence(provenance: &Provenance, latex: bool) -> String {
 fn markdown_prose(provenance: &Provenance) -> String {
     format!(
         "{}\n\n\
-         Our second experiment compares Akita with WHIR and BaseFold, representative\n\
-         high-performance hash-based PCSs, on the same dense standalone workloads.\n\
-         Akita uses the validated planner schedule for each field and input size\n\
-         (`fp32-dense`, including planner-generated $n_v=22$ and $n_v=24$ rows).\n\
-         The comparison uses a common **128-bit** transcript-error target: WHIR is\n\
-         Plonky3 `p3-whir` at `security_level=128`. Capacity bound at rate $1/2$ is used\n\
+         Our second experiment compares Akita with other high-performance hash-based PCSs\n\
+         on the same dense standalone payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
+         Each scheme uses its **native** security target, hash, field, and rate rather than a\n\
+         common 128-bit retune, so cells are **not** $\\lambda$-comparable.\n\
+         Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
+         WHIR is Plonky3 `p3-whir` at `security_level=128`. Capacity bound at rate $1/2$ is used\n\
          when that instance fits a 30-bit KoalaBear grind ($\\log_2 N \\le 26$);\n\
          unique decoding at rate $1/2$ is used at $\\log_2 N=28$ and $30$, where list-decoding\n\
-         bounds on KoalaBear cannot close 128 bits within that grind limit. BaseFold is\n\
-         SP1 SLOP stacked BaseFold with FRI parameters `log_blowup=1`, 112 queries, and\n\
+         bounds on KoalaBear cannot close 128 bits within that grind limit. BaseFold (SP1) is\n\
+         SLOP stacked BaseFold with FRI parameters `log_blowup=1`, 112 queries, and\n\
          16 bits of grinding (conjectured soundness $1\\cdot 112+16=128$).\n\
-         WHIR and BaseFold run over KoalaBear ($q=2^{{31}}-2^{{24}}+1$) at the same\n\
-         $\\log_2 N$ as Akita so the dense tables have matching coefficient counts.\n\
+         Plonky2 FRI, Plonky3 FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native\n\
+         **100-bit** targets. ProveKit WHIR uses Johnson-bound **133-bit** Goldilocks degree-3\n\
+         challenges with base-field coefficients. KoalaBear univariate FRI/STIR pack into a\n\
+         $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$ (two-adicity 24 at rate $1/2$).\n\
          Timing cells report median ± sample standard deviation across fresh processes\n\
          after warmup, at **1 and 8 threads**. Scheme names link to the exact git commit\n\
-         that was measured.\n\n\
+         that was measured. Unmeasured roster cells are `pending`.\n\n\
          The timing comparison separates commitment, opening, and verification, while the\n\
          resources table reports communication, memory (1-thread and 8-thread peak RSS),\n\
          and preprocessing. An OOM entry {oom}.",
@@ -133,21 +135,24 @@ fn markdown_prose(provenance: &Provenance) -> String {
 fn latex_prose(provenance: &Provenance) -> String {
     format!(
         "{}\n\n\
-         Our second experiment compares Akita with WHIR and BaseFold, representative\n\
-         high-performance hash-based PCSs, on the same dense standalone workloads.\n\
-         Akita uses the validated planner schedule for each field and input size.\n\
-         The comparison uses a common 128-bit transcript-error target: WHIR is\n\
-         Plonky3 \\texttt{{p3-whir}} at \\texttt{{security\\_level=128}}. Capacity bound at\n\
+         Our second experiment compares Akita with other high-performance hash-based PCSs\n\
+         on the same dense standalone payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
+         Each scheme uses its native security target, hash, field, and rate rather than a\n\
+         common 128-bit retune, so cells are not $\\lambda$-comparable.\n\
+         Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
+         WHIR is Plonky3 \\texttt{{p3-whir}} at \\texttt{{security\\_level=128}}. Capacity bound at\n\
          rate $1/2$ is used when that instance fits a 30-bit KoalaBear grind\n\
          ($\\log_2 N \\le 26$); unique decoding at rate $1/2$ is used at $\\log_2 N=28$\n\
          and $30$, where list-decoding bounds on KoalaBear cannot close 128 bits within\n\
-         that grind limit. BaseFold is SP1 SLOP stacked BaseFold with FRI parameters\n\
+         that grind limit. BaseFold (SP1) is SLOP stacked BaseFold with FRI parameters\n\
          $\\log_2(1/\\rho)=1$, 112 queries, and 16 bits of grinding (conjectured soundness\n\
-         $1\\cdot 112+16=128$). WHIR and BaseFold run over KoalaBear\n\
-         ($q=2^{{31}}-2^{{24}}+1$) at the same $\\log_2 N$ as Akita so the dense tables have\n\
-         matching coefficient counts. Timing cells report median $\\pm$ sample standard\n\
-         deviation across fresh processes after warmup, at 1 and 8 threads. Scheme names\n\
-         are hyperlinks to the exact git commit that was measured.\n\n\
+         $1\\cdot 112+16=128$). Plonky2 FRI, Plonky3 FRI/STIR, Binius64 BaseFold, and Flock\n\
+         Ligerito Fast use native 100-bit targets. ProveKit WHIR uses Johnson-bound 133-bit\n\
+         Goldilocks degree-3 challenges with base-field coefficients. KoalaBear univariate\n\
+         FRI/STIR pack into a $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$. Timing cells\n\
+         report median $\\pm$ sample standard deviation across fresh processes after warmup,\n\
+         at 1 and 8 threads. Scheme names are hyperlinks to the exact git commit that was\n\
+         measured. Unmeasured roster cells are \\evalpending{{}}.\n\n\
          The timing comparison in \\Cref{{tab:eval-hash-time}} separates commitment,\n\
          opening, and verification, while \\Cref{{tab:eval-hash-resources}} reports\n\
          communication, memory, and preprocessing.  An \\evaloom{{}} entry {oom}.",
@@ -159,12 +164,13 @@ fn latex_prose(provenance: &Provenance) -> String {
 fn markdown_pins() -> String {
     let mut out = String::from("### Measured commits\n\n");
     for scheme in HashSchemeId::all() {
+        let extra = extra_pin_suffix(scheme, false);
         let _ = writeln!(
             out,
-            "- {} [`{}`]({})",
+            "- {} [`{}`]({}){extra}",
             scheme.display_name(),
             scheme.short_sha(),
-            scheme.commit_url()
+            scheme.commit_url(),
         );
     }
     out
@@ -175,9 +181,10 @@ fn latex_pins() -> String {
         "\\medskip\n\\noindent\\textbf{Measured commits.}\n\\begin{itemize}\\setlength{\\itemsep}{0pt}\n",
     );
     for scheme in HashSchemeId::all() {
+        let extra = extra_pin_suffix(scheme, true);
         let _ = writeln!(
             out,
-            "\\item {}: \\href{{{}}}{{\\texttt{{{}}}}}",
+            "\\item {}: \\href{{{}}}{{\\texttt{{{}}}}}{extra}",
             scheme.latex_name(),
             scheme.commit_url(),
             scheme.short_sha()
@@ -185,6 +192,19 @@ fn latex_pins() -> String {
     }
     out.push_str("\\end{itemize}\n");
     out
+}
+
+fn extra_pin_suffix(scheme: HashSchemeId, latex: bool) -> String {
+    let Some(url) = scheme.extra_commit_url() else {
+        return String::new();
+    };
+    let sha = url.rsplit('/').next().unwrap_or("");
+    let short = sha.get(..8).unwrap_or(sha);
+    if latex {
+        format!(r"; whir \href{{{url}}}{{\texttt{{{short}}}}}")
+    } else {
+        format!("; whir [`{short}`]({url})")
+    }
 }
 
 fn oom_clause(provenance: &Provenance, latex: bool) -> String {
@@ -250,9 +270,10 @@ Every timed worker is a fresh process wrapped in `scripts/with-memlimit.sh` at
 {MEMORY_LIMIT_GIB}~GiB (`ulimit -v`, 90% of host RAM). The runner defaults are
 **1 warmup + 3 measured** samples per cell; warmup rows are stored with
 `warmup: true` and excluded from the median. Workers inherit
-`RUSTFLAGS=-C target-cpu=native`. WHIR and BaseFold are isolated Cargo trees
-(`benchmarks/whir`, `benchmarks/basefold`) so they do not unify with the lattice
-workspace. Cargo fetches the pinned Plonky3 and SP1 git revisions on first build.
+`RUSTFLAGS=-C target-cpu=native`. Isolated Cargo trees under `benchmarks/`
+fetch the pinned git revisions (Plonky3, SP1, plonky2, Binius64, Flock,
+ProveKit/whir) so they do not unify with the lattice workspace. Cargo fetches
+those revisions on first build.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`
 is required in that case. `CARGO_NET_GIT_FETCH_WITH_CLI=true` avoids libgit2 auth
@@ -277,7 +298,7 @@ export RUSTFLAGS=\"-C target-cpu=native\"
 
 ./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 catalogs
 
-# Full 30-cell matrix (3 schemes × 5 payloads × {1,8} threads)
+# Full 90-cell matrix (9 schemes × 5 payloads × {1,8} threads)
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -287,13 +308,13 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `hash-eval matrix`
-prints the 30-cell plan. A single supported cell should verify and emit JSON
+prints the 90-cell plan. A single supported cell should verify and emit JSON
 with `status: ok`. Each sample the runner launches is equivalent to the worker
 commands below (still under the 90%-of-RAM cap).";
 
 const SANITY_PROSE_LATEX: &str = "\
 \\noindent Sanity-check the harness before a full run.
-\\texttt{hash-eval matrix} prints the 30-cell plan.
+\\texttt{hash-eval matrix} prints the 90-cell plan.
 A single supported cell should verify and emit JSON with \\texttt{status: ok}.";
 
 const SANITY_COMMANDS: &str = "\
@@ -306,6 +327,9 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme whir --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme basefold --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme plonky2-fri --payload 27 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme plonky3-fri --payload 27 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme flock --payload 27 --threads 1 --runs 1 --warmups 0
 ";
 
 fn escape_tex(text: &str) -> String {
@@ -363,10 +387,12 @@ mod tests {
         let report = render_markdown_hash_eval_report(&[record]);
         assert!(report.contains("AMD Ryzen 9 9950X"));
         assert!(report.contains("AVX-512F"));
-        assert!(report.contains("unique decoding"));
+        assert!(report.contains("native"));
         assert!(report.contains("128-bit"));
+        assert!(report.contains("unique decoding"));
         assert!(report.contains("WHIR"));
         assert!(report.contains("BaseFold"));
+        assert!(report.contains("90-cell"));
         assert!(report.contains("results/hash-x86_64"));
         assert!(report.contains("Linux **x86_64**"));
         assert!(!report.contains("leopard"));

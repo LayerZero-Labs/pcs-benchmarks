@@ -56,7 +56,6 @@ impl ProvenanceExt for Provenance {
              memory_bytes={}\n\
              memory_limit_bytes={}\n\
              akita={}\n\
-             akita_pr466={}\n\
              greyhound={}\n\
              rokoko={}\n",
             self.harness_revision,
@@ -73,7 +72,6 @@ impl ProvenanceExt for Provenance {
             self.memory_limit_bytes
                 .map_or_else(|| "unknown".into(), |bytes| bytes.to_string()),
             pcs_bench_core::SchemeId::Akita.commit_url(),
-            pcs_bench_core::SchemeId::AkitaPr466.commit_url(),
             pcs_bench_core::SchemeId::Greyhound.commit_url(),
             pcs_bench_core::SchemeId::Rokoko.commit_url(),
         );
@@ -96,7 +94,15 @@ impl ProvenanceExt for Provenance {
              akita={}\n\
              whir={}\n\
              basefold={}\n\
-             security_bits={}\n",
+             plonky2_fri={}\n\
+             plonky3_fri_stir={}\n\
+             binius64={}\n\
+             flock={}\n\
+             whir_provekit={}\n\
+             whir_provekit_whir={}\n\
+             security_bits_128={}\n\
+             security_bits_100={}\n\
+             provekit_security_bits={}\n",
             self.harness_revision,
             self.rustc_version,
             self.target,
@@ -113,7 +119,17 @@ impl ProvenanceExt for Provenance {
             pcs_bench_core::HashSchemeId::Akita.commit_url(),
             pcs_bench_core::HashSchemeId::Whir.commit_url(),
             pcs_bench_core::HashSchemeId::Basefold.commit_url(),
+            pcs_bench_core::HashSchemeId::Plonky2Fri.commit_url(),
+            pcs_bench_core::HashSchemeId::Plonky3Fri.commit_url(),
+            pcs_bench_core::HashSchemeId::Binius64.commit_url(),
+            pcs_bench_core::HashSchemeId::FlockLigerito.commit_url(),
+            pcs_bench_core::HashSchemeId::WhirProvekit.commit_url(),
+            pcs_bench_core::HashSchemeId::WhirProvekit
+                .extra_commit_url()
+                .unwrap_or_default(),
             pcs_bench_core::HASH_SECURITY_BITS,
+            pcs_bench_core::HASH_SECURITY_BITS_100,
+            pcs_bench_core::PROVEKIT_SECURITY_BITS,
         );
         fs::write(path, body).with_context(|| format!("write {}", path.display()))
     }

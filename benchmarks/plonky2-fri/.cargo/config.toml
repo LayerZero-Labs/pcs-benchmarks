@@ -1,0 +1,5 @@
+# elliottech/plonky2 uses `#![feature(specialization)]` on the field crate.
+# Isolated hash-eval still runs under the workspace's Rust 1.95; bootstrap
+# unlocks that incomplete feature without a second toolchain.
+[env]
+RUSTC_BOOTSTRAP = "1"

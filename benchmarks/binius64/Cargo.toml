@@ -1,0 +1,29 @@
+# Isolated Binius64 BaseFold worker.
+[workspace]
+
+[package]
+name = "pcs-bench-binius64"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+publish = false
+description = "Binius64 BaseFold adapter for the hash PCS comparison"
+
+[[bin]]
+name = "hash-eval"
+path = "src/bin/hash_eval.rs"
+
+[dependencies]
+binius-compute = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-field = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-hash = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-iop = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-iop-prover = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-ip = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-ip-prover = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+binius-math = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176", features = ["test-utils"] }
+binius-transcript = { git = "https://github.com/binius-zk/binius64", rev = "6e75a2d1d2e716578ae3ccb62806413fb1615176" }
+pcs-bench-core = { path = "../../crates/pcs-bench-core" }
+rand = { version = "0.10.1", features = ["std", "std_rng"] }
+rayon = "1.10"
+serde_json = "1.0"

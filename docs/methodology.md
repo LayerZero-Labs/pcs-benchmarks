@@ -83,23 +83,32 @@ Additional rules that apply only to that table:
 The second experiment is documented in [hash-eval.md](hash-eval.md). Additional
 rules that apply only to that table:
 
-1. **128-bit transcript error.** WHIR uses Plonky3 `p3-whir` with
-   `security_level=128`. Capacity bound at rate 1/2 is used when the derived
-   grind fits 30 bits (KoalaBear); unique decoding at rate 1/2 is used when
-   list-decoding bounds cannot close 128 bits (`log2 N` 28 and 30 in this
-   matrix). Generated tables footnote those WHIR rows. BaseFold uses SP1 SLOP FRI
-   parameters whose conjectured soundness is `log_blowup * queries + pow = 128`.
+1. **Native security targets.** Do not retune every scheme to 128 bits.
+   Akita, Plonky3 WHIR, and SP1 BaseFold stay at 128-bit transcript error.
+   WHIR uses Plonky3 `p3-whir` with `security_level=128`. Capacity bound at
+   rate 1/2 is used when the derived grind fits 30 bits (KoalaBear); unique
+   decoding at rate 1/2 is used when list-decoding bounds cannot close 128
+   bits (`log2 N` 28 and 30 in this matrix). Generated tables footnote those
+   WHIR rows. BaseFold uses SP1 SLOP FRI parameters whose conjectured
+   soundness is `log_blowup * queries + pow = 128`. Plonky2 FRI, Plonky3
+   FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native 100-bit
+   targets. ProveKit WHIR uses a 133-bit Johnson-bound Goldilocks instance.
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
-   table.
-2. **Matched coefficient counts.** WHIR and BaseFold use KoalaBear
-   (`2^{31}-2^{24}+1`) at the same `log2 N` as Akita. That matches dense table
-   length, not bit-identical payload.
+   table. Cells are not \(\lambda\)-comparable.
+2. **Matched payloads, native \(\log_2 N\).** Convert payload bits by
+   coefficient width (32-bit \(-5\), Goldilocks \(-6\), \(\mathbb F_{2^{128}}\)
+   \(-7\), Flock bits \(=\) payload). KoalaBear univariate FRI/STIR pack
+   \(\log_2 N>23\) into height \(2^{23}\) because two-adicity is 24 at rate
+   \(1/2\); footnote those rows.
 3. **1 and 8 threads.** Each cell is a fresh process with `RAYON_NUM_THREADS`
    set to the row's thread count. A dash is an unsupported parallel mode.
+   Smoke-check that Flock and Binius64 honor the env var.
 4. **Process isolation and 90% RAM** are the same as the lattice table.
-5. **Immutable git pins.** Plonky3 and SP1 are pinned by commit SHA, never a
-   moving branch. Isolated Cargo trees keep those graphs out of the lattice
-   workspace.
+   Record OOM; do not drop a scheme because one payload OOMs.
+5. **Immutable git pins.** Isolated Cargo trees keep those graphs out of the
+   lattice workspace. Pins are commit SHAs, never a moving branch. The
+   Plonky2 adapter enables `RUSTC_BOOTSTRAP=1` so `specialization` compiles
+   on the workspace's Rust 1.95.
 
 ## Statistics
 

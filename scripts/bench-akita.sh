@@ -23,7 +23,7 @@ cpu_model() {
 {
   printf 'captured_at_utc=%s\n' "$STAMP"
   printf 'harness_revision=%s\n' "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || printf uncommitted)"
-  printf 'akita_revision=%s\n' 'f9f7de87bcf230436193dbf6ba5a3bdc077b8f53'
+  printf 'akita_revision=%s\n' 'd1b224d809c7edc357b0dbab0f607e19b475910b'
   printf 'target=%s\n' "$(uname -sm)"
   printf 'cpu_model=%s\n' "$(cpu_model)"
   printf 'logical_cpus=%s\n' "$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu)"

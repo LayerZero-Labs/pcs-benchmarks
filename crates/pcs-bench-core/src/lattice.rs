@@ -51,13 +51,7 @@ pub const ROKOKO_Q50: FieldSpec = FieldSpec {
 };
 
 /// Pinned Akita revision on `main` (immutable git SHA).
-pub const AKITA_REVISION: &str = "f9f7de87bcf230436193dbf6ba5a3bdc077b8f53";
-
-/// Last commit on [PR #466](https://github.com/LayerZero-Labs/akita/pull/466).
-pub const AKITA_PR466_REVISION: &str = "bb68275e90ea280c19ad572b1653724a04656740";
-
-/// GitHub pull request that `AKITA_PR466_REVISION` belongs to.
-pub const AKITA_PR466_URL: &str = "https://github.com/LayerZero-Labs/akita/pull/466";
+pub const AKITA_REVISION: &str = "d1b224d809c7edc357b0dbab0f607e19b475910b";
 
 /// Pinned Greyhound reference revision (`LayerZero-Labs/greyhound-reference`).
 pub const GREYHOUND_REVISION: &str = "687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397";
@@ -74,8 +68,6 @@ pub const ROKOKO_REVISION: &str = "1baa91e901fc37b5fa59e65c26a630cb93849b3e";
 pub enum SchemeId {
     /// Akita at the pinned `main` commit.
     Akita,
-    /// Akita at the tip of PR #466 (quotient-free ring relations).
-    AkitaPr466,
     /// Greyhound Pack (`LayerZero-Labs/greyhound-reference`).
     Greyhound,
     /// RoKoKo PCS chain (`lattice-arguments/rokoko`).
@@ -88,19 +80,15 @@ impl SchemeId {
     pub const fn display_name(self) -> &'static str {
         match self {
             Self::Akita => "Akita",
-            Self::AkitaPr466 => "Akita (#466)",
             Self::Greyhound => "Greyhound",
             Self::Rokoko => "RoKoKo",
         }
     }
 
-    /// Table label with LaTeX escaping for `#`.
+    /// Table label (same as [`Self::display_name`]; kept for report renderers).
     #[must_use]
     pub const fn latex_name(self) -> &'static str {
-        match self {
-            Self::AkitaPr466 => r"Akita (\#466)",
-            other => other.display_name(),
-        }
+        self.display_name()
     }
 
     /// Parse a CLI scheme token.
@@ -108,7 +96,6 @@ impl SchemeId {
     pub fn parse_token(token: &str) -> Option<Self> {
         match token {
             "akita" => Some(Self::Akita),
-            "akita-pr466" | "akita_pr466" => Some(Self::AkitaPr466),
             "greyhound" => Some(Self::Greyhound),
             "rokoko" | "ro-koko" => Some(Self::Rokoko),
             _ => None,
@@ -120,7 +107,6 @@ impl SchemeId {
     pub const fn token(self) -> &'static str {
         match self {
             Self::Akita => "akita",
-            Self::AkitaPr466 => "akita-pr466",
             Self::Greyhound => "greyhound",
             Self::Rokoko => "rokoko",
         }
@@ -128,15 +114,15 @@ impl SchemeId {
 
     /// Every scheme in table order.
     #[must_use]
-    pub const fn all() -> [Self; 4] {
-        [Self::Akita, Self::AkitaPr466, Self::Greyhound, Self::Rokoko]
+    pub const fn all() -> [Self; 3] {
+        [Self::Akita, Self::Greyhound, Self::Rokoko]
     }
 
     /// GitHub repository URL without a trailing slash.
     #[must_use]
     pub const fn source_repo(self) -> &'static str {
         match self {
-            Self::Akita | Self::AkitaPr466 => "https://github.com/LayerZero-Labs/akita",
+            Self::Akita => "https://github.com/LayerZero-Labs/akita",
             Self::Greyhound => "https://github.com/LayerZero-Labs/greyhound-reference",
             Self::Rokoko => "https://github.com/lattice-arguments/rokoko",
         }
@@ -147,7 +133,6 @@ impl SchemeId {
     pub const fn revision(self) -> &'static str {
         match self {
             Self::Akita => AKITA_REVISION,
-            Self::AkitaPr466 => AKITA_PR466_REVISION,
             Self::Greyhound => GREYHOUND_REVISION,
             Self::Rokoko => ROKOKO_REVISION,
         }
@@ -213,9 +198,9 @@ pub const fn greyhound_ring_len(log2_n: u32) -> Option<usize> {
     1usize.checked_shl(log2_n - 6)
 }
 
-/// The headline matrix (5 payloads × 4 implementations).
+/// The headline matrix (5 payloads × 3 implementations).
 #[must_use]
-pub fn lattice_matrix() -> [LatticeCase; 20] {
+pub fn lattice_matrix() -> [LatticeCase; 15] {
     let mut cases = [LatticeCase {
         payload_log2: 0,
         scheme: SchemeId::Akita,
@@ -223,13 +208,12 @@ pub fn lattice_matrix() -> [LatticeCase; 20] {
         log2_n: None,
         native_param: None,
         unsupported_reason: None,
-    }; 20];
+    }; 15];
     for (payload_index, payload) in PAYLOAD_LOG2.iter().enumerate() {
-        let index = payload_index * 4;
+        let index = payload_index * 3;
         cases[index] = akita_or_greyhound_case(*payload, SchemeId::Akita);
-        cases[index + 1] = akita_or_greyhound_case(*payload, SchemeId::AkitaPr466);
-        cases[index + 2] = akita_or_greyhound_case(*payload, SchemeId::Greyhound);
-        cases[index + 3] = rokoko_case(*payload);
+        cases[index + 1] = akita_or_greyhound_case(*payload, SchemeId::Greyhound);
+        cases[index + 2] = rokoko_case(*payload);
     }
     cases
 }
@@ -244,7 +228,7 @@ pub fn lattice_case(payload_log2: u32, scheme: SchemeId) -> Option<LatticeCase> 
 
 fn akita_or_greyhound_case(payload_log2: u32, scheme: SchemeId) -> LatticeCase {
     let native_param = match scheme {
-        SchemeId::Akita | SchemeId::AkitaPr466 => Some("fp32-dense"),
+        SchemeId::Akita => Some("fp32-dense"),
         SchemeId::Greyhound => Some("pack-q32"),
         SchemeId::Rokoko => None,
     };
@@ -332,24 +316,23 @@ mod tests {
     }
 
     #[test]
-    fn matrix_is_five_payloads_times_four_implementations() {
+    fn matrix_is_five_payloads_times_three_implementations() {
         let matrix = lattice_matrix();
-        assert_eq!(matrix.len(), 20);
+        assert_eq!(matrix.len(), 15);
         for (index, payload) in PAYLOAD_LOG2.iter().enumerate() {
-            let base = index * 4;
+            let base = index * 3;
             assert_eq!(matrix[base].scheme, SchemeId::Akita);
-            assert_eq!(matrix[base + 1].scheme, SchemeId::AkitaPr466);
-            assert_eq!(matrix[base + 2].scheme, SchemeId::Greyhound);
-            assert_eq!(matrix[base + 3].scheme, SchemeId::Rokoko);
-            assert!(matrix[base..base + 4]
+            assert_eq!(matrix[base + 1].scheme, SchemeId::Greyhound);
+            assert_eq!(matrix[base + 2].scheme, SchemeId::Rokoko);
+            assert!(matrix[base..base + 3]
                 .iter()
                 .all(|case| case.payload_log2 == *payload));
         }
         let unsupported = matrix.iter().filter(|case| case.log2_n.is_none()).count();
         assert_eq!(unsupported, 2);
         assert_eq!(
-            SchemeId::AkitaPr466.commit_url(),
-            "https://github.com/LayerZero-Labs/akita/commit/bb68275e90ea280c19ad572b1653724a04656740"
+            SchemeId::Akita.commit_url(),
+            "https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b"
         );
         assert_eq!(
             SchemeId::Greyhound.commit_url(),

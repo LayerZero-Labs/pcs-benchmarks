@@ -5,4 +5,4 @@
 //! contaminating one another.
 
 /// Exact Akita source revision measured by this adapter.
-pub const IMPLEMENTATION_REVISION: &str = "f9f7de87bcf230436193dbf6ba5a3bdc077b8f53";
+pub const IMPLEMENTATION_REVISION: &str = "d1b224d809c7edc357b0dbab0f607e19b475910b";

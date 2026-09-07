@@ -1,6 +1,6 @@
 //! Paper-style lattice evaluation report (prose + both tables).
 
-use crate::lattice::{SchemeId, AKITA_PR466_URL};
+use crate::lattice::SchemeId;
 use crate::observation::{LatticeRecord, Provenance};
 use crate::table::{
     aggregate_resource_rows, aggregate_timing_rows, render_latex_resource_table,
@@ -116,8 +116,7 @@ fn markdown_prose(provenance: &Provenance) -> String {
          `l2-quantum128-adps16` Euclidean SIS policy and reports contextual proof bytes.\n\
          Timing cells report median ± sample standard\n\
          deviation across fresh processes after warmup. Scheme names link to the exact\n\
-         git commit that was measured. Akita is reported both at the pinned `main` commit\n\
-         and at the tip of [PR #466]({AKITA_PR466_URL}).\n\n\
+         git commit that was measured.\n\n\
          The timing comparison separates commitment, opening, and verification, while the\n\
          resources table reports communication, memory, and preprocessing. Released but\n\
          non-normalized measurements are labeled historical when retained and are never used\n\
@@ -145,9 +144,7 @@ fn latex_prose(provenance: &Provenance) -> String {
          reference can parallelize extension products. Greyhound uses the\n\
          \\texttt{{l2-quantum128-adps16}} Euclidean SIS policy and reports contextual proof bytes.\n\
          Timing cells report median $\\pm$ sample standard deviation across fresh processes\n\
-         after warmup. Scheme names are hyperlinks to the exact git commit that was measured.\n\
-         Akita is reported both at the pinned \\texttt{{main}} commit and at the tip of\n\
-         \\href{{{}}}{{PR \\#466}}.\n\n\
+         after warmup. Scheme names are hyperlinks to the exact git commit that was measured.\n\n\
          The timing comparison in \\Cref{{tab:eval-lattice-time}} separates commitment,\n\
          opening, and verification, while \\Cref{{tab:eval-lattice-resources}} reports\n\
          communication, memory, and preprocessing.  Released but non-normalized\n\
@@ -160,7 +157,6 @@ fn latex_prose(provenance: &Provenance) -> String {
          number of logical bits, since their native field has about $50$ bits rather\n\
          than $32$. They report the cost of those native instances.",
         machine_sentence(provenance, true),
-        AKITA_PR466_URL,
         oom = oom_clause(provenance, true),
     )
 }
@@ -176,7 +172,6 @@ fn markdown_pins() -> String {
             scheme.commit_url()
         );
     }
-    let _ = writeln!(out, "- Akita PR: <{AKITA_PR466_URL}>");
     out
 }
 
@@ -193,10 +188,7 @@ fn latex_pins() -> String {
             scheme.short_sha()
         );
     }
-    let _ = writeln!(
-        out,
-        "\\item Akita PR: \\url{{{AKITA_PR466_URL}}}\n\\end{{itemize}}"
-    );
+    out.push_str("\\end{itemize}\n");
     out
 }
 
@@ -267,9 +259,7 @@ are stored with `warmup: true` and excluded from the median. Greyhound is
 `LayerZero-Labs/greyhound-reference`, built with `-march=native -O3 -flto`,
 and run with `LATTICE_DOGS_THREADS=1` and `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`.
 Proof sizes are contextual wire bytes. Akita and RoKoKo inherit `RUSTFLAGS=-C target-cpu=native`.
-Akita PR #466 is a separate Cargo tree (`benchmarks/akita-pr466`,
-`CARGO_TARGET_DIR=target/akita-pr466`) so it does not unify with the pinned
-`main` revision. `./scripts/fetch-vendors.sh` clones both Akita pins,
+`./scripts/fetch-vendors.sh` clones the pinned implementations,
 installs planner-generated `fp32-dense` rows for `nv=22` and `nv=24`, and
 patches RoKoKo so the executor prints commitment, CRS, and peak RSS.
 
@@ -300,7 +290,7 @@ export RAYON_NUM_THREADS=1
 ./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 catalogs
 ./scripts/build-greyhound.sh
 
-# Full 20-cell matrix (Akita main, Akita #466, Greyhound, RoKoKo)
+# Full 15-cell matrix (Akita, Greyhound, RoKoKo)
 ./scripts/lattice-eval.sh run --out results/lattice-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -310,7 +300,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `lattice-eval matrix`
-prints the 20-cell plan (unsupported RoKoKo sizes, Akita/Greyhound `log2 N`,
+prints the 15-cell plan (unsupported RoKoKo sizes, Akita/Greyhound `log2 N`,
 RoKoKo `p-26`/`p-28`/`p-30`). A single supported cell should verify and emit
 JSON with `status: ok`. Unit tests cover the RoKoKo log parser, OOM
 classification, and table tokens. Each sample the runner launches is equivalent
@@ -318,7 +308,7 @@ to the worker commands below (still under the 90%-of-RAM cap).";
 
 const SANITY_PROSE_LATEX: &str = "\
 \\noindent Sanity-check the harness before a full run.
-\\texttt{lattice-eval matrix} prints the 20-cell plan.
+\\texttt{lattice-eval matrix} prints the 15-cell plan.
 A single supported cell should verify and emit JSON with \\texttt{status: ok}.
 Unit tests cover the RoKoKo log parser, OOM classification, and table tokens.";
 
@@ -333,7 +323,6 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
 ./scripts/lattice-eval.sh run --scheme akita --payload 31 --runs 1 --warmups 0
 ./scripts/lattice-eval.sh run --scheme greyhound --payload 31 --runs 1 --warmups 0
 ./scripts/lattice-eval.sh run --scheme rokoko --payload 31 --runs 1 --warmups 0
-./scripts/lattice-eval.sh run --scheme akita-pr466 --payload 31 --runs 1 --warmups 0
 
 # Direct workers (what each harness sample wraps with with-memlimit.sh)
 ./scripts/with-memlimit.sh {MEMORY_LIMIT_BYTES} \\
@@ -398,7 +387,6 @@ mod tests {
         assert!(report.contains("AMD Ryzen 9 9950X"));
         assert!(report.contains("AVX-512F"));
         assert!(report.contains("-C target-cpu=native"));
-        assert!(report.contains("PR #466"));
         assert!(report.contains(&SchemeId::Akita.commit_url()));
         assert!(report.contains("Commands used for these numbers"));
         assert!(report.contains("./scripts/fetch-vendors.sh"));

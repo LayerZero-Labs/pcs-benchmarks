@@ -7,12 +7,13 @@ use crate::provenance::ProvenanceExt;
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use pcs_bench_core::{
-    aggregate_hash_resource_rows, aggregate_hash_timing_rows, aggregate_timing_rows, hash_case,
-    hash_matrix, lattice_case, lattice_matrix, render_latex_eval_report,
-    render_latex_hash_eval_report, render_latex_hash_resource_table,
-    render_latex_hash_timing_table, render_latex_timing_table, render_markdown_eval_report,
-    render_markdown_hash_eval_report, render_markdown_hash_resource_table,
-    render_markdown_hash_timing_table, render_markdown_timing_table, HashRecord, HashSchemeId,
+    aggregate_hash_resource_rows, aggregate_hash_timing_rows, aggregate_resource_rows,
+    aggregate_timing_rows, hash_case, hash_matrix, lattice_case, lattice_matrix,
+    render_latex_eval_report, render_latex_hash_eval_report, render_latex_hash_resource_table,
+    render_latex_hash_timing_table, render_latex_resource_table, render_latex_timing_table,
+    render_markdown_eval_report, render_markdown_hash_eval_report,
+    render_markdown_hash_resource_table, render_markdown_hash_timing_table,
+    render_markdown_resource_table, render_markdown_timing_table, HashRecord, HashSchemeId,
     LatticeRecord, SchemeId, HASH_THREADS, PAYLOAD_LOG2,
 };
 use std::fs::{self, File};
@@ -89,7 +90,7 @@ struct RunArgs {
 
 #[derive(clap::Args)]
 struct HashRunArgs {
-    /// Comma-separated schemes: akita,whir,basefold (default: all).
+    /// Comma-separated schemes: akita,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,whir-provekit,basefold (default: all).
     #[arg(long, value_delimiter = ',')]
     scheme: Vec<String>,
     /// Comma-separated payload exponents (default: 27,29,31,33,35).
@@ -246,11 +247,20 @@ fn compare_lattice(args: CompareArgs) -> Result<()> {
 
 fn write_tables(out_dir: &Path, records: &[LatticeRecord]) -> Result<()> {
     let rows = aggregate_timing_rows(records);
+    let resources = aggregate_resource_rows(records);
     fs::write(
         out_dir.join("table.md"),
         render_markdown_timing_table(&rows),
     )?;
+    fs::write(
+        out_dir.join("table-resources.md"),
+        render_markdown_resource_table(&resources),
+    )?;
     fs::write(out_dir.join("table.tex"), render_latex_timing_table(&rows))?;
+    fs::write(
+        out_dir.join("table-resources.tex"),
+        render_latex_resource_table(&resources),
+    )?;
     fs::write(
         out_dir.join("report.md"),
         render_markdown_eval_report(records),

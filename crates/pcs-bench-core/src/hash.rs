@@ -3,27 +3,78 @@
 use crate::lattice::{log2_n_for_32bit_payload, FieldSpec, AKITA_FP32, PAYLOAD_LOG2};
 use serde::{Deserialize, Serialize};
 
-/// Common transcript-error target for WHIR and BaseFold, in bits.
-pub const HASH_SECURITY_BITS: u32 = 128;
-
 /// Thread counts in the hash timing table.
 pub const HASH_THREADS: [u32; 2] = [1, 8];
 
-/// KoalaBear prime `2^31 - 2^24 + 1`, used by the WHIR and BaseFold workers.
+/// Schemes in roster order (Akita through BaseFold SP1).
+pub const HASH_SCHEME_COUNT: usize = 9;
+
+/// Headline hash matrix size: 5 payloads × 9 schemes × 2 thread counts.
+pub const HASH_CELL_COUNT: usize = 90;
+
+/// KoalaBear prime `2^31 - 2^24 + 1`.
 pub const KOALA_BEAR: FieldSpec = FieldSpec {
     name: "2^{31}-2^{24}+1",
     modulus: 2_130_706_433,
     log2_bits: 31,
 };
 
-/// KoalaBear two-adicity; WHIR's first-round fold must keep the FFT in range.
+/// Goldilocks prime `2^64 - 2^32 + 1`.
+pub const GOLDILOCKS: FieldSpec = FieldSpec {
+    name: "2^{64}-2^{32}+1",
+    modulus: 0xFFFF_FFFF_0000_0001,
+    log2_bits: 64,
+};
+
+/// Binary extension \(\mathbb F_{2^{128}}\) used by Binius64 BaseFold.
+pub const BINARY_128: FieldSpec = FieldSpec {
+    name: "F_{2^{128}}",
+    modulus: 0,
+    log2_bits: 128,
+};
+
+/// Bit-valued multilinear packed into \(\mathbb F_{2^{128}}\) (Flock Ligerito).
+pub const FLOCK_BITS: FieldSpec = FieldSpec {
+    name: "F_2",
+    modulus: 0,
+    log2_bits: 1,
+};
+
+/// KoalaBear two-adicity; univariate FRI/STIR packing and WHIR first-round fold.
 pub const KOALA_BEAR_TWO_ADICITY: u32 = 24;
 
 /// Pinned [Plonky3](https://github.com/Plonky3/Plonky3) revision (`p3-whir`).
 pub const PLONKY3_REVISION: &str = "9d496524560f3c699473906c6f50fca7cf343730";
 
+/// Pinned Plonky3 revision for univariate FRI and STIR.
+pub const PLONKY3_FRI_STIR_REVISION: &str = "3da160d09d1c6a878adaa5b339939fcdccda5d36";
+
 /// Pinned [SP1 / SLOP](https://github.com/succinctlabs/sp1) revision (`slop-basefold`).
 pub const SP1_REVISION: &str = "0f2a1e1389747ac0dbee1c4d40243eed20baba86";
+
+/// Pinned [elliottech/plonky2](https://github.com/elliottech/plonky2) revision.
+pub const PLONKY2_REVISION: &str = "e1c2d35450948b88fca6a7e69e2643c3ecad3caa";
+
+/// Pinned [Binius64](https://github.com/binius-zk/binius64) revision.
+pub const BINIUS64_REVISION: &str = "6e75a2d1d2e716578ae3ccb62806413fb1615176";
+
+/// Pinned [Flock](https://github.com/succinctlabs/flock) revision.
+pub const FLOCK_REVISION: &str = "43f0eee06d887d87ad25d72614cbc2b17fe91430";
+
+/// Pinned [ProveKit](https://github.com/worldfnd/ProveKit) revision.
+pub const PROVEKIT_REVISION: &str = "6481f961fc78615811b9cbaa9aa2380f1f6703c9";
+
+/// Pinned [worldfnd/whir](https://github.com/worldfnd/whir) revision used by ProveKit WHIR.
+pub const WHIR_PROVEKIT_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
+
+/// Common transcript-error target for Akita, Plonky3 WHIR, and SP1 BaseFold, in bits.
+pub const HASH_SECURITY_BITS: u32 = 128;
+
+/// Native 100-bit target used by Plonky2 FRI, Plonky3 FRI/STIR, and Binius64.
+pub const HASH_SECURITY_BITS_100: u32 = 100;
+
+/// ProveKit WHIR internal target (Johnson bound).
+pub const PROVEKIT_SECURITY_BITS: u32 = 133;
 
 /// BaseFold interleaved height. Domain `2^{height+1}` fits KoalaBear two-adicity 24.
 pub const BASEFOLD_LOG_STACKING_HEIGHT: u32 = 20;
@@ -36,6 +87,27 @@ pub const BASEFOLD_FRI_QUERIES: usize = 112;
 
 /// FRI query proof-of-work bits for BaseFold.
 pub const BASEFOLD_FRI_POW_BITS: usize = 16;
+
+/// Plonky3 FRI/STIR log-inverse rate (`rho = 1/2`).
+pub const PLONKY3_UNI_LOG_BLOWUP: u32 = 1;
+
+/// Plonky3 FRI grinding budget.
+pub const PLONKY3_FRI_POW_BITS: usize = 20;
+
+/// Plonky3 FRI query count: `(100 - 20) / 1 = 80`.
+pub const PLONKY3_FRI_QUERIES: usize = 80;
+
+/// Plonky2 FRI log-inverse rate (`rho = 1/8`).
+pub const PLONKY2_FRI_RATE_BITS: usize = 3;
+
+/// Plonky2 FRI queries at the native 100-bit conjectural target.
+pub const PLONKY2_FRI_QUERIES: usize = 28;
+
+/// Plonky2 FRI grinding bits.
+pub const PLONKY2_FRI_POW_BITS: usize = 16;
+
+/// Plonky2 Merkle cap height (standard recursion config).
+pub const PLONKY2_CAP_HEIGHT: usize = 4;
 
 /// WHIR starting log-inverse rate (`rho = 1/2`), matching `p3-whir` benches.
 pub const WHIR_STARTING_LOG_INV_RATE: usize = 1;
@@ -53,14 +125,35 @@ pub const WHIR_MAX_POW_BITS: usize = 30;
 /// WHIR direct-send threshold (matches `p3-whir` `MAX_NUM_VARIABLES_TO_SEND_COEFFS`).
 pub const WHIR_DIRECT_SEND_VARS: usize = 6;
 
-/// Identifies a hash-eval implementation.
+/// ProveKit WHIR starting log-inverse rate (`rho = 1/4`).
+pub const PROVEKIT_WHIR_LOG_INV_RATE: usize = 2;
+
+/// ProveKit WHIR folding factor.
+pub const PROVEKIT_WHIR_FOLD: usize = 8;
+
+/// Flock packing: `m` bit-variables become `m - 7` packed \(\mathbb F_{2^{128}}\) variables.
+pub const FLOCK_LOG_PACKING: u32 = 7;
+
+/// Identifies a hash-eval implementation, in roster order.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HashSchemeId {
     /// Akita at the pinned `main` commit, same fp32-dense catalog as lattice-eval.
     Akita,
+    /// Plonky2 univariate FRI over Goldilocks (`elliottech/plonky2`).
+    Plonky2Fri,
+    /// Plonky3 univariate FRI over KoalaBear.
+    Plonky3Fri,
+    /// Plonky3 univariate STIR over KoalaBear.
+    Plonky3Stir,
     /// Plonky3 `p3-whir` multilinear PCS.
     Whir,
+    /// Binius64 BaseFold over \(\mathbb F_{2^{128}}\).
+    Binius64,
+    /// Flock Ligerito bit-multilinear PCS (Fast profile).
+    FlockLigerito,
+    /// worldfnd/whir via ProveKit, Goldilocks degree-3 challenges, base-field coeffs.
+    WhirProvekit,
     /// SP1 SLOP stacked BaseFold (`slop-basefold`).
     Basefold,
 }
@@ -71,8 +164,14 @@ impl HashSchemeId {
     pub const fn display_name(self) -> &'static str {
         match self {
             Self::Akita => "Akita",
-            Self::Whir => "WHIR",
-            Self::Basefold => "BaseFold",
+            Self::Plonky2Fri => "Plonky2 FRI",
+            Self::Plonky3Fri => "Plonky3 FRI",
+            Self::Plonky3Stir => "Plonky3 STIR",
+            Self::Whir => "WHIR (Plonky3)",
+            Self::Binius64 => "Binius64 BaseFold",
+            Self::FlockLigerito => "Flock Ligerito",
+            Self::WhirProvekit => "WHIR (ProveKit)",
+            Self::Basefold => "BaseFold (SP1)",
         }
     }
 
@@ -87,7 +186,13 @@ impl HashSchemeId {
     pub fn parse_token(token: &str) -> Option<Self> {
         match token {
             "akita" => Some(Self::Akita),
+            "plonky2" | "plonky2-fri" => Some(Self::Plonky2Fri),
+            "plonky3-fri" | "p3-fri" => Some(Self::Plonky3Fri),
+            "plonky3-stir" | "p3-stir" | "stir" => Some(Self::Plonky3Stir),
             "whir" => Some(Self::Whir),
+            "binius64" | "binius" => Some(Self::Binius64),
+            "flock" | "ligerito" | "flock-ligerito" => Some(Self::FlockLigerito),
+            "whir-provekit" | "provekit" | "whir-goldilocks" => Some(Self::WhirProvekit),
             "basefold" | "base-fold" => Some(Self::Basefold),
             _ => None,
         }
@@ -98,15 +203,31 @@ impl HashSchemeId {
     pub const fn token(self) -> &'static str {
         match self {
             Self::Akita => "akita",
+            Self::Plonky2Fri => "plonky2-fri",
+            Self::Plonky3Fri => "plonky3-fri",
+            Self::Plonky3Stir => "plonky3-stir",
             Self::Whir => "whir",
+            Self::Binius64 => "binius64",
+            Self::FlockLigerito => "flock",
+            Self::WhirProvekit => "whir-provekit",
             Self::Basefold => "basefold",
         }
     }
 
     /// Every scheme in table order.
     #[must_use]
-    pub const fn all() -> [Self; 3] {
-        [Self::Akita, Self::Whir, Self::Basefold]
+    pub const fn all() -> [Self; HASH_SCHEME_COUNT] {
+        [
+            Self::Akita,
+            Self::Plonky2Fri,
+            Self::Plonky3Fri,
+            Self::Plonky3Stir,
+            Self::Whir,
+            Self::Binius64,
+            Self::FlockLigerito,
+            Self::WhirProvekit,
+            Self::Basefold,
+        ]
     }
 
     /// GitHub repository URL without a trailing slash.
@@ -114,7 +235,13 @@ impl HashSchemeId {
     pub const fn source_repo(self) -> &'static str {
         match self {
             Self::Akita => "https://github.com/LayerZero-Labs/akita",
-            Self::Whir => "https://github.com/Plonky3/Plonky3",
+            Self::Plonky2Fri => "https://github.com/elliottech/plonky2",
+            Self::Plonky3Fri | Self::Plonky3Stir | Self::Whir => {
+                "https://github.com/Plonky3/Plonky3"
+            }
+            Self::Binius64 => "https://github.com/binius-zk/binius64",
+            Self::FlockLigerito => "https://github.com/succinctlabs/flock",
+            Self::WhirProvekit => "https://github.com/worldfnd/ProveKit",
             Self::Basefold => "https://github.com/succinctlabs/sp1",
         }
     }
@@ -124,7 +251,12 @@ impl HashSchemeId {
     pub const fn revision(self) -> &'static str {
         match self {
             Self::Akita => crate::lattice::AKITA_REVISION,
+            Self::Plonky2Fri => PLONKY2_REVISION,
+            Self::Plonky3Fri | Self::Plonky3Stir => PLONKY3_FRI_STIR_REVISION,
             Self::Whir => PLONKY3_REVISION,
+            Self::Binius64 => BINIUS64_REVISION,
+            Self::FlockLigerito => FLOCK_REVISION,
+            Self::WhirProvekit => PROVEKIT_REVISION,
             Self::Basefold => SP1_REVISION,
         }
     }
@@ -133,6 +265,17 @@ impl HashSchemeId {
     #[must_use]
     pub fn commit_url(self) -> String {
         format!("{}/commit/{}", self.source_repo(), self.revision())
+    }
+
+    /// Extra pin URL (ProveKit WHIR crate), when the table SHA is not the PCS crate.
+    #[must_use]
+    pub fn extra_commit_url(self) -> Option<String> {
+        match self {
+            Self::WhirProvekit => Some(format!(
+                "https://github.com/worldfnd/whir/commit/{WHIR_PROVEKIT_WHIR_REVISION}"
+            )),
+            _ => None,
+        }
     }
 
     /// Abbreviated SHA used in tables.
@@ -152,12 +295,43 @@ pub struct HashCase {
     pub scheme: HashSchemeId,
     /// Implementation field.
     pub field: FieldSpec,
-    /// Native `log2 N` (coefficient count matches the lattice Akita rows).
+    /// Native `log2 N` (coefficient or bit count; see scheme).
     pub log2_n: u32,
     /// Worker thread count.
     pub threads: u32,
     /// Compile-time / protocol parameter name.
     pub native_param: &'static str,
+}
+
+/// `log2 N` so that `N * coeff_bits` matches the payload bit volume.
+///
+/// `coeff_bits` must be a power of two (1, 32, 64, 128, 256).
+#[must_use]
+pub const fn log2_n_for_payload_bits(payload_log2: u32, coeff_bits: u32) -> u32 {
+    payload_log2 - coeff_bits.trailing_zeros()
+}
+
+/// Plonky3 univariate FRI/STIR log-height after packing into KoalaBear two-adicity.
+#[must_use]
+pub const fn plonky3_log_height(log2_n: u32) -> u32 {
+    let max_h = KOALA_BEAR_TWO_ADICITY.saturating_sub(PLONKY3_UNI_LOG_BLOWUP);
+    if log2_n <= max_h {
+        log2_n
+    } else {
+        max_h
+    }
+}
+
+/// Log-width (number of columns) for packed Plonky3 FRI/STIR.
+#[must_use]
+pub const fn plonky3_log_width(log2_n: u32) -> u32 {
+    log2_n.saturating_sub(plonky3_log_height(log2_n))
+}
+
+/// True when the univariate must be packed into more than one column.
+#[must_use]
+pub const fn plonky3_is_packed(log2_n: u32) -> bool {
+    plonky3_log_width(log2_n) > 0
 }
 
 /// First-round WHIR fold so `log2_n + rate - fold <=` KoalaBear two-adicity.
@@ -240,24 +414,14 @@ pub fn whir_round_log_inv_rates_with_rate(log2_n: u32, starting_log_inv_rate: us
     rates
 }
 
-/// The headline hash matrix (5 payloads × 3 schemes × 2 thread counts).
+/// The headline hash matrix (5 payloads × 9 schemes × 2 thread counts).
 #[must_use]
-pub fn hash_matrix() -> [HashCase; 30] {
-    let mut cases = [HashCase {
-        payload_log2: 0,
-        scheme: HashSchemeId::Akita,
-        field: AKITA_FP32,
-        log2_n: 0,
-        threads: 1,
-        native_param: "fp32-dense",
-    }; 30];
-    let mut index = 0;
+pub fn hash_matrix() -> Vec<HashCase> {
+    let mut cases = Vec::with_capacity(HASH_CELL_COUNT);
     for payload in PAYLOAD_LOG2 {
-        let log2_n = log2_n_for_32bit_payload(payload).expect("hash payloads match lattice sizes");
         for scheme in HashSchemeId::all() {
             for threads in HASH_THREADS {
-                cases[index] = hash_case_inner(payload, log2_n, scheme, threads);
-                index += 1;
+                cases.push(hash_case_inner(payload, scheme, threads));
             }
         }
     }
@@ -272,29 +436,78 @@ pub fn hash_case(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Optio
     })
 }
 
-fn hash_case_inner(payload_log2: u32, log2_n: u32, scheme: HashSchemeId, threads: u32) -> HashCase {
+fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> HashCase {
+    let log2_n_32 = log2_n_for_32bit_payload(payload_log2).unwrap_or(0);
     match scheme {
         HashSchemeId::Akita => HashCase {
             payload_log2,
             scheme,
             field: AKITA_FP32,
-            log2_n,
+            log2_n: log2_n_32,
             threads,
             native_param: "fp32-dense",
+        },
+        HashSchemeId::Plonky2Fri => HashCase {
+            payload_log2,
+            scheme,
+            field: GOLDILOCKS,
+            log2_n: log2_n_for_payload_bits(payload_log2, 64),
+            threads,
+            native_param: "plonky2-fri-100",
+        },
+        HashSchemeId::Plonky3Fri => HashCase {
+            payload_log2,
+            scheme,
+            field: KOALA_BEAR,
+            log2_n: log2_n_32,
+            threads,
+            native_param: "plonky3-fri-100",
+        },
+        HashSchemeId::Plonky3Stir => HashCase {
+            payload_log2,
+            scheme,
+            field: KOALA_BEAR,
+            log2_n: log2_n_32,
+            threads,
+            native_param: "plonky3-stir-100",
         },
         HashSchemeId::Whir => HashCase {
             payload_log2,
             scheme,
             field: KOALA_BEAR,
-            log2_n,
+            log2_n: log2_n_32,
             threads,
             native_param: "whir-128",
+        },
+        HashSchemeId::Binius64 => HashCase {
+            payload_log2,
+            scheme,
+            field: BINARY_128,
+            log2_n: log2_n_for_payload_bits(payload_log2, 128),
+            threads,
+            native_param: "binius64-basefold-100",
+        },
+        HashSchemeId::FlockLigerito => HashCase {
+            payload_log2,
+            scheme,
+            field: FLOCK_BITS,
+            log2_n: payload_log2,
+            threads,
+            native_param: "flock-ligerito-fast",
+        },
+        HashSchemeId::WhirProvekit => HashCase {
+            payload_log2,
+            scheme,
+            field: GOLDILOCKS,
+            log2_n: log2_n_for_payload_bits(payload_log2, 64),
+            threads,
+            native_param: "whir-provekit-goldilocks3-133",
         },
         HashSchemeId::Basefold => HashCase {
             payload_log2,
             scheme,
             field: KOALA_BEAR,
-            log2_n,
+            log2_n: log2_n_32,
             threads,
             native_param: "basefold-fri-128",
         },
@@ -304,18 +517,22 @@ fn hash_case_inner(payload_log2: u32, log2_n: u32, scheme: HashSchemeId, threads
 #[cfg(test)]
 mod tests {
     use super::{
-        hash_matrix, whir_first_fold, HashSchemeId, BASEFOLD_FRI_LOG_BLOWUP, BASEFOLD_FRI_POW_BITS,
-        BASEFOLD_FRI_QUERIES, HASH_SECURITY_BITS, HASH_THREADS, KOALA_BEAR, KOALA_BEAR_TWO_ADICITY,
+        hash_matrix, log2_n_for_payload_bits, plonky3_is_packed, plonky3_log_height,
+        plonky3_log_width, whir_first_fold, HashSchemeId, BASEFOLD_FRI_LOG_BLOWUP,
+        BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES, HASH_CELL_COUNT, HASH_SCHEME_COUNT,
+        HASH_SECURITY_BITS, HASH_THREADS, KOALA_BEAR, KOALA_BEAR_TWO_ADICITY, PLONKY3_FRI_QUERIES,
+        PLONKY3_UNI_LOG_BLOWUP,
     };
     use crate::lattice::{log2_n_for_32bit_payload, PAYLOAD_LOG2};
 
     #[test]
-    fn security_target_is_128_bits() {
+    fn security_targets_match_the_roster() {
         assert_eq!(HASH_SECURITY_BITS, 128);
         assert_eq!(
             BASEFOLD_FRI_LOG_BLOWUP * BASEFOLD_FRI_QUERIES + BASEFOLD_FRI_POW_BITS,
             HASH_SECURITY_BITS as usize
         );
+        assert_eq!(PLONKY3_FRI_QUERIES, 80);
     }
 
     #[test]
@@ -325,16 +542,47 @@ mod tests {
     }
 
     #[test]
-    fn hash_log2_n_matches_akita_coefficient_counts() {
+    fn payload_ladders_match_the_roster() {
+        assert_eq!(log2_n_for_payload_bits(27, 32), 22);
+        assert_eq!(log2_n_for_payload_bits(27, 64), 21);
+        assert_eq!(log2_n_for_payload_bits(27, 128), 20);
+        assert_eq!(log2_n_for_payload_bits(27, 1), 27);
         for payload in PAYLOAD_LOG2 {
-            assert_eq!(
-                hash_matrix()
-                    .iter()
-                    .find(|case| case.payload_log2 == payload)
-                    .map(|case| case.log2_n),
-                log2_n_for_32bit_payload(payload)
-            );
+            let matrix = hash_matrix();
+            let akita = matrix
+                .iter()
+                .find(|case| case.payload_log2 == payload && case.scheme == HashSchemeId::Akita)
+                .expect("akita");
+            assert_eq!(Some(akita.log2_n), log2_n_for_32bit_payload(payload));
+            let p2 = matrix
+                .iter()
+                .find(|case| {
+                    case.payload_log2 == payload && case.scheme == HashSchemeId::Plonky2Fri
+                })
+                .expect("plonky2");
+            assert_eq!(p2.log2_n, log2_n_for_payload_bits(payload, 64));
+            let flock = matrix
+                .iter()
+                .find(|case| {
+                    case.payload_log2 == payload && case.scheme == HashSchemeId::FlockLigerito
+                })
+                .expect("flock");
+            assert_eq!(flock.log2_n, payload);
         }
+    }
+
+    #[test]
+    fn plonky3_univariate_packs_above_two_adicity() {
+        assert!(!plonky3_is_packed(22));
+        assert_eq!(plonky3_log_height(22), 22);
+        assert_eq!(plonky3_log_width(22), 0);
+        assert!(plonky3_is_packed(24));
+        assert_eq!(
+            plonky3_log_height(24),
+            KOALA_BEAR_TWO_ADICITY - PLONKY3_UNI_LOG_BLOWUP
+        );
+        assert_eq!(plonky3_log_height(30) + plonky3_log_width(30), 30);
+        assert!(plonky3_log_height(30) + PLONKY3_UNI_LOG_BLOWUP <= KOALA_BEAR_TWO_ADICITY);
     }
 
     #[test]
@@ -386,19 +634,19 @@ mod tests {
     }
 
     #[test]
-    fn matrix_is_five_payloads_times_three_schemes_times_two_threads() {
+    fn matrix_is_five_payloads_times_nine_schemes_times_two_threads() {
         let matrix = hash_matrix();
-        assert_eq!(matrix.len(), 30);
+        assert_eq!(matrix.len(), HASH_CELL_COUNT);
+        assert_eq!(HashSchemeId::all().len(), HASH_SCHEME_COUNT);
         assert_eq!(HASH_THREADS, [1, 8]);
         for (payload_index, payload) in PAYLOAD_LOG2.iter().enumerate() {
-            let base = payload_index * 6;
+            let base = payload_index * HASH_SCHEME_COUNT * HASH_THREADS.len();
             assert_eq!(matrix[base].scheme, HashSchemeId::Akita);
             assert_eq!(matrix[base].threads, 1);
-            assert_eq!(matrix[base + 1].scheme, HashSchemeId::Akita);
-            assert_eq!(matrix[base + 1].threads, 8);
-            assert_eq!(matrix[base + 2].scheme, HashSchemeId::Whir);
-            assert_eq!(matrix[base + 4].scheme, HashSchemeId::Basefold);
-            assert!(matrix[base..base + 6]
+            assert_eq!(matrix[base + 2].scheme, HashSchemeId::Plonky2Fri);
+            assert_eq!(matrix[base + 8].scheme, HashSchemeId::Whir);
+            assert_eq!(matrix[base + 16].scheme, HashSchemeId::Basefold);
+            assert!(matrix[base..base + HASH_SCHEME_COUNT * HASH_THREADS.len()]
                 .iter()
                 .all(|case| case.payload_log2 == *payload));
         }
@@ -410,5 +658,10 @@ mod tests {
             HashSchemeId::Basefold.commit_url(),
             "https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86"
         );
+        assert_eq!(
+            HashSchemeId::Plonky3Fri.revision(),
+            HashSchemeId::Plonky3Stir.revision()
+        );
+        assert!(HashSchemeId::WhirProvekit.extra_commit_url().is_some());
     }
 }

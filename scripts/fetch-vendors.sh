@@ -62,19 +62,9 @@ fi
 clone_pin \
   https://github.com/LayerZero-Labs/akita.git \
   "$ROOT/third_party/akita" \
-  f9f7de87bcf230436193dbf6ba5a3bdc077b8f53
+  d1b224d809c7edc357b0dbab0f607e19b475910b
 install_fp32_dense_catalog \
   "$ROOT/third_party/akita" \
   "$ROOT/vendor/akita-catalogs/fp32_dense-main.rs"
-
-if [[ "$AKITA_ONLY" -eq 0 ]]; then
-  clone_pin \
-    https://github.com/LayerZero-Labs/akita.git \
-    "$ROOT/third_party/akita-pr466" \
-    bb68275e90ea280c19ad572b1653724a04656740
-  install_fp32_dense_catalog \
-    "$ROOT/third_party/akita-pr466" \
-    "$ROOT/vendor/akita-catalogs/fp32_dense-pr466.rs"
-fi
 
 echo "Vendors pinned under $ROOT/third_party"
