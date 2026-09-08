@@ -28,14 +28,17 @@ jobs:
         with:
           components: clippy,rustfmt
 
+      # benchmarks/akita is a workspace member with path deps under
+      # third_party/akita. Cargo resolves the whole workspace even for
+      # `-p pcs-bench-core`, so the pin must exist before any cargo command.
+      - name: Fetch pinned Akita
+        run: ./scripts/fetch-vendors.sh --akita
+
       - name: Check formatting
         run: cargo fmt --all --check
 
       - name: Test shared contracts
         run: cargo test -p pcs-bench-core -p pcs-bench-runner --locked
-
-      - name: Fetch pinned Akita
-        run: ./scripts/fetch-vendors.sh --akita
 
       - name: Compile every benchmark
         run: cargo check --workspace --all-targets --locked
