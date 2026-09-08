@@ -6,8 +6,7 @@ lattice PCSs
 [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference),
 [RoKoKo](https://github.com/lattice-arguments/rokoko))
 and hash-based PCSs
-([Akita](https://github.com/LayerZero-Labs/akita),
-[Plonky2 FRI](https://github.com/elliottech/plonky2),
+([Plonky2 FRI](https://github.com/elliottech/plonky2),
 [Plonky3 FRI/STIR/WHIR](https://github.com/Plonky3/Plonky3),
 [Binius64 BaseFold](https://github.com/binius-zk/binius64),
 [Flock Ligerito](https://github.com/succinctlabs/flock),
