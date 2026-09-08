@@ -20,6 +20,12 @@ use std::time::Instant;
 
 type DirectCfg = fp32::Dense;
 type OffloadCfg = RecursiveCommitmentConfig<fp32::Dense>;
+type ProverOpeningData<'a, Cfg, P> = SelectedProverOpeningData<
+    'a,
+    <Cfg as CommitmentConfig>::ExtField,
+    akita_prover::PreparedProverGroup<'a, P>,
+    <Cfg as CommitmentConfig>::Field,
+>;
 
 const INPUT_SEED: u64 = 0xDEAD_BEEF;
 const POINT_SEED: u64 = 0xCAFE_BABE;
@@ -247,15 +253,7 @@ fn prover_claims<'a, Cfg, P>(
     polynomials: &'a [&'a P],
     commitment: &'a CommittedGroup<Cfg::Field>,
     hint: AkitaCommitmentHint<Cfg::Field>,
-) -> Result<
-    SelectedProverOpeningData<
-        'a,
-        Cfg::ExtField,
-        akita_prover::PreparedProverGroup<'a, P>,
-        Cfg::Field,
-    >,
-    String,
->
+) -> Result<ProverOpeningData<'a, Cfg, P>, String>
 where
     Cfg: CommitmentConfig,
     Cfg::ExtField: Ring,

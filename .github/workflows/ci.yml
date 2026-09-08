@@ -34,8 +34,10 @@ jobs:
       - name: Fetch pinned Akita
         run: ./scripts/fetch-vendors.sh --akita
 
+      # `--all` recurses into path dependencies, which would format the pinned
+      # Akita checkout under third_party. Name the workspace members instead.
       - name: Check formatting
-        run: cargo fmt --all --check
+        run: cargo fmt -p pcs-bench-core -p pcs-bench-runner -p pcs-bench-akita --check
 
       - name: Test shared contracts
         run: cargo test -p pcs-bench-core -p pcs-bench-runner --locked

@@ -258,10 +258,10 @@ def patch_generated_mod(root: Path) -> None:
             """#[cfg(feature = "fp32-dense")]
 pub mod fp32_dense;
 """,
-            MOD_DECL
-            + """#[cfg(feature = "fp32-dense")]
+            """#[cfg(feature = "fp32-dense")]
 pub mod fp32_dense;
-""",
+"""
+            + MOD_DECL,
             path,
         )
         text = replace_once(
