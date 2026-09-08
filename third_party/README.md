@@ -3,8 +3,9 @@ Vendored PCS implementations live here after `./scripts/fetch-vendors.sh`.
 They are cloned at pinned commits and are not part of the Cargo workspace:
 
 - `akita` — LayerZero Akita at the `main` pin, with planner-generated
-  `fp32-dense` rows for `nv=22` and `nv=24` installed from
-  `vendor/akita-catalogs/`
+  `fp32-dense` rows for `nv=22` and `nv=24`, recursive `fp32-dense`
+  setup-offload, `fp64-dense` rows for `nv=21/23/25/27`, and `fp128-dense`
+  rows for `nv=20/22` installed from `vendor/akita-catalogs/`
 - `greyhound-reference` — Greyhound Pack (`LayerZero-Labs/greyhound-reference`)
 - `rokoko` — RoKoKo PCS chain (`lattice-arguments/rokoko`), with
   `scripts/patch-rokoko-resources.py` printing commitment, CRS, and peak RSS

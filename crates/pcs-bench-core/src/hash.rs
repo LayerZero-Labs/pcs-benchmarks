@@ -1,16 +1,18 @@
 //! Hash-based PCS comparison matching the dense-payload evaluation table.
 
-use crate::lattice::{log2_n_for_32bit_payload, FieldSpec, AKITA_FP32, PAYLOAD_LOG2};
+use crate::lattice::{
+    log2_n_for_32bit_payload, FieldSpec, AKITA_FP128, AKITA_FP32, AKITA_FP64, PAYLOAD_LOG2,
+};
 use serde::{Deserialize, Serialize};
 
 /// Thread counts in the hash timing table.
 pub const HASH_THREADS: [u32; 2] = [1, 8];
 
-/// Schemes in roster order (Akita through BaseFold SP1).
-pub const HASH_SCHEME_COUNT: usize = 9;
+/// Schemes in roster order (Akita fp32/fp64/fp128 through BaseFold SP1).
+pub const HASH_SCHEME_COUNT: usize = 11;
 
-/// Headline hash matrix size: 5 payloads × 9 schemes × 2 thread counts.
-pub const HASH_CELL_COUNT: usize = 90;
+/// Headline hash matrix size: 5 payloads × 11 schemes × 2 thread counts.
+pub const HASH_CELL_COUNT: usize = 110;
 
 /// KoalaBear prime `2^31 - 2^24 + 1`.
 pub const KOALA_BEAR: FieldSpec = FieldSpec {
@@ -138,8 +140,12 @@ pub const FLOCK_LOG_PACKING: u32 = 7;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HashSchemeId {
-    /// Akita at the pinned `main` commit, same fp32-dense catalog as lattice-eval.
+    /// Akita at the pinned `main` commit, same direct fp32-dense catalog as lattice-eval.
     Akita,
+    /// Same pin as [`Self::Akita`], fp64-dense catalog (`q = 2^{64}-59`).
+    AkitaFp64,
+    /// Same pin as [`Self::Akita`], fp128-dense catalog (`q = 2^{128}-2^{32}+22537`).
+    AkitaFp128,
     /// Plonky2 univariate FRI over Goldilocks (`elliottech/plonky2`).
     Plonky2Fri,
     /// Plonky3 univariate FRI over KoalaBear.
@@ -163,7 +169,7 @@ impl HashSchemeId {
     #[must_use]
     pub const fn display_name(self) -> &'static str {
         match self {
-            Self::Akita => "Akita",
+            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => "Akita",
             Self::Plonky2Fri => "Plonky2 FRI",
             Self::Plonky3Fri => "Plonky3 FRI",
             Self::Plonky3Stir => "Plonky3 STIR",
@@ -186,6 +192,8 @@ impl HashSchemeId {
     pub fn parse_token(token: &str) -> Option<Self> {
         match token {
             "akita" => Some(Self::Akita),
+            "akita-fp64" | "akita_fp64" => Some(Self::AkitaFp64),
+            "akita-fp128" | "akita_fp128" => Some(Self::AkitaFp128),
             "plonky2" | "plonky2-fri" => Some(Self::Plonky2Fri),
             "plonky3-fri" | "p3-fri" => Some(Self::Plonky3Fri),
             "plonky3-stir" | "p3-stir" | "stir" => Some(Self::Plonky3Stir),
@@ -203,6 +211,8 @@ impl HashSchemeId {
     pub const fn token(self) -> &'static str {
         match self {
             Self::Akita => "akita",
+            Self::AkitaFp64 => "akita-fp64",
+            Self::AkitaFp128 => "akita-fp128",
             Self::Plonky2Fri => "plonky2-fri",
             Self::Plonky3Fri => "plonky3-fri",
             Self::Plonky3Stir => "plonky3-stir",
@@ -219,6 +229,8 @@ impl HashSchemeId {
     pub const fn all() -> [Self; HASH_SCHEME_COUNT] {
         [
             Self::Akita,
+            Self::AkitaFp64,
+            Self::AkitaFp128,
             Self::Plonky2Fri,
             Self::Plonky3Fri,
             Self::Plonky3Stir,
@@ -234,7 +246,9 @@ impl HashSchemeId {
     #[must_use]
     pub const fn source_repo(self) -> &'static str {
         match self {
-            Self::Akita => "https://github.com/LayerZero-Labs/akita",
+            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => {
+                "https://github.com/LayerZero-Labs/akita"
+            }
             Self::Plonky2Fri => "https://github.com/elliottech/plonky2",
             Self::Plonky3Fri | Self::Plonky3Stir | Self::Whir => {
                 "https://github.com/Plonky3/Plonky3"
@@ -250,7 +264,7 @@ impl HashSchemeId {
     #[must_use]
     pub const fn revision(self) -> &'static str {
         match self {
-            Self::Akita => crate::lattice::AKITA_REVISION,
+            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => crate::lattice::AKITA_REVISION,
             Self::Plonky2Fri => PLONKY2_REVISION,
             Self::Plonky3Fri | Self::Plonky3Stir => PLONKY3_FRI_STIR_REVISION,
             Self::Whir => PLONKY3_REVISION,
@@ -265,6 +279,17 @@ impl HashSchemeId {
     #[must_use]
     pub fn commit_url(self) -> String {
         format!("{}/commit/{}", self.source_repo(), self.revision())
+    }
+
+    /// `--field` value for the shared Akita worker, when this scheme is Akita.
+    #[must_use]
+    pub const fn akita_field_arg(self) -> Option<&'static str> {
+        match self {
+            Self::Akita => Some("fp32"),
+            Self::AkitaFp64 => Some("fp64"),
+            Self::AkitaFp128 => Some("fp128"),
+            _ => None,
+        }
     }
 
     /// Extra pin URL (ProveKit WHIR crate), when the table SHA is not the PCS crate.
@@ -414,7 +439,7 @@ pub fn whir_round_log_inv_rates_with_rate(log2_n: u32, starting_log_inv_rate: us
     rates
 }
 
-/// The headline hash matrix (5 payloads × 9 schemes × 2 thread counts).
+/// The headline hash matrix (5 payloads × 11 schemes × 2 thread counts).
 #[must_use]
 pub fn hash_matrix() -> Vec<HashCase> {
     let mut cases = Vec::with_capacity(HASH_CELL_COUNT);
@@ -446,6 +471,22 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             log2_n: log2_n_32,
             threads,
             native_param: "fp32-dense",
+        },
+        HashSchemeId::AkitaFp64 => HashCase {
+            payload_log2,
+            scheme,
+            field: AKITA_FP64,
+            log2_n: log2_n_for_payload_bits(payload_log2, 64),
+            threads,
+            native_param: "fp64-dense",
+        },
+        HashSchemeId::AkitaFp128 => HashCase {
+            payload_log2,
+            scheme,
+            field: AKITA_FP128,
+            log2_n: log2_n_for_payload_bits(payload_log2, 128),
+            threads,
+            native_param: "fp128-dense",
         },
         HashSchemeId::Plonky2Fri => HashCase {
             payload_log2,
@@ -554,6 +595,20 @@ mod tests {
                 .find(|case| case.payload_log2 == payload && case.scheme == HashSchemeId::Akita)
                 .expect("akita");
             assert_eq!(Some(akita.log2_n), log2_n_for_32bit_payload(payload));
+            let fp64 = matrix
+                .iter()
+                .find(|case| case.payload_log2 == payload && case.scheme == HashSchemeId::AkitaFp64)
+                .expect("akita fp64");
+            assert_eq!(fp64.log2_n, log2_n_for_payload_bits(payload, 64));
+            assert_eq!(fp64.field.name, "2^{64}-59");
+            let fp128 = matrix
+                .iter()
+                .find(|case| {
+                    case.payload_log2 == payload && case.scheme == HashSchemeId::AkitaFp128
+                })
+                .expect("akita fp128");
+            assert_eq!(fp128.log2_n, log2_n_for_payload_bits(payload, 128));
+            assert_eq!(fp128.field.name, "2^{128}-2^{32}+22537");
             let p2 = matrix
                 .iter()
                 .find(|case| {
@@ -634,18 +689,31 @@ mod tests {
     }
 
     #[test]
-    fn matrix_is_five_payloads_times_nine_schemes_times_two_threads() {
+    fn matrix_is_five_payloads_times_eleven_schemes_times_two_threads() {
         let matrix = hash_matrix();
         assert_eq!(matrix.len(), HASH_CELL_COUNT);
         assert_eq!(HashSchemeId::all().len(), HASH_SCHEME_COUNT);
         assert_eq!(HASH_THREADS, [1, 8]);
+        assert_eq!(HashSchemeId::Akita.akita_field_arg(), Some("fp32"));
+        assert_eq!(HashSchemeId::AkitaFp64.akita_field_arg(), Some("fp64"));
+        assert_eq!(HashSchemeId::AkitaFp128.akita_field_arg(), Some("fp128"));
+        assert_eq!(
+            HashSchemeId::parse_token("akita-fp64"),
+            Some(HashSchemeId::AkitaFp64)
+        );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-fp128"),
+            Some(HashSchemeId::AkitaFp128)
+        );
         for (payload_index, payload) in PAYLOAD_LOG2.iter().enumerate() {
             let base = payload_index * HASH_SCHEME_COUNT * HASH_THREADS.len();
             assert_eq!(matrix[base].scheme, HashSchemeId::Akita);
             assert_eq!(matrix[base].threads, 1);
-            assert_eq!(matrix[base + 2].scheme, HashSchemeId::Plonky2Fri);
-            assert_eq!(matrix[base + 8].scheme, HashSchemeId::Whir);
-            assert_eq!(matrix[base + 16].scheme, HashSchemeId::Basefold);
+            assert_eq!(matrix[base + 2].scheme, HashSchemeId::AkitaFp64);
+            assert_eq!(matrix[base + 4].scheme, HashSchemeId::AkitaFp128);
+            assert_eq!(matrix[base + 6].scheme, HashSchemeId::Plonky2Fri);
+            assert_eq!(matrix[base + 12].scheme, HashSchemeId::Whir);
+            assert_eq!(matrix[base + 20].scheme, HashSchemeId::Basefold);
             assert!(matrix[base..base + HASH_SCHEME_COUNT * HASH_THREADS.len()]
                 .iter()
                 .all(|case| case.payload_log2 == *payload));

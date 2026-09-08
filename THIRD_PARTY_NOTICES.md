@@ -5,10 +5,12 @@ software fetched by Cargo or by `scripts/fetch-vendors.sh` is not relicensed;
 it remains subject to its respective copyright and license terms. The fetch
 workflow retains the license and notice files in each upstream checkout.
 
-The committed `vendor/akita-catalogs/fp32_dense-main.rs` file was generated
-with Akita at commit `d1b224d809c7edc357b0dbab0f607e19b475910b` and includes
-additional benchmark schedule rows. Akita is available under Apache-2.0 or
-MIT; this repository uses the Apache-2.0 option.
+The committed `vendor/akita-catalogs/fp32_dense-main.rs`,
+`fp32_dense_recursive-main.rs`, `fp64_dense-main.rs`, and
+`fp128_dense-main.rs` files were generated with Akita at commit
+`d1b224d809c7edc357b0dbab0f607e19b475910b` and include additional benchmark
+schedule rows. Akita is available under Apache-2.0 or MIT; this repository
+uses the Apache-2.0 option.
 
 The `scripts/patch-rokoko-resources.py` patcher contains matching context for
 and modifies RoKoKo's `src/protocol/parties/executor.rs` at commit
