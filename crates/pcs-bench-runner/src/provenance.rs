@@ -56,6 +56,7 @@ impl ProvenanceExt for Provenance {
              memory_bytes={}\n\
              memory_limit_bytes={}\n\
              akita={}\n\
+             akita_offload={}\n\
              greyhound={}\n\
              rokoko={}\n",
             self.harness_revision,
@@ -72,6 +73,7 @@ impl ProvenanceExt for Provenance {
             self.memory_limit_bytes
                 .map_or_else(|| "unknown".into(), |bytes| bytes.to_string()),
             pcs_bench_core::SchemeId::Akita.commit_url(),
+            pcs_bench_core::SchemeId::AkitaOffload.commit_url(),
             pcs_bench_core::SchemeId::Greyhound.commit_url(),
             pcs_bench_core::SchemeId::Rokoko.commit_url(),
         );

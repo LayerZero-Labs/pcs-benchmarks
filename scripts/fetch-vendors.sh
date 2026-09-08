@@ -45,6 +45,23 @@ install_fp32_dense_catalog() {
   fi
 }
 
+install_schedule_overlay() {
+  local dest="$1"
+  local rel="$2"
+  local overlay="$3"
+  local generated="$dest/$rel"
+  if [[ ! -f "$generated" ]]; then
+    echo "error: missing $generated" >&2
+    exit 2
+  fi
+  if [[ -f "$overlay" ]]; then
+    cp "$overlay" "$generated"
+    echo "installed $(basename "$overlay") into $generated"
+  else
+    echo "warning: missing $overlay; leaving upstream $(basename "$generated") (hash-eval fp64/fp128 rows need the extend scripts)" >&2
+  fi
+}
+
 if [[ "$AKITA_ONLY" -eq 0 ]]; then
   clone_pin \
     https://github.com/LayerZero-Labs/greyhound-reference.git \
@@ -66,5 +83,20 @@ clone_pin \
 install_fp32_dense_catalog \
   "$ROOT/third_party/akita" \
   "$ROOT/vendor/akita-catalogs/fp32_dense-main.rs"
+python3 "$ROOT/scripts/patch-akita-fp32-dense-offload.py" "$ROOT/third_party/akita"
+RECURSIVE_OVERLAY="$ROOT/vendor/akita-catalogs/fp32_dense_recursive-main.rs"
+if [[ -f "$RECURSIVE_OVERLAY" ]]; then
+  cp "$RECURSIVE_OVERLAY" \
+    "$ROOT/third_party/akita/crates/akita-schedules/src/generated/fp32_dense_recursive.rs"
+  echo "installed $(basename "$RECURSIVE_OVERLAY") into Akita fp32_dense_recursive catalog"
+fi
+install_schedule_overlay \
+  "$ROOT/third_party/akita" \
+  crates/akita-schedules/src/generated/fp64_dense.rs \
+  "$ROOT/vendor/akita-catalogs/fp64_dense-main.rs"
+install_schedule_overlay \
+  "$ROOT/third_party/akita" \
+  crates/akita-schedules/src/generated/fp128_dense.rs \
+  "$ROOT/vendor/akita-catalogs/fp128_dense-main.rs"
 
 echo "Vendors pinned under $ROOT/third_party"

@@ -33,9 +33,9 @@ pub use hash_table::{
 pub use lattice::{
     greyhound_ring_len, lattice_case, lattice_matrix, log2_n_for_32bit_payload,
     rokoko_native_for_payload, worker_memory_limit_bytes, FieldSpec, LatticeCase, SchemeId,
-    AKITA_FP32, AKITA_REVISION, GREYHOUND_Q32, GREYHOUND_REVISION, GREYHOUND_SIS_POLICY,
-    PAYLOAD_LOG2, ROKOKO_Q50, ROKOKO_REVISION, THREADS_LATTICE_EVAL, WORKER_RAM_DENOMINATOR,
-    WORKER_RAM_NUMERATOR,
+    AKITA_FP128, AKITA_FP32, AKITA_FP64, AKITA_REVISION, GREYHOUND_Q32, GREYHOUND_REVISION,
+    GREYHOUND_SIS_POLICY, LATTICE_CELL_COUNT, LATTICE_SCHEME_COUNT, PAYLOAD_LOG2, ROKOKO_Q50,
+    ROKOKO_REVISION, THREADS_LATTICE_EVAL, WORKER_RAM_DENOMINATOR, WORKER_RAM_NUMERATOR,
 };
 pub use observation::{
     looks_like_greyhound_sis, looks_like_oom, HashRecord, LatticeRecord, Observation, Provenance,

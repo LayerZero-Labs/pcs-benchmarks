@@ -15,6 +15,8 @@ build, and machine provenance are explicit.
    dependencies use commit hashes, never moving branches or tags.
 3. **Deterministic workloads.** Inputs use documented seeds. Input generation,
    allocation, and expected-opening computation occur outside timed regions.
+   Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
+   the dense witness.
 4. **Separated phases.** Setup, commitment, proving/opening, and verification
    are measured independently. Whether setup includes preprocessing must be
    stated.
@@ -70,7 +72,10 @@ Additional rules that apply only to that table:
 6. **Catalog honesty.** If Akita has no generated schedule for a requested
    `nv`, record unsupported. Do not silently run a nearby size. For the
    lattice table, `nv=22` and `nv=24` are generated with the pinned revision's
-   planner rather than omitted.
+   planner rather than omitted. Setup-offload rows use a separate recursive
+   `fp32-dense` catalog from the same planner; a missing offload row is
+   unsupported, not a fallback to the direct catalog. A recursive row with
+   no setup-prefix edge is an error: that cell would not offload setup.
 7. **Greyhound reference.** Use `LayerZero-Labs/greyhound-reference` at the
    pinned commit, not `lattice-dogs/labrador`. Run with
    `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`. Report contextual proof
@@ -94,10 +99,11 @@ rules that apply only to that table:
    FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native 100-bit
    targets. ProveKit WHIR uses a 133-bit Johnson-bound Goldilocks instance.
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
-   table. Cells are not \(\lambda\)-comparable.
+   table, plus `fp64-dense` and `fp128-dense` rows on the hash matrix (CLI
+   `akita-fp64` / `akita-fp128`). Cells are not \(\lambda\)-comparable.
 2. **Matched payloads, native \(\log_2 N\).** Convert payload bits by
-   coefficient width (32-bit \(-5\), Goldilocks \(-6\), \(\mathbb F_{2^{128}}\)
-   \(-7\), Flock bits \(=\) payload). KoalaBear univariate FRI/STIR pack
+   coefficient width (32-bit \(-5\), 64-bit \(-6\), Goldilocks \(-6\),
+   \(\mathbb F_{2^{128}}\) \(-7\), Flock bits \(=\) payload). KoalaBear univariate FRI/STIR pack
    \(\log_2 N>23\) into height \(2^{23}\) because two-adicity is 24 at rate
    \(1/2\); footnote those rows.
 3. **1 and 8 threads.** Each cell is a fresh process with `RAYON_NUM_THREADS`

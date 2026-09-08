@@ -10,10 +10,10 @@ description = "Akita adapter for the PCS benchmark suite"
 
 [dependencies]
 # Path to the pinned checkout after `./scripts/fetch-vendors.sh`. That script
-# installs planner-generated fp32-dense rows for nv=22 and nv=24; upstream
-# catalogs omit those keys.
+# installs planner-generated fp32-dense rows for nv=22 and nv=24, plus
+# fp64-dense (nv=21/23/25/27) and fp128-dense (nv=20/22) overlays when present.
 akita-algebra = { path = "../../third_party/akita/crates/akita-algebra" }
-akita-config = { path = "../../third_party/akita/crates/akita-config" }
+akita-config = { path = "../../third_party/akita/crates/akita-config", features = ["schedules-fp32-dense-recursive"] }
 akita-pcs = { path = "../../third_party/akita/crates/akita-pcs" }
 akita-prover = { path = "../../third_party/akita/crates/akita-prover" }
 akita-serialization = { path = "../../third_party/akita/crates/akita-serialization" }

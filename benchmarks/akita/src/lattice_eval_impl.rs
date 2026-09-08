@@ -1,16 +1,15 @@
-use akita_algebra::poly::multilinear_eval;
-use akita_config::proof_optimized::fp32;
-use akita_config::CommitmentConfig;
+use akita_config::proof_optimized::{fp128, fp32, fp64};
+use akita_config::{CommitmentConfig, RecursiveCommitmentConfig};
 use akita_pcs::AkitaCommitmentScheme;
 use akita_prover::{ComputeBackendSetup, CpuBackend, DensePoly, SelectedProverOpeningData};
-use akita_serialization::{AkitaSerialize, Compress};
+use akita_serialization::{AkitaDeserialize, AkitaSerialize, Compress, Valid};
 use akita_transcript::AkitaTranscript;
 use akita_types::{
-    AkitaCommitmentHint, BasisMode, CommittedGroup, CommittedGroupBatchProfile,
+    AkitaCommitmentHint, BasisMode, CommittedGroup, CommittedGroupBatchProfile, FpExtEncoding,
     GroupBatchStatement, OpeningClaims, OpeningClaimsLayout, OpeningScheduleSelection,
     PolynomialGroupClaims,
 };
-use jolt_field::{ExtField, Ring};
+use jolt_field::{Fold, PseudoMersenne, Ring, Unreduced};
 use pcs_bench_core::{RunStatus, WorkerOutput};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -19,9 +18,14 @@ use std::io::{self, Write};
 use std::process::ExitCode;
 use std::time::Instant;
 
-type Cfg = fp32::Dense;
-type F = fp32::Field;
-type E = fp32::ExtensionField;
+type DirectCfg = fp32::Dense;
+type OffloadCfg = RecursiveCommitmentConfig<fp32::Dense>;
+type ProverOpeningData<'a, Cfg, P> = SelectedProverOpeningData<
+    'a,
+    <Cfg as CommitmentConfig>::ExtField,
+    akita_prover::PreparedProverGroup<'a, P>,
+    <Cfg as CommitmentConfig>::Field,
+>;
 
 const INPUT_SEED: u64 = 0xDEAD_BEEF;
 const POINT_SEED: u64 = 0xCAFE_BABE;
@@ -51,16 +55,37 @@ fn main() -> ExitCode {
 fn run() -> Result<(), String> {
     let log2_n = parse_u32_flag("--log2-n")?;
     let _payload_log2 = parse_u32_flag("--payload-log2").ok();
+    let offload = has_flag("--offload");
+    let field = parse_string_flag("--field").unwrap_or_else(|| "fp32".into());
+    match (field.as_str(), offload) {
+        ("fp32", true) => run_cfg::<OffloadCfg>(log2_n, true, "fp32-dense-recursive"),
+        ("fp32", false) => run_cfg::<DirectCfg>(log2_n, false, "fp32 dense"),
+        ("fp64", false) => run_cfg::<fp64::Dense>(log2_n, false, "fp64 dense"),
+        ("fp128", false) => run_cfg::<fp128::Dense>(log2_n, false, "fp128 dense"),
+        ("fp64" | "fp128", true) => {
+            Err(format!("--offload is only supported for fp32, not {field}"))
+        }
+        (other, _) => Err(format!(
+            "unknown --field {other} (expected fp32, fp64, or fp128)"
+        )),
+    }
+}
 
-    if OpeningClaimsLayout::new(log2_n as usize, 1)
+fn run_cfg<Cfg>(log2_n: u32, offload: bool, catalog: &'static str) -> Result<(), String>
+where
+    Cfg: CommitmentConfig,
+    Cfg::Field:
+        Ring + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
+    Cfg::ExtField: Ring + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
+{
+    let resolved = OpeningClaimsLayout::new(log2_n as usize, 1)
         .ok()
-        .and_then(|layout| Cfg::resolve_catalog_row_for_opening(&layout).ok())
-        .is_none()
-    {
+        .and_then(|layout| Cfg::resolve_catalog_row_for_opening(&layout).ok());
+    let Some(resolved) = resolved else {
         emit(&WorkerOutput {
             status: RunStatus::Unsupported,
             status_detail: Some(format!(
-                "pinned Akita fp32 dense catalog has no row for nv={log2_n}"
+                "pinned Akita {catalog} catalog has no row for nv={log2_n}"
             )),
             log2_n: Some(log2_n),
             timings_ns: BTreeMap::new(),
@@ -70,12 +95,35 @@ fn run() -> Result<(), String> {
             peak_rss_bytes: peak_rss_bytes(),
         })?;
         return Ok(());
+    };
+    if offload {
+        let offload_edges = resolved
+            .schedule()
+            .recursive_folds
+            .iter()
+            .filter(|fold| fold.params.setup_prefix().is_some())
+            .count();
+        if offload_edges == 0 {
+            emit(&WorkerOutput {
+                status: RunStatus::Error,
+                status_detail: Some(format!(
+                    "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
+                )),
+                log2_n: Some(log2_n),
+                timings_ns: BTreeMap::new(),
+                proof_bytes: None,
+                commitment_bytes: None,
+                state_bytes: None,
+                peak_rss_bytes: peak_rss_bytes(),
+            })?;
+            return Ok(());
+        }
     }
 
     let output = std::thread::Builder::new()
         .name("akita-lattice-eval".into())
         .stack_size(256 * 1024 * 1024)
-        .spawn(move || timed_dense(log2_n))
+        .spawn(move || timed_dense::<Cfg>(log2_n, offload))
         .map_err(|error| error.to_string())?
         .join()
         .map_err(|_| "Akita worker thread panicked".to_owned())??;
@@ -84,14 +132,28 @@ fn run() -> Result<(), String> {
 }
 
 #[allow(clippy::too_many_lines)]
-fn timed_dense(log2_n: u32) -> Result<WorkerOutput, String> {
+fn timed_dense<Cfg>(log2_n: u32, offload: bool) -> Result<WorkerOutput, String>
+where
+    Cfg: CommitmentConfig,
+    Cfg::Field:
+        Ring + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
+    Cfg::ExtField: Ring + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
+{
     let num_vars = log2_n as usize;
-    let evaluations = dense_evaluations(num_vars);
-    let polynomial = DensePoly::<F>::from_field_evals(num_vars, &evaluations)
+    let evaluations = dense_evaluations::<Cfg::Field>(num_vars);
+    let point = opening_point::<Cfg::ExtField>(num_vars);
+    // Same as Akita's dense profile workload: transfer the eval buffer, then
+    // derive the extension opening from those base-field coefficients.
+    let polynomial = DensePoly::<Cfg::Field>::from_field_evals(num_vars, evaluations)
         .map_err(|error| error.to_string())?;
-    let point = opening_point(num_vars);
-    let ext_evals: Vec<E> = evaluations.iter().copied().map(E::lift_base).collect();
-    let opening = multilinear_eval(&ext_evals, &point).map_err(|error| error.to_string())?;
+    let live = 1usize << num_vars;
+    let opening = akita_types::derive_tensor_extension_opening_claim::<Cfg::Field, Cfg::ExtField>(
+        num_vars,
+        &polynomial.field_coeffs()[..live],
+        &point,
+    )
+    .map_err(|error| error.to_string())?
+    .0;
 
     let t0 = Instant::now();
     let setup = AkitaCommitmentScheme::<Cfg>::setup_prover(num_vars, 1)
@@ -119,20 +181,26 @@ fn timed_dense(log2_n: u32) -> Result<WorkerOutput, String> {
     let commit_ns = elapsed_ns(t0);
 
     let polynomial_refs = [&polynomial];
-    let selection = Cfg::resolve_catalog_row_for_profiles(&CommittedGroupBatchProfile {
+    let resolved = Cfg::resolve_catalog_row_for_profiles(&CommittedGroupBatchProfile {
         final_group: *commit_output.committed_group.profile(),
         precommitteds: Vec::new(),
     })
-    .map_err(|error| error.to_string())?
-    .selection();
+    .map_err(|error| error.to_string())?;
+    let offload_edges = resolved
+        .schedule()
+        .recursive_folds
+        .iter()
+        .filter(|fold| fold.params.setup_prefix().is_some())
+        .count();
+    let selection = resolved.selection();
     let verifier_setup =
         AkitaCommitmentScheme::<Cfg>::setup_verifier(&setup).map_err(|error| error.to_string())?;
 
     let t0 = Instant::now();
-    let mut prover_transcript = AkitaTranscript::<F>::new(TRANSCRIPT_DOMAIN);
+    let mut prover_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
     let proof = AkitaCommitmentScheme::<Cfg>::batched_prove::<_, _, _>(
         &setup,
-        prover_claims(
+        prover_claims::<Cfg, _>(
             &point,
             &polynomial_refs,
             &commit_output.committed_group,
@@ -146,12 +214,12 @@ fn timed_dense(log2_n: u32) -> Result<WorkerOutput, String> {
     let open_ns = elapsed_ns(t0);
 
     let t0 = Instant::now();
-    let mut verifier_transcript = AkitaTranscript::<F>::new(TRANSCRIPT_DOMAIN);
+    let mut verifier_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
     AkitaCommitmentScheme::<Cfg>::batched_verify(
         &proof,
         &verifier_setup,
         &mut verifier_transcript,
-        verifier_claims(
+        verifier_claims::<Cfg>(
             selection,
             &point,
             &[opening],
@@ -170,7 +238,7 @@ fn timed_dense(log2_n: u32) -> Result<WorkerOutput, String> {
 
     Ok(WorkerOutput {
         status: RunStatus::Ok,
-        status_detail: None,
+        status_detail: offload.then(|| format!("setup_offload_edges={offload_edges}")),
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof.serialized_size(Compress::No) as u64),
@@ -180,18 +248,20 @@ fn timed_dense(log2_n: u32) -> Result<WorkerOutput, String> {
     })
 }
 
-fn prover_claims<'a, P>(
-    point: &'a [E],
+fn prover_claims<'a, Cfg, P>(
+    point: &'a [Cfg::ExtField],
     polynomials: &'a [&'a P],
-    commitment: &'a CommittedGroup<F>,
-    hint: AkitaCommitmentHint<F>,
-) -> Result<SelectedProverOpeningData<'a, E, akita_prover::PreparedProverGroup<'a, P>, F>, String>
+    commitment: &'a CommittedGroup<Cfg::Field>,
+    hint: AkitaCommitmentHint<Cfg::Field>,
+) -> Result<ProverOpeningData<'a, Cfg, P>, String>
 where
-    P: akita_prover::RootPolyMeta<F>,
+    Cfg: CommitmentConfig,
+    Cfg::ExtField: Ring,
+    P: akita_prover::RootPolyMeta<Cfg::Field>,
 {
     let group = PolynomialGroupClaims::new(
         point.to_vec(),
-        vec![E::from_u64(0); polynomials.len()],
+        vec![Cfg::ExtField::from_u64(0); polynomials.len()],
         commitment.clone(),
     )
     .map_err(|error| error.to_string())?;
@@ -200,19 +270,22 @@ where
         .map_err(|error| error.to_string())
 }
 
-fn verifier_claims<'a>(
+fn verifier_claims<'a, Cfg>(
     selection: OpeningScheduleSelection,
-    point: &[E],
-    openings: &[E],
-    commitment: &'a CommittedGroup<F>,
-) -> Result<GroupBatchStatement<'a, E, F>, String> {
+    point: &[Cfg::ExtField],
+    openings: &[Cfg::ExtField],
+    commitment: &'a CommittedGroup<Cfg::Field>,
+) -> Result<GroupBatchStatement<'a, Cfg::ExtField, Cfg::Field>, String>
+where
+    Cfg: CommitmentConfig,
+{
     let group = PolynomialGroupClaims::new(point.to_vec(), openings.to_vec(), commitment)
         .map_err(|error| error.to_string())?;
     let claims = OpeningClaims::from_groups(vec![group]).map_err(|error| error.to_string())?;
     GroupBatchStatement::new(selection, claims).map_err(|error| error.to_string())
 }
 
-fn dense_evaluations(num_vars: usize) -> Vec<F> {
+fn dense_evaluations<F: Ring>(num_vars: usize) -> Vec<F> {
     let mut rng = StdRng::seed_from_u64(INPUT_SEED);
     let half_bound = 1i64 << 30;
     (0..(1usize << num_vars))
@@ -220,7 +293,7 @@ fn dense_evaluations(num_vars: usize) -> Vec<F> {
         .collect()
 }
 
-fn opening_point(num_vars: usize) -> Vec<E> {
+fn opening_point<E: Ring>(num_vars: usize) -> Vec<E> {
     let mut rng = StdRng::seed_from_u64(POINT_SEED);
     (0..num_vars)
         .map(|_| E::from_u64(rng.gen::<u64>()))
@@ -234,21 +307,28 @@ fn init_thread_pool(threads: u32) {
         .build_global();
 }
 
+fn has_flag(name: &str) -> bool {
+    std::env::args().skip(1).any(|arg| arg == name)
+}
+
 fn parse_u32_flag(name: &str) -> Result<u32, String> {
+    parse_string_flag(name)
+        .ok_or_else(|| format!("missing {name}"))?
+        .parse()
+        .map_err(|_| format!("invalid {name}"))
+}
+
+fn parse_string_flag(name: &str) -> Option<String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == name {
-            return args
-                .next()
-                .ok_or_else(|| format!("{name} requires a value"))?
-                .parse()
-                .map_err(|_| format!("invalid {name}"));
+            return args.next();
         }
         if let Some(value) = arg.strip_prefix(&format!("{name}=")) {
-            return value.parse().map_err(|_| format!("invalid {name}"));
+            return Some(value.to_string());
         }
     }
-    Err(format!("missing {name}"))
+    None
 }
 
 fn elapsed_ns(start: Instant) -> u64 {

@@ -110,6 +110,8 @@ fn markdown_prose(provenance: &Provenance) -> String {
          uses the validated planner schedule selected for that field and size.\n\
          The pinned catalogs omit $n_v=22$ and $n_v=24$; those rows are generated\n\
          with that same planner at the measured commit.\n\
+         Akita appears twice: the direct `fp32-dense` catalog, and the same pin\n\
+         with recursive setup offloading (`fp32-dense-recursive`).\n\
          The comparison is exclusively single-threaded: RoKoKo has no native multithreaded\n\
          prover, and Greyhound is pinned to `LATTICE_DOGS_THREADS=1` even though the\n\
          reference can parallelize extension products. Greyhound uses the\n\
@@ -139,6 +141,8 @@ fn latex_prose(provenance: &Provenance) -> String {
          uses the validated planner schedule selected for that field and size.\n\
          The pinned catalogs omit $n_v=22$ and $n_v=24$; those rows are generated\n\
          with that same planner at the measured commit.\n\
+         Akita appears twice: the direct \\texttt{{fp32-dense}} catalog, and the same pin\n\
+         with recursive setup offloading (\\texttt{{fp32-dense-recursive}}).\n\
          The comparison is exclusively single-threaded: RoKoKo has no native multithreaded\n\
          prover, and Greyhound is pinned to \\texttt{{LATTICE\\_DOGS\\_THREADS=1}} even though the\n\
          reference can parallelize extension products. Greyhound uses the\n\
@@ -260,7 +264,8 @@ are stored with `warmup: true` and excluded from the median. Greyhound is
 and run with `LATTICE_DOGS_THREADS=1` and `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`.
 Proof sizes are contextual wire bytes. Akita and RoKoKo inherit `RUSTFLAGS=-C target-cpu=native`.
 `./scripts/fetch-vendors.sh` clones the pinned implementations,
-installs planner-generated `fp32-dense` rows for `nv=22` and `nv=24`, and
+installs planner-generated `fp32-dense` rows for `nv=22` and `nv=24`, installs
+the recursive `fp32-dense` setup-offload catalog, and
 patches RoKoKo so the executor prints commitment, CRS, and peak RSS.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`
@@ -287,10 +292,11 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS=\"-C target-cpu=native\"
 export RAYON_NUM_THREADS=1
 
-./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 catalogs
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
+./scripts/extend-akita-fp32-dense-offload.sh third_party/akita   # once; fills the offload catalog
 ./scripts/build-greyhound.sh
 
-# Full 15-cell matrix (Akita, Greyhound, RoKoKo)
+# Full 20-cell matrix (Akita, Akita offload, Greyhound, RoKoKo)
 ./scripts/lattice-eval.sh run --out results/lattice-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -300,15 +306,15 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `lattice-eval matrix`
-prints the 15-cell plan (unsupported RoKoKo sizes, Akita/Greyhound `log2 N`,
-RoKoKo `p-26`/`p-28`/`p-30`). A single supported cell should verify and emit
+prints the 20-cell plan (unsupported RoKoKo sizes, Akita/Greyhound `log2 N`,
+RoKoKo `p-26`/`p-28`/`p-30`, and the Akita setup-offload row). A single supported cell should verify and emit
 JSON with `status: ok`. Unit tests cover the RoKoKo log parser, OOM
 classification, and table tokens. Each sample the runner launches is equivalent
 to the worker commands below (still under the 90%-of-RAM cap).";
 
 const SANITY_PROSE_LATEX: &str = "\
 \\noindent Sanity-check the harness before a full run.
-\\texttt{lattice-eval matrix} prints the 15-cell plan.
+\\texttt{lattice-eval matrix} prints the 20-cell plan.
 A single supported cell should verify and emit JSON with \\texttt{status: ok}.
 Unit tests cover the RoKoKo log parser, OOM classification, and table tokens.";
 
@@ -321,6 +327,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
 
 # One measured sample of a supported cell (payload 2^31, log2 N = 26)
 ./scripts/lattice-eval.sh run --scheme akita --payload 31 --runs 1 --warmups 0
+./scripts/lattice-eval.sh run --scheme akita-offload --payload 31 --runs 1 --warmups 0
 ./scripts/lattice-eval.sh run --scheme greyhound --payload 31 --runs 1 --warmups 0
 ./scripts/lattice-eval.sh run --scheme rokoko --payload 31 --runs 1 --warmups 0
 
@@ -329,6 +336,10 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
   env RAYON_NUM_THREADS=1 AKITA_PARALLEL=0 \\
   cargo run --release -p pcs-bench-akita --bin lattice-eval -- \\
     --log2-n 26 --payload-log2 31
+./scripts/with-memlimit.sh {MEMORY_LIMIT_BYTES} \\
+  env RAYON_NUM_THREADS=1 AKITA_PARALLEL=0 \\
+  cargo run --release -p pcs-bench-akita --bin lattice-eval -- \\
+    --log2-n 26 --payload-log2 31 --offload
 ./scripts/with-memlimit.sh {MEMORY_LIMIT_BYTES} target/greyhound/lattice-eval --log2-n 26
 ";
 
@@ -387,9 +398,12 @@ mod tests {
         assert!(report.contains("AMD Ryzen 9 9950X"));
         assert!(report.contains("AVX-512F"));
         assert!(report.contains("-C target-cpu=native"));
+        assert!(report.contains("Akita (offload)"));
+        assert!(report.contains("recursive setup offloading"));
         assert!(report.contains(&SchemeId::Akita.commit_url()));
         assert!(report.contains("Commands used for these numbers"));
         assert!(report.contains("./scripts/fetch-vendors.sh"));
+        assert!(report.contains("./scripts/extend-akita-fp32-dense-offload.sh"));
         assert!(report.contains("./scripts/build-greyhound.sh"));
         assert!(report.contains("results/lattice-x86_64"));
         assert!(report.contains("Linux **x86_64**"));
