@@ -5,6 +5,8 @@ polynomial data at the target volumes above. For each input, Akita
 uses the validated planner schedule selected for that field and size.
 The pinned catalogs omit $n_v=22$ and $n_v=24$; those rows are generated
 with that same planner at the measured commit.
+Akita appears twice: the direct \texttt{fp32-dense} catalog, and the same pin
+with recursive setup offloading (\texttt{fp32-dense-recursive}).
 The comparison is exclusively single-threaded: RoKoKo has no native multithreaded
 prover, and Greyhound is pinned to \texttt{LATTICE\_DOGS\_THREADS=1} even though the
 reference can parallelize extension products. Greyhound uses the
@@ -28,7 +30,7 @@ than $32$. They report the cost of those native instances.
 \begin{table}[H]
 \centering
 \caption[Timing comparison with lattice-based PCSs]{Commitment, opening, and
-verification time for Akita and prior lattice-based PCSs on dense
+verification time for Akita (direct and setup-offload) and prior lattice-based PCSs on dense
 polynomial openings. Payload is the target value of
 $N\log_2|\mathbb F|$.  A dash denotes an unsupported input; numbered
 footnotes give the reason.
@@ -43,30 +45,36 @@ Scheme names link to the exact git commit that was measured.}
 Payload & Scheme & Field & $\log_2 N$
 & Commit (s) & Open (s) & Total (s) & Verify (ms) \\
 \midrule
-$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 22 & $0.098 \pm 0.0015$ & $0.966 \pm 0.016$ & $1.06 \pm 0.018$ & $7.6 \pm 0.05$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 22 & $0.099 \pm 0.0021$ & $1.000 \pm 0.0035$ & $1.10 \pm 0.0055$ & $7.6 \pm 0.01$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & $2^{32}-99$ & 22 & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
 $2^{27}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & $2^{32}-99$ & 22 & $0.110 \pm 0.0011$ & $0.168 \pm 0.0027$ & $0.278 \pm 0.0039$ & $74.3 \pm 0.87$ \\
-$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
 \addlinespace
-$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 24 & $0.344 \pm 0.0016$ & $1.52 \pm 0.0013$ & $1.86 \pm 0.0028$ & $8.7 \pm 0.34$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 24 & $0.348 \pm 0.0012$ & $1.52 \pm 0.0011$ & $1.87 \pm 0.0014$ & $9.2 \pm 0.01$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & $2^{32}-99$ & 24 & $0.343 \pm 0.0022$ & $2.02 \pm 0.0017$ & $2.36 \pm 0.0036$ & $8.2 \pm 0.14$ \\
 $2^{29}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & $2^{32}-99$ & 24 & $0.435 \pm 0.0016$ & $0.337 \pm 0.013$ & $0.772 \pm 0.015$ & $149 \pm 0.42$ \\
-$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
 \addlinespace
-$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 26 & $1.29 \pm 0.0011$ & $2.63 \pm 0.0010$ & $3.92 \pm 0.0007$ & $12.8 \pm 0.04$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 26 & $1.30 \pm 0.0064$ & $2.57 \pm 0.026$ & $3.87 \pm 0.032$ & $12.2 \pm 0.30$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & $2^{32}-99$ & 26 & $1.29 \pm 0.0035$ & $3.28 \pm 0.0034$ & $4.57 \pm 0.0069$ & $12.1 \pm 0.30$ \\
 $2^{31}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & $2^{32}-99$ & 26 & $2.27 \pm 0.0077$ & $0.881 \pm 0.0019$ & $3.15 \pm 0.0059$ & $325 \pm 0.21$ \\
 $2^{31}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & 26 & $0.876 \pm 0.015$ & $0.743 \pm 0.0055$ & $1.62 \pm 0.015$ & $4.8 \pm 0.08$ \\
 \addlinespace
-$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 28 & $6.07 \pm 0.026$ & $6.61 \pm 0.0031$ & $12.7 \pm 0.024$ & $21.7 \pm 0.40$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 28 & $6.08 \pm 0.024$ & $6.64 \pm 0.0033$ & $12.7 \pm 0.027$ & $21.6 \pm 0.11$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & $2^{32}-99$ & 28 & $6.07 \pm 0.026$ & $7.80 \pm 0.0084$ & $13.9 \pm 0.035$ & $14.4 \pm 0.17$ \\
 $2^{33}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & $2^{32}-99$ & 28 & $11.3 \pm 0.031$ & $3.43 \pm 0.087$ & $14.8 \pm 0.065$ & $643 \pm 1.33$ \\
 $2^{33}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & 28 & $3.50 \pm 0.012$ & $1.59 \pm 0.011$ & $5.10 \pm 0.0052$ & $4.9 \pm 0.13$ \\
 \addlinespace
-$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 30 & $24.5 \pm 0.188$ & $16.1 \pm 0.046$ & $40.6 \pm 0.225$ & $33.2 \pm 1.32$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 30 & $24.5 \pm 0.161$ & $16.2 \pm 0.025$ & $40.7 \pm 0.153$ & $33.3 \pm 0.40$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & $2^{32}-99$ & 30 & $24.6 \pm 0.110$ & $18.7 \pm 0.032$ & $43.3 \pm 0.079$ & $16.6 \pm 0.74$ \\
 $2^{35}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & $2^{32}-99$ & 30 & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{35}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & $2^{50}-2687$ & 30 & $18.0 \pm 0.252$ & $4.94 \pm 0.028$ & $23.0 \pm 0.250$ & $7.6 \pm 0.33$ \\
 \bottomrule
 \end{tabular}
 \smallskip
 {\footnotesize
-\noindent$^{(1)}$ RoKoKo ships only native sets \texttt{p-26}, \texttt{p-28}, and \texttt{p-30}; no instance matches this payload.\\
+\noindent$^{(1)}$ The recursive \texttt{fp32-dense} planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.\\
+\noindent$^{(2)}$ RoKoKo ships only native sets \texttt{p-26}, \texttt{p-28}, and \texttt{p-30}; no instance matches this payload.\\
 }
 \end{table}
 
@@ -87,30 +95,36 @@ Numbered footnotes mark unsupported inputs.}
 Payload & Scheme & Commitment (B) & Proof (B) & Total (B)
 & Peak RSS (GiB) & Prep. (s) & State (GiB) \\
 \midrule
-$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61299 & 61642 & 0.187 & 0.0080 & 0.0020 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61299 & 61642 & 0.109 & 0.0081 & 0.0020 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
 $2^{27}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & 2048 & 59284 & 61332 & 0.329 & 0 & 0.0000 \\
-$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
 \addlinespace
-$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61763 & 62106 & 0.632 & 0.0079 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61763 & 62106 & 0.239 & 0.0081 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & 343 & 66154 & 66497 & 0.232 & 0.0291 & 0.0020 \\
 $2^{29}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & 2304 & 59089 & 61393 & 1.08 & 0 & 0.0000 \\
-$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
 \addlinespace
-$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 63081 & 63424 & 1.93 & 0.0196 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 63081 & 63424 & 0.680 & 0.0191 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & 343 & 66297 & 66640 & 0.702 & 0.0758 & 0.0039 \\
 $2^{31}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & 2304 & 64600 & 66904 & 4.66 & 0 & 0.0000 \\
 $2^{31}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & 774 & 114830 & 115604 & 4.07 & 0.335 & 1.59 \\
 \addlinespace
-$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64487 & 64830 & 6.36 & 0.0389 & 0.0098 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64487 & 64830 & 1.36 & 0.0379 & 0.0098 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & 343 & 66894 & 67237 & 1.38 & 0.230 & 0.0156 \\
 $2^{33}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & 2304 & 64525 & 66829 & 20.7 & 0 & 0.0000 \\
 $2^{33}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & 773 & 114910 & 115683 & 10.9 & 0.698 & 3.19 \\
 \addlinespace
-$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64605 & 64948 & 24.7 & 0.0748 & 0.0195 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64605 & 64948 & 4.68 & 0.0745 & 0.0195 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita (offload)} & 343 & 67288 & 67631 & 4.73 & 0.463 & 0.0313 \\
 $2^{35}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{Greyhound} & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{35}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{RoKoKo} & 777 & 115056 & 115833 & 35.6 & 1.65 & 7.44 \\
 \bottomrule
 \end{tabular}
 \smallskip
 {\footnotesize
-\noindent$^{(1)}$ RoKoKo ships only native sets \texttt{p-26}, \texttt{p-28}, and \texttt{p-30}; no instance matches this payload.\\
+\noindent$^{(1)}$ The recursive \texttt{fp32-dense} planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.\\
+\noindent$^{(2)}$ RoKoKo ships only native sets \texttt{p-26}, \texttt{p-28}, and \texttt{p-30}; no instance matches this payload.\\
 }
 \end{table}
 
@@ -119,6 +133,7 @@ $2^{35}$ & \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc
 \noindent\textbf{Measured commits.}
 \begin{itemize}\setlength{\itemsep}{0pt}
 \item Akita: \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{\texttt{d1b224d8}}
+\item Akita (offload): \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{\texttt{d1b224d8}}
 \item Greyhound: \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397}{\texttt{687a6f8b}}
 \item RoKoKo: \href{https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e}{\texttt{1baa91e9}}
 \end{itemize}
@@ -143,10 +158,11 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS="-C target-cpu=native"
 export RAYON_NUM_THREADS=1
 
-./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 catalogs
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
+./scripts/extend-akita-fp32-dense-offload.sh third_party/akita   # once; fills the offload catalog
 ./scripts/build-greyhound.sh
 
-# Full 15-cell matrix (Akita, Greyhound, RoKoKo)
+# Full 20-cell matrix (Akita, Akita offload, Greyhound, RoKoKo)
 ./scripts/lattice-eval.sh run --out results/lattice-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -154,7 +170,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \
   results/lattice-x86_64 --out-dir results/lattice-x86_64
 \end{verbatim}
 \noindent Sanity-check the harness before a full run.
-\texttt{lattice-eval matrix} prints the 15-cell plan.
+\texttt{lattice-eval matrix} prints the 20-cell plan.
 A single supported cell should verify and emit JSON with \texttt{status: ok}.
 Unit tests cover the RoKoKo log parser, OOM classification, and table tokens.
 \begin{verbatim}
@@ -166,6 +182,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
 
 # One measured sample of a supported cell (payload 2^31, log2 N = 26)
 ./scripts/lattice-eval.sh run --scheme akita --payload 31 --runs 1 --warmups 0
+./scripts/lattice-eval.sh run --scheme akita-offload --payload 31 --runs 1 --warmups 0
 ./scripts/lattice-eval.sh run --scheme greyhound --payload 31 --runs 1 --warmups 0
 ./scripts/lattice-eval.sh run --scheme rokoko --payload 31 --runs 1 --warmups 0
 
@@ -174,6 +191,10 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval matrix
   env RAYON_NUM_THREADS=1 AKITA_PARALLEL=0 \
   cargo run --release -p pcs-bench-akita --bin lattice-eval -- \
     --log2-n 26 --payload-log2 31
+./scripts/with-memlimit.sh 117128687616 \
+  env RAYON_NUM_THREADS=1 AKITA_PARALLEL=0 \
+  cargo run --release -p pcs-bench-akita --bin lattice-eval -- \
+    --log2-n 26 --payload-log2 31 --offload
 ./scripts/with-memlimit.sh 117128687616 target/greyhound/lattice-eval --log2-n 26
 \end{verbatim}
 

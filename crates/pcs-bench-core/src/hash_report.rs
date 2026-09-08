@@ -110,7 +110,8 @@ fn markdown_prose(provenance: &Provenance) -> String {
          on the same dense standalone payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
          Each scheme uses its **native** security target, hash, field, and rate rather than a\n\
          common 128-bit retune, so cells are **not** $\\lambda$-comparable.\n\
-         Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
+         Akita is measured at its native 32-, 64-, and 128-bit primes on the same payload\n\
+         ladder. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
          WHIR is Plonky3 `p3-whir` at `security_level=128`. Capacity bound at rate $1/2$ is used\n\
          when that instance fits a 30-bit KoalaBear grind ($\\log_2 N \\le 26$);\n\
          unique decoding at rate $1/2$ is used at $\\log_2 N=28$ and $30$, where list-decoding\n\
@@ -139,7 +140,8 @@ fn latex_prose(provenance: &Provenance) -> String {
          on the same dense standalone payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
          Each scheme uses its native security target, hash, field, and rate rather than a\n\
          common 128-bit retune, so cells are not $\\lambda$-comparable.\n\
-         Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
+         Akita is measured at its native 32-, 64-, and 128-bit primes on the same payload\n\
+         ladder. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
          WHIR is Plonky3 \\texttt{{p3-whir}} at \\texttt{{security\\_level=128}}. Capacity bound at\n\
          rate $1/2$ is used when that instance fits a 30-bit KoalaBear grind\n\
          ($\\log_2 N \\le 26$); unique decoding at rate $1/2$ is used at $\\log_2 N=28$\n\
@@ -163,7 +165,11 @@ fn latex_prose(provenance: &Provenance) -> String {
 
 fn markdown_pins() -> String {
     let mut out = String::from("### Measured commits\n\n");
+    let mut seen = std::collections::BTreeSet::new();
     for scheme in HashSchemeId::all() {
+        if !seen.insert((scheme.display_name(), scheme.commit_url())) {
+            continue;
+        }
         let extra = extra_pin_suffix(scheme, false);
         let _ = writeln!(
             out,
@@ -180,7 +186,11 @@ fn latex_pins() -> String {
     let mut out = String::from(
         "\\medskip\n\\noindent\\textbf{Measured commits.}\n\\begin{itemize}\\setlength{\\itemsep}{0pt}\n",
     );
+    let mut seen = std::collections::BTreeSet::new();
     for scheme in HashSchemeId::all() {
+        if !seen.insert((scheme.display_name(), scheme.commit_url())) {
+            continue;
+        }
         let extra = extra_pin_suffix(scheme, true);
         let _ = writeln!(
             out,
@@ -296,9 +306,9 @@ cd /path/to/akita-benchmark
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS=\"-C target-cpu=native\"
 
-./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 catalogs
+./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 catalogs
 
-# Full 90-cell matrix (9 schemes × 5 payloads × {1,8} threads)
+# Full 110-cell matrix (11 schemes × 5 payloads × {1,8} threads)
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -308,13 +318,13 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `hash-eval matrix`
-prints the 90-cell plan. A single supported cell should verify and emit JSON
+prints the 110-cell plan. A single supported cell should verify and emit JSON
 with `status: ok`. Each sample the runner launches is equivalent to the worker
 commands below (still under the 90%-of-RAM cap).";
 
 const SANITY_PROSE_LATEX: &str = "\
 \\noindent Sanity-check the harness before a full run.
-\\texttt{hash-eval matrix} prints the 90-cell plan.
+\\texttt{hash-eval matrix} prints the 110-cell plan.
 A single supported cell should verify and emit JSON with \\texttt{status: ok}.";
 
 const SANITY_COMMANDS: &str = "\
@@ -325,6 +335,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 
 # One measured sample of a supported cell (payload 2^31, log2 N = 26, 1 thread)
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp64 --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp128 --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme whir --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme basefold --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme plonky2-fri --payload 27 --threads 1 --runs 1 --warmups 0
@@ -392,7 +404,7 @@ mod tests {
         assert!(report.contains("unique decoding"));
         assert!(report.contains("WHIR"));
         assert!(report.contains("BaseFold"));
-        assert!(report.contains("90-cell"));
+        assert!(report.contains("110-cell"));
         assert!(report.contains("results/hash-x86_64"));
         assert!(report.contains("Linux **x86_64**"));
         assert!(!report.contains("leopard"));

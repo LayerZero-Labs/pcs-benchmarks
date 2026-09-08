@@ -72,6 +72,10 @@ pub struct ResourceTableRow {
 pub enum GapNote {
     /// Akita has no generated fp32-dense row for the requested `nv`.
     AkitaCatalog,
+    /// Akita setup-offload has no generated recursive catalog row for the requested `nv`.
+    AkitaOffloadCatalog,
+    /// Recursive planner produced a row that does not offload setup (no prefix edge).
+    AkitaOffloadNoPrefix,
     /// RoKoKo has no native parameter set for this payload.
     RokokoNative,
     /// Greyhound's SIS parameter search cannot secure the inner commitment.
@@ -317,11 +321,23 @@ fn gap_note(scheme: SchemeId, status: RunStatus, samples: &[&LatticeRecord]) -> 
     {
         return Some(GapNote::GreyhoundSis);
     }
+    if scheme == SchemeId::AkitaOffload
+        && status == RunStatus::Error
+        && samples.iter().any(|record| {
+            record
+                .status_detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("no setup-prefix"))
+        })
+    {
+        return Some(GapNote::AkitaOffloadNoPrefix);
+    }
     if status != RunStatus::Unsupported {
         return None;
     }
     match scheme {
         SchemeId::Akita => Some(GapNote::AkitaCatalog),
+        SchemeId::AkitaOffload => Some(GapNote::AkitaOffloadCatalog),
         SchemeId::Rokoko => Some(GapNote::RokokoNative),
         SchemeId::Greyhound => Some(
             samples
@@ -341,6 +357,12 @@ impl GapNote {
         match self {
             Self::AkitaCatalog => {
                 "Pinned Akita fp32-dense catalog has no production row for $n_v=22$ (payload $2^{27}$) or $n_v=24$ (payload $2^{29}$).".into()
+            }
+            Self::AkitaOffloadCatalog => {
+                "Akita setup-offload uses the recursive `fp32-dense` catalog. That catalog has no generated row for this $n_v$.".into()
+            }
+            Self::AkitaOffloadNoPrefix => {
+                "The recursive `fp32-dense` planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.".into()
             }
             Self::RokokoNative => {
                 "RoKoKo ships only native sets `p-26`, `p-28`, and `p-30`; no instance matches this payload.".into()
@@ -362,6 +384,12 @@ impl GapNote {
         match self {
             Self::AkitaCatalog => {
                 "Pinned Akita fp32-dense catalog has no production row for $n_v=22$ (payload $2^{27}$) or $n_v=24$ (payload $2^{29}$).".into()
+            }
+            Self::AkitaOffloadCatalog => {
+                "Akita setup-offload uses the recursive \\texttt{fp32-dense} catalog. That catalog has no generated row for this $n_v$.".into()
+            }
+            Self::AkitaOffloadNoPrefix => {
+                "The recursive \\texttt{fp32-dense} planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.".into()
             }
             Self::RokokoNative => {
                 "RoKoKo ships only native sets \\texttt{p-26}, \\texttt{p-28}, and \\texttt{p-30}; no instance matches this payload.".into()
@@ -776,7 +804,7 @@ pub fn render_latex_timing_table(rows: &[TimingTableRow]) -> String {
         "\\begin{table}[H]\n\
          \\centering\n\
          \\caption[Timing comparison with lattice-based PCSs]{Commitment, opening, and\n\
-         verification time for Akita and prior lattice-based PCSs on dense\n\
+         verification time for Akita (direct and setup-offload) and prior lattice-based PCSs on dense\n\
          polynomial openings. Payload is the target value of\n\
          $N\\log_2|\\mathbb F|$.  A dash denotes an unsupported input; numbered\n\
          footnotes give the reason.\n\
@@ -1068,15 +1096,78 @@ mod tests {
     #[test]
     fn unmeasured_supported_cells_render_as_pending() {
         let rows = aggregate_timing_rows(&[]);
+        assert_eq!(rows.len(), crate::LATTICE_CELL_COUNT);
         let akita = rows
             .iter()
             .find(|row| row.payload_log2 == 31 && row.scheme == SchemeId::Akita)
             .expect("row");
         assert!(!akita.measured);
+        let offload = rows
+            .iter()
+            .find(|row| row.payload_log2 == 31 && row.scheme == SchemeId::AkitaOffload)
+            .expect("offload row");
+        assert!(!offload.measured);
         let markdown = render_markdown_timing_table(std::slice::from_ref(akita));
         assert!(markdown.contains("pending"));
         let latex = render_latex_timing_table(std::slice::from_ref(akita));
         assert!(latex.contains(r"\evalpending"));
+    }
+
+    #[test]
+    fn offload_catalog_gaps_carry_a_footnote() {
+        let mut offload = record(
+            31,
+            SchemeId::AkitaOffload,
+            RunStatus::Unsupported,
+            Some(26),
+            None,
+            None,
+            None,
+        );
+        offload.status_detail =
+            Some("pinned Akita fp32-dense-recursive catalog has no row for nv=26".into());
+        let rows = aggregate_timing_rows(&[offload]);
+        let row = rows
+            .iter()
+            .find(|row| row.payload_log2 == 31 && row.scheme == SchemeId::AkitaOffload)
+            .expect("row");
+        assert_eq!(row.gap_note, Some(GapNote::AkitaOffloadCatalog));
+        let markdown = render_markdown_timing_table(std::slice::from_ref(row));
+        assert!(markdown.contains("—(1)"));
+        assert!(markdown.contains("recursive `fp32-dense` catalog"));
+        let latex = render_latex_timing_table(std::slice::from_ref(row));
+        assert!(latex.contains(r"\evalunsupported$^{(1)}$"));
+        assert!(latex.contains("recursive \\texttt{fp32-dense} catalog"));
+    }
+
+    #[test]
+    fn offload_without_setup_prefix_carries_a_footnote() {
+        let mut offload = record(
+            27,
+            SchemeId::AkitaOffload,
+            RunStatus::Error,
+            Some(22),
+            None,
+            None,
+            None,
+        );
+        offload.status_detail = Some(
+            "pinned Akita fp32-dense-recursive catalog row for nv=22 has no setup-prefix edges"
+                .into(),
+        );
+        let rows = aggregate_timing_rows(&[offload]);
+        let row = rows
+            .iter()
+            .find(|row| row.payload_log2 == 27 && row.scheme == SchemeId::AkitaOffload)
+            .expect("row");
+        assert_eq!(row.status, RunStatus::Error);
+        assert_eq!(row.gap_note, Some(GapNote::AkitaOffloadNoPrefix));
+        let markdown = render_markdown_timing_table(std::slice::from_ref(row));
+        assert!(markdown.contains("err(1)"));
+        assert!(markdown.contains("no setup-prefix edge"));
+        let latex = render_latex_timing_table(std::slice::from_ref(row));
+        assert!(latex.contains(r"\evalunsupported$^{(1)}$"));
+        assert!(latex.contains("no setup-prefix edge"));
     }
 
     #[test]

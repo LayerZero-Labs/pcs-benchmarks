@@ -4,7 +4,8 @@ Our second experiment compares Akita with other high-performance hash-based PCSs
 on the same dense standalone payload ladder ($2^{27}$ through $2^{35}$ bits).
 Each scheme uses its native security target, hash, field, and rate rather than a
 common 128-bit retune, so cells are not $\lambda$-comparable.
-Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:
+Akita is measured at its native 32-, 64-, and 128-bit primes on the same payload
+ladder. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:
 WHIR is Plonky3 \texttt{p3-whir} at \texttt{security\_level=128}. Capacity bound at
 rate $1/2$ is used when that instance fits a 30-bit KoalaBear grind
 ($\log_2 N \le 26$); unique decoding at rate $1/2$ is used at $\log_2 N=28$
@@ -39,8 +40,12 @@ Scheme names link to the exact git commit that was measured.}
 Payload & Scheme & Field & $\log_2 N$ & Threads
 & Commit (s) & Open (s) & Total (s) & Verify (ms) \\
 \midrule
-$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 22 & 1 & $0.099 \pm 0.0026$ & $0.990 \pm 0.016$ & $1.09 \pm 0.018$ & $7.5 \pm 0.05$ \\
-$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 22 & 8 & $0.021 \pm 0.0005$ & $0.259 \pm 0.0079$ & $0.280 \pm 0.0078$ & $5.8 \pm 0.04$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 22 & 1 & $0.099 \pm 0.0010$ & $0.999 \pm 0.018$ & $1.10 \pm 0.019$ & $7.6 \pm 0.06$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 22 & 8 & $0.021 \pm 0.0003$ & $0.253 \pm 0.0019$ & $0.273 \pm 0.0021$ & $5.8 \pm 0.05$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 21 & 1 & $0.073 \pm 0.0018$ & $0.585 \pm 0.0018$ & $0.658 \pm 0.0031$ & $6.0 \pm 0.25$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 21 & 8 & $0.018 \pm 0.0010$ & $0.169 \pm 0.0037$ & $0.186 \pm 0.0034$ & $4.6 \pm 0.31$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 20 & 1 & $0.105 \pm 0.0007$ & $0.486 \pm 0.0012$ & $0.591 \pm 0.0004$ & $5.7 \pm 0.01$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 20 & 8 & $0.024 \pm 0.0012$ & $0.151 \pm 0.0012$ & $0.176 \pm 0.0013$ & $4.7 \pm 0.01$ \\
 $2^{27}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 21 & 1 & $14.3 \pm 0.060$ & $5.20 \pm 0.013$ & $19.5 \pm 0.072$ & $1.8 \pm 0.01$ \\
 $2^{27}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 21 & 8 & $2.26 \pm 0.0091$ & $1.75 \pm 0.012$ & $4.02 \pm 0.019$ & $1.8 \pm 0.02$ \\
 $2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI} & $2^{31}-2^{24}+1$ & 22 & 1 & $1.10 \pm 0.0057$ & $2.59 \pm 0.010$ & $3.69 \pm 0.012$ & $7.3 \pm 0.06$ \\
@@ -58,8 +63,12 @@ $2^{27}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b
 $2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 22 & 1 & $0.571 \pm 0.0085$ & $0.844 \pm 0.020$ & $1.41 \pm 0.012$ & $19.7 \pm 0.24$ \\
 $2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 22 & 8 & $0.563 \pm 0.0044$ & $0.812 \pm 0.012$ & $1.38 \pm 0.0076$ & $19.8 \pm 0.32$ \\
 \addlinespace
-$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 24 & 1 & $0.345 \pm 0.0007$ & $1.52 \pm 0.018$ & $1.86 \pm 0.018$ & $8.8 \pm 0.30$ \\
-$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 24 & 8 & $0.055 \pm 0.0006$ & $0.349 \pm 0.0001$ & $0.404 \pm 0.0005$ & $6.8 \pm 0.32$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 24 & 1 & $0.348 \pm 0.0024$ & $1.52 \pm 0.0036$ & $1.87 \pm 0.0051$ & $9.2 \pm 0.01$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 24 & 8 & $0.056 \pm 0.0006$ & $0.350 \pm 0.0030$ & $0.407 \pm 0.0031$ & $6.7 \pm 0.08$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 23 & 1 & $0.225 \pm 0.0021$ & $1.01 \pm 0.0005$ & $1.23 \pm 0.0018$ & $8.3 \pm 0.18$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 23 & 8 & $0.040 \pm 0.0010$ & $0.258 \pm 0.0010$ & $0.299 \pm 0.0014$ & $5.3 \pm 0.02$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 22 & 1 & $0.345 \pm 0.0046$ & $0.811 \pm 0.0016$ & $1.16 \pm 0.0034$ & $6.7 \pm 0.21$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 22 & 8 & $0.059 \pm 0.0011$ & $0.202 \pm 0.0029$ & $0.262 \pm 0.0022$ & $4.6 \pm 0.02$ \\
 $2^{29}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 23 & 1 & $57.2 \pm 0.021$ & $21.0 \pm 0.0091$ & $78.3 \pm 0.016$ & $2.2 \pm 0.01$ \\
 $2^{29}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 23 & 8 & $9.17 \pm 0.038$ & $7.25 \pm 0.0078$ & $16.4 \pm 0.036$ & $2.2 \pm 0.00$ \\
 $2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & $2^{31}-2^{24}+1$ & 24 & 1 & $2.36 \pm 0.012$ & $5.21 \pm 0.023$ & $7.57 \pm 0.036$ & $8.2 \pm 0.16$ \\
@@ -77,8 +86,12 @@ $2^{29}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b
 $2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 24 & 1 & $0.837 \pm 0.020$ & $0.918 \pm 0.022$ & $1.75 \pm 0.0046$ & $19.7 \pm 0.34$ \\
 $2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 24 & 8 & $0.864 \pm 0.0070$ & $0.839 \pm 0.011$ & $1.70 \pm 0.018$ & $20.6 \pm 0.67$ \\
 \addlinespace
-$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 26 & 1 & $1.30 \pm 0.0080$ & $2.63 \pm 0.0015$ & $3.93 \pm 0.0091$ & $12.8 \pm 0.01$ \\
-$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 26 & 8 & $0.188 \pm 0.0018$ & $0.532 \pm 0.0042$ & $0.720 \pm 0.0059$ & $7.5 \pm 0.39$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 26 & 1 & $1.30 \pm 0.0036$ & $2.61 \pm 0.024$ & $3.91 \pm 0.022$ & $12.7 \pm 0.45$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 26 & 8 & $0.187 \pm 0.0009$ & $0.539 \pm 0.020$ & $0.726 \pm 0.021$ & $7.1 \pm 0.22$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 25 & 1 & $0.815 \pm 0.0062$ & $1.84 \pm 0.018$ & $2.66 \pm 0.022$ & $10.4 \pm 0.60$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 25 & 8 & $0.124 \pm 0.0019$ & $0.405 \pm 0.0031$ & $0.531 \pm 0.0027$ & $6.3 \pm 0.47$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 24 & 1 & $1.84 \pm 0.0064$ & $1.62 \pm 0.0077$ & $3.46 \pm 0.014$ & $10.7 \pm 0.45$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 24 & 8 & $0.283 \pm 0.0015$ & $0.359 \pm 0.0022$ & $0.643 \pm 0.0036$ & $5.8 \pm 0.03$ \\
 $2^{31}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 25 & 1 & $235.7 \pm 0.309$ & $84.5 \pm 0.134$ & $320.3 \pm 0.177$ & $2.4 \pm 0.00$ \\
 $2^{31}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 25 & 8 & $38.7 \pm 0.075$ & $29.5 \pm 0.014$ & $68.2 \pm 0.070$ & $2.4 \pm 0.01$ \\
 $2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & $2^{31}-2^{24}+1$ & 26 & 1 & $2.69 \pm 0.0062$ & $5.15 \pm 0.011$ & $7.84 \pm 0.015$ & $7.8 \pm 0.11$ \\
@@ -96,8 +109,12 @@ $2^{31}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b
 $2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 26 & 1 & $2.53 \pm 0.044$ & $1.02 \pm 0.020$ & $3.55 \pm 0.025$ & $20.5 \pm 0.12$ \\
 $2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 26 & 8 & $2.51 \pm 0.034$ & $0.982 \pm 0.018$ & $3.48 \pm 0.022$ & $20.6 \pm 0.23$ \\
 \addlinespace
-$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 28 & 1 & $6.10 \pm 0.0059$ & $6.61 \pm 0.0055$ & $12.7 \pm 0.0033$ & $22.2 \pm 0.45$ \\
-$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 28 & 8 & $0.804 \pm 0.0015$ & $1.19 \pm 0.0079$ & $1.99 \pm 0.0079$ & $9.3 \pm 0.16$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 28 & 1 & $6.10 \pm 0.035$ & $6.64 \pm 0.012$ & $12.7 \pm 0.031$ & $21.2 \pm 0.99$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 28 & 8 & $0.805 \pm 0.0009$ & $1.19 \pm 0.0023$ & $2.00 \pm 0.0031$ & $9.3 \pm 0.62$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 27 & 1 & $4.61 \pm 0.020$ & $4.21 \pm 0.0040$ & $8.83 \pm 0.016$ & $17.8 \pm 0.06$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 27 & 8 & $0.666 \pm 0.0028$ & $0.835 \pm 0.0073$ & $1.50 \pm 0.0046$ & $6.9 \pm 0.23$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 26 & 1 & $3.84 \pm 0.0067$ & $4.04 \pm 0.014$ & $7.88 \pm 0.0078$ & $15.6 \pm 0.55$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 26 & 8 & $0.599 \pm 0.0040$ & $0.714 \pm 0.0032$ & $1.31 \pm 0.0071$ & $6.8 \pm 0.06$ \\
 $2^{33}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 27 & 1 & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{33}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 27 & 8 & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & $2^{31}-2^{24}+1$ & 28 & 1 & $5.38 \pm 0.0041$ & $5.27 \pm 0.014$ & $10.6 \pm 0.010$ & $7.9 \pm 0.02$ \\
@@ -115,8 +132,12 @@ $2^{33}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b
 $2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 28 & 1 & $9.22 \pm 0.168$ & $1.49 \pm 0.046$ & $10.7 \pm 0.124$ & $22.6 \pm 0.21$ \\
 $2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & $2^{31}-2^{24}+1$ & 28 & 8 & $9.16 \pm 0.114$ & $1.37 \pm 0.017$ & $10.5 \pm 0.102$ & $22.7 \pm 0.27$ \\
 \addlinespace
-$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 30 & 1 & $24.5 \pm 0.188$ & $16.1 \pm 0.021$ & $40.6 \pm 0.171$ & $33.2 \pm 0.06$ \\
-$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 30 & 8 & $3.47 \pm 0.015$ & $2.70 \pm 0.014$ & $6.17 \pm 0.025$ & $11.3 \pm 0.19$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 30 & 1 & $24.7 \pm 0.0059$ & $16.2 \pm 0.024$ & $40.9 \pm 0.019$ & $33.4 \pm 0.43$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{32}-99$ & 30 & 8 & $3.50 \pm 0.0099$ & $2.71 \pm 0.0026$ & $6.21 \pm 0.0076$ & $11.1 \pm 0.13$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 29 & 1 & $18.1 \pm 0.033$ & $10.1 \pm 0.0087$ & $28.3 \pm 0.037$ & $21.1 \pm 1.04$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{64}-59$ & 29 & 8 & $2.68 \pm 0.011$ & $1.73 \pm 0.0080$ & $4.41 \pm 0.017$ & $8.0 \pm 0.19$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 28 & 1 & $14.8 \pm 0.017$ & $11.1 \pm 0.034$ & $25.9 \pm 0.049$ & $23.9 \pm 0.83$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & $2^{128}-2^{32}+22537$ & 28 & 8 & $2.34 \pm 0.0060$ & $1.77 \pm 0.010$ & $4.10 \pm 0.012$ & $8.5 \pm 0.08$ \\
 $2^{35}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 29 & 1 & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{35}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & $2^{64}-2^{32}+1$ & 29 & 8 & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & $2^{31}-2^{24}+1$ & 30 & 1 & $18.6 \pm 0.020$ & $6.68 \pm 0.028$ & $25.3 \pm 0.013$ & $8.5 \pm 0.13$ \\
@@ -158,7 +179,9 @@ Payload & Scheme & Commitment (B) & Proof (B) & Total (B)
 \cmidrule(lr){6-7}
 & & & & & 1 thread & 8 threads & & \\
 \midrule
-$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61299 & 61642 & 0.187 & 0.193 & 0.0077 & 0.0020 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61299 & 61642 & 0.108 & 0.115 & 0.0079 & 0.0020 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 65849 & 66192 & 0.123 & 0.131 & 0.0159 & 0.0044 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 65749 & 66092 & 0.124 & 0.139 & 0.0170 & 0.0049 \\
 $2^{27}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & 520 & 87968 & 88488 & 2.79 & 2.79 & 0.0000 & 0.0000 \\
 $2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI} & 33 & 384190 & 384223 & 1.75 & 1.75 & 0.0269 & 0.0000 \\
 $2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR} & 34 & 154860 & 154894 & 1.36 & 1.36 & 0.0269 & 0.0000 \\
@@ -168,7 +191,9 @@ $2^{27}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad
 $2^{27}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9}{WHIR (ProveKit)} & 56 & 446504 & 446560 & 0.288 & 0.287 & 0.0000 & 0.0000 \\
 $2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 905160 & 905192 & 0.362 & 0.362 & 0.0000 & 0.0000 \\
 \addlinespace
-$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61763 & 62106 & 0.633 & 0.632 & 0.0079 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 61763 & 62106 & 0.239 & 0.244 & 0.0080 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 66193 & 66536 & 0.219 & 0.231 & 0.0157 & 0.0044 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 66549 & 66892 & 0.216 & 0.227 & 0.0203 & 0.0059 \\
 $2^{29}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & 520 & 106472 & 106992 & 11.2 & 11.2 & 0.0000 & 0.0000 \\
 $2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & 33 & 423479 & 423512 & 3.57 & 3.57 & 0.0582 & 0.0000 \\
 $2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR}$^{(1)}$ & 34 & 161788 & 161822 & 2.78 & 2.78 & 0.0606 & 0.0000 \\
@@ -178,7 +203,9 @@ $2^{29}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad
 $2^{29}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9}{WHIR (ProveKit)} & 56 & 459464 & 459520 & 1.14 & 1.14 & 0.0000 & 0.0000 \\
 $2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 910728 & 910760 & 0.502 & 0.502 & 0.0000 & 0.0000 \\
 \addlinespace
-$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 63081 & 63424 & 1.93 & 1.94 & 0.0200 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 63081 & 63424 & 0.681 & 0.687 & 0.0191 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 66667 & 67010 & 0.485 & 0.499 & 0.0209 & 0.0059 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 68279 & 68622 & 0.811 & 0.832 & 0.0515 & 0.0156 \\
 $2^{31}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & 520 & 117608 & 118128 & 44.6 & 44.6 & 0.0000 & 0.0000 \\
 $2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & 33 & 418487 & 418520 & 3.94 & 3.94 & 0.0599 & 0.0000 \\
 $2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR}$^{(1)}$ & 34 & 164164 & 164198 & 3.16 & 3.16 & 0.0609 & 0.0000 \\
@@ -188,7 +215,9 @@ $2^{31}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad
 $2^{31}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9}{WHIR (ProveKit)} & 56 & 564160 & 564216 & 4.56 & 4.57 & 0.0000 & 0.0000 \\
 $2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 933000 & 933032 & 1.75 & 1.75 & 0.0000 & 0.0000 \\
 \addlinespace
-$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64487 & 64830 & 6.36 & 6.37 & 0.0373 & 0.0098 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64487 & 64830 & 1.36 & 1.37 & 0.0379 & 0.0098 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 67595 & 67938 & 1.49 & 1.53 & 0.0540 & 0.0156 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 68857 & 69200 & 1.58 & 1.61 & 0.101 & 0.0313 \\
 $2^{33}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & 33 & 433943 & 433976 & 5.44 & 5.44 & 0.0621 & 0.0000 \\
 $2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR}$^{(1)}$ & 34 & 173251 & 173285 & 4.66 & 4.66 & 0.0611 & 0.0000 \\
@@ -198,7 +227,9 @@ $2^{33}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad
 $2^{33}$ & \href{https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9}{WHIR (ProveKit)} & 56 & 573456 & 573512 & 18.2 & 18.3 & 0.0000 & 0.0000 \\
 $2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 1022088 & 1022120 & 7.00 & 7.00 & 0.0000 & 0.0000 \\
 \addlinespace
-$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64605 & 64948 & 24.7 & 24.7 & 0.0747 & 0.0195 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 64605 & 64948 & 4.68 & 4.69 & 0.0751 & 0.0195 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 68473 & 68816 & 4.83 & 4.90 & 0.106 & 0.0313 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita} & 343 & 69124 & 69467 & 5.00 & 5.05 & 0.202 & 0.0625 \\
 $2^{35}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom \\
 $2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI}$^{(1)}$ & 33 & 471815 & 471848 & 12.2 & 12.2 & 0.0618 & 0.0000 \\
 $2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR}$^{(1)}$ & 34 & 207227 & 207261 & 12.2 & 12.2 & 0.0592 & 0.0000 \\
@@ -248,9 +279,9 @@ cd /path/to/akita-benchmark
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS="-C target-cpu=native"
 
-./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 catalogs
+./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 catalogs
 
-# Full 90-cell matrix (9 schemes × 5 payloads × {1,8} threads)
+# Full 110-cell matrix (11 schemes × 5 payloads × {1,8} threads)
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -258,7 +289,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \
   results/hash-x86_64 --out-dir results/hash-x86_64
 \end{verbatim}
 \noindent Sanity-check the harness before a full run.
-\texttt{hash-eval matrix} prints the 90-cell plan.
+\texttt{hash-eval matrix} prints the 110-cell plan.
 A single supported cell should verify and emit JSON with \texttt{status: ok}.
 \begin{verbatim}
 export RUSTFLAGS="-C target-cpu=native"
@@ -268,6 +299,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 
 # One measured sample of a supported cell (payload 2^31, log2 N = 26, 1 thread)
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp64 --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp128 --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme whir --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme basefold --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme plonky2-fri --payload 27 --threads 1 --runs 1 --warmups 0

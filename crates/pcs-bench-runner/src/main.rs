@@ -29,7 +29,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Dense lattice PCS comparison (Akita, Greyhound, RoKoKo).
+    /// Dense lattice PCS comparison (Akita, Akita offload, Greyhound, RoKoKo).
     LatticeEval {
         #[command(subcommand)]
         command: LatticeCommand,
@@ -71,7 +71,7 @@ enum TableFormat {
 
 #[derive(clap::Args)]
 struct RunArgs {
-    /// Comma-separated schemes: akita,greyhound,rokoko (default: all).
+    /// Comma-separated schemes: akita,akita-offload,greyhound,rokoko (default: all).
     #[arg(long, value_delimiter = ',')]
     scheme: Vec<String>,
     /// Comma-separated payload exponents (default: 27,29,31,33,35).
@@ -90,7 +90,7 @@ struct RunArgs {
 
 #[derive(clap::Args)]
 struct HashRunArgs {
-    /// Comma-separated schemes: akita,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,whir-provekit,basefold (default: all).
+    /// Comma-separated schemes: akita,akita-fp64,akita-fp128,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,whir-provekit,basefold (default: all).
     #[arg(long, value_delimiter = ',')]
     scheme: Vec<String>,
     /// Comma-separated payload exponents (default: 27,29,31,33,35).

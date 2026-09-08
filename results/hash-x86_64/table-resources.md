@@ -1,6 +1,8 @@
 | Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 61299 | 61642 | 0.187 | 0.193 | 0.0077 | 0.0020 |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 61299 | 61642 | 0.108 | 0.115 | 0.0079 | 0.0020 |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 65849 | 66192 | 0.123 | 0.131 | 0.0159 | 0.0044 |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 65749 | 66092 | 0.124 | 0.139 | 0.0170 | 0.0049 |
 | 2^{27} | [Plonky2 FRI](https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa) | 520 | 87968 | 88488 | 2.79 | 2.79 | 0.0000 | 0.0000 |
 | 2^{27} | [Plonky3 FRI](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 33 | 384190 | 384223 | 1.75 | 1.75 | 0.0269 | 0.0000 |
 | 2^{27} | [Plonky3 STIR](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 34 | 154860 | 154894 | 1.36 | 1.36 | 0.0269 | 0.0000 |
@@ -9,7 +11,9 @@
 | 2^{27} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4137 | 408856 | 412993 | 0.240 | 0.240 | 0.0000 | 0.0000 |
 | 2^{27} | [WHIR (ProveKit)](https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9) | 56 | 446504 | 446560 | 0.288 | 0.287 | 0.0000 | 0.0000 |
 | 2^{27} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 905160 | 905192 | 0.362 | 0.362 | 0.0000 | 0.0000 |
-| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 61763 | 62106 | 0.633 | 0.632 | 0.0079 | 0.0020 |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 61763 | 62106 | 0.239 | 0.244 | 0.0080 | 0.0020 |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 66193 | 66536 | 0.219 | 0.231 | 0.0157 | 0.0044 |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 66549 | 66892 | 0.216 | 0.227 | 0.0203 | 0.0059 |
 | 2^{29} | [Plonky2 FRI](https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa) | 520 | 106472 | 106992 | 11.2 | 11.2 | 0.0000 | 0.0000 |
 | 2^{29} | [Plonky3 FRI(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 33 | 423479 | 423512 | 3.57 | 3.57 | 0.0582 | 0.0000 |
 | 2^{29} | [Plonky3 STIR(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 34 | 161788 | 161822 | 2.78 | 2.78 | 0.0606 | 0.0000 |
@@ -18,7 +22,9 @@
 | 2^{29} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4137 | 340832 | 344969 | 0.957 | 0.956 | 0.0000 | 0.0000 |
 | 2^{29} | [WHIR (ProveKit)](https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9) | 56 | 459464 | 459520 | 1.14 | 1.14 | 0.0000 | 0.0000 |
 | 2^{29} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 910728 | 910760 | 0.502 | 0.502 | 0.0000 | 0.0000 |
-| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 63081 | 63424 | 1.93 | 1.94 | 0.0200 | 0.0049 |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 63081 | 63424 | 0.681 | 0.687 | 0.0191 | 0.0049 |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 66667 | 67010 | 0.485 | 0.499 | 0.0209 | 0.0059 |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 68279 | 68622 | 0.811 | 0.832 | 0.0515 | 0.0156 |
 | 2^{31} | [Plonky2 FRI](https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa) | 520 | 117608 | 118128 | 44.6 | 44.6 | 0.0000 | 0.0000 |
 | 2^{31} | [Plonky3 FRI(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 33 | 418487 | 418520 | 3.94 | 3.94 | 0.0599 | 0.0000 |
 | 2^{31} | [Plonky3 STIR(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 34 | 164164 | 164198 | 3.16 | 3.16 | 0.0609 | 0.0000 |
@@ -27,7 +33,9 @@
 | 2^{31} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4137 | 494632 | 498769 | 3.79 | 3.78 | 0.0000 | 0.0000 |
 | 2^{31} | [WHIR (ProveKit)](https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9) | 56 | 564160 | 564216 | 4.56 | 4.57 | 0.0000 | 0.0000 |
 | 2^{31} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 933000 | 933032 | 1.75 | 1.75 | 0.0000 | 0.0000 |
-| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 64487 | 64830 | 6.36 | 6.37 | 0.0373 | 0.0098 |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 64487 | 64830 | 1.36 | 1.37 | 0.0379 | 0.0098 |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 67595 | 67938 | 1.49 | 1.53 | 0.0540 | 0.0156 |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 68857 | 69200 | 1.58 | 1.61 | 0.101 | 0.0313 |
 | 2^{33} | [Plonky2 FRI](https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa) | OOM | OOM | OOM | OOM | OOM | OOM | OOM |
 | 2^{33} | [Plonky3 FRI(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 33 | 433943 | 433976 | 5.44 | 5.44 | 0.0621 | 0.0000 |
 | 2^{33} | [Plonky3 STIR(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 34 | 173251 | 173285 | 4.66 | 4.66 | 0.0611 | 0.0000 |
@@ -36,7 +44,9 @@
 | 2^{33} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4137 | 524840 | 528977 | 15.1 | 15.1 | 0.0000 | 0.0000 |
 | 2^{33} | [WHIR (ProveKit)](https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9) | 56 | 573456 | 573512 | 18.2 | 18.3 | 0.0000 | 0.0000 |
 | 2^{33} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 1022088 | 1022120 | 7.00 | 7.00 | 0.0000 | 0.0000 |
-| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 64605 | 64948 | 24.7 | 24.7 | 0.0747 | 0.0195 |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 64605 | 64948 | 4.68 | 4.69 | 0.0751 | 0.0195 |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 68473 | 68816 | 4.83 | 4.90 | 0.106 | 0.0313 |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 343 | 69124 | 69467 | 5.00 | 5.05 | 0.202 | 0.0625 |
 | 2^{35} | [Plonky2 FRI](https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa) | OOM | OOM | OOM | OOM | OOM | OOM | OOM |
 | 2^{35} | [Plonky3 FRI(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 33 | 471815 | 471848 | 12.2 | 12.2 | 0.0618 | 0.0000 |
 | 2^{35} | [Plonky3 STIR(1)](https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36) | 34 | 207227 | 207261 | 12.2 | 12.2 | 0.0592 | 0.0000 |

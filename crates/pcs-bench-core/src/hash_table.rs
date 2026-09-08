@@ -1,6 +1,6 @@
 //! Render the hash timing and resource comparison as Markdown or LaTeX.
 
-use crate::hash::{hash_case, hash_matrix, plonky3_is_packed, HashSchemeId};
+use crate::hash::{hash_case, hash_matrix, plonky3_is_packed, HashSchemeId, HASH_SCHEME_COUNT};
 use crate::lattice::PAYLOAD_LOG2;
 use crate::observation::{looks_like_oom, HashRecord, RunStatus};
 use crate::table::{
@@ -103,7 +103,7 @@ pub fn aggregate_hash_timing_rows(records: &[HashRecord]) -> Vec<HashTimingTable
 /// Aggregate measured hash records into the communication / memory table.
 #[must_use]
 pub fn aggregate_hash_resource_rows(records: &[HashRecord]) -> Vec<HashResourceTableRow> {
-    let mut rows = Vec::with_capacity(45);
+    let mut rows = Vec::with_capacity(PAYLOAD_LOG2.len() * HASH_SCHEME_COUNT);
     for payload in PAYLOAD_LOG2 {
         for scheme in HashSchemeId::all() {
             let samples_1 = measured_samples(records, payload, scheme, 1);
@@ -888,7 +888,7 @@ mod tests {
     #[test]
     fn hash_matrix_unmeasured_cells_are_pending() {
         let rows = aggregate_hash_timing_rows(&[]);
-        assert_eq!(rows.len(), 90);
+        assert_eq!(rows.len(), crate::hash::HASH_CELL_COUNT);
         let whir = rows
             .iter()
             .find(|row| {

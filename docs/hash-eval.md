@@ -14,6 +14,8 @@ table. Schemes do **not** share one coefficient width:
 | Scheme | Field | \(\log_2 N\) vs payload |
 | --- | --- | --- |
 | Akita | \(q=2^{32}-99\) | payload \(- 5\) |
+| Akita | \(q=2^{64}-59\) | payload \(- 6\) |
+| Akita | \(q=2^{128}-2^{32}+22537\) | payload \(- 7\) |
 | Plonky2 FRI | Goldilocks | payload \(- 6\) |
 | Plonky3 FRI / STIR / WHIR | KoalaBear | payload \(- 5\) |
 | Binius64 BaseFold | \(\mathbb F_{2^{128}}\) | payload \(- 7\) |
@@ -24,8 +26,11 @@ table. Schemes do **not** share one coefficient width:
 Each scheme keeps its **native** security target, hash, and rate. Cells are
 not \(\lambda\)-comparable.
 
-- **Akita:** generated `fp32-dense` planner schedule, including `nv=22` and
-  `nv=24` from `scripts/fetch-vendors.sh`.
+- **Akita:** generated planner schedules at the native 32-, 64-, and 128-bit
+  primes. `fp32-dense` includes `nv=22` and `nv=24` from
+  `scripts/fetch-vendors.sh`. `fp64-dense` adds `nv=21/23/25/27` and
+  `fp128-dense` adds `nv=20/22` via `scripts/extend-akita-fp64-dense.sh` and
+  `scripts/extend-akita-fp128-dense.sh`, installed from `vendor/akita-catalogs/`.
 - **Plonky2 FRI:** `elliottech/plonky2`, univariate Goldilocks, rate \(1/8\),
   28 queries, 16-bit PoW, Poseidon2, native 100-bit target. The LDE has
   length \(2^{n+3}\). Payload \(2^{33}\) (\(\log_2 N=27\)) and \(2^{35}\)
@@ -107,7 +112,7 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 # One scheme, one payload, one thread count, one measured sample
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
 
-# Full 90-cell table (hours, 90% of host RAM cap)
+# Full 110-cell table (hours, 90% of host RAM cap)
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \

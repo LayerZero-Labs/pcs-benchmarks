@@ -40,7 +40,8 @@ pub(crate) fn run_case(
 
     let mem_limit = provenance.resolved_memory_limit_bytes().unwrap_or(0);
     let output = match case.scheme {
-        SchemeId::Akita => run_akita(case, "pcs-bench-akita", mem_limit),
+        SchemeId::Akita => run_akita(case, mem_limit, false),
+        SchemeId::AkitaOffload => run_akita(case, mem_limit, true),
         SchemeId::Greyhound => run_greyhound(case, mem_limit),
         SchemeId::Rokoko => run_rokoko(case, mem_limit),
     };
@@ -171,23 +172,27 @@ fn record(
     }
 }
 
-fn run_akita(case: &LatticeCase, package: &str, mem_limit: u64) -> Result<WorkerOutput> {
+fn run_akita(case: &LatticeCase, mem_limit: u64, offload: bool) -> Result<WorkerOutput> {
     let log2_n = case.log2_n.context("akita cell is supported")?;
-    let output = limited_command(workspace_root()?, mem_limit)
-        .args([
-            "cargo",
-            "run",
-            "--release",
-            "-p",
-            package,
-            "--bin",
-            "lattice-eval",
-            "--",
-            "--log2-n",
-            &log2_n.to_string(),
-            "--payload-log2",
-            &case.payload_log2.to_string(),
-        ])
+    let mut command = limited_command(workspace_root()?, mem_limit);
+    command.args([
+        "cargo",
+        "run",
+        "--release",
+        "-p",
+        "pcs-bench-akita",
+        "--bin",
+        "lattice-eval",
+        "--",
+        "--log2-n",
+        &log2_n.to_string(),
+        "--payload-log2",
+        &case.payload_log2.to_string(),
+    ]);
+    if offload {
+        command.arg("--offload");
+    }
+    let output = command
         .env("RAYON_NUM_THREADS", "1")
         .env("AKITA_PARALLEL", "0")
         .output()
@@ -197,7 +202,9 @@ fn run_akita(case: &LatticeCase, package: &str, mem_limit: u64) -> Result<Worker
 
 fn spawn_hash_worker(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
     match case.scheme {
-        HashSchemeId::Akita => run_akita_hash(case, mem_limit),
+        HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128 => {
+            run_akita_hash(case, mem_limit)
+        }
         HashSchemeId::Whir => run_isolated_hash(
             case,
             mem_limit,
@@ -275,6 +282,7 @@ fn spawn_hash_worker(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
 
 fn run_akita_hash(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
     let threads = case.threads.to_string();
+    let field = case.scheme.akita_field_arg().unwrap_or("fp32").to_string();
     let mut command = limited_command(workspace_root()?, mem_limit);
     command.args([
         "cargo",
@@ -291,6 +299,8 @@ fn run_akita_hash(case: &HashCase, mem_limit: u64) -> Result<WorkerOutput> {
         &case.payload_log2.to_string(),
         "--threads",
         &threads,
+        "--field",
+        &field,
     ]);
     command.env("RAYON_NUM_THREADS", &threads);
     if case.threads <= 1 {
