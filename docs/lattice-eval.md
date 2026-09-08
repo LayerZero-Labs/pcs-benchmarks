@@ -43,8 +43,8 @@ Greyhound uses the `l2-quantum128-adps16` Euclidean SIS policy (128-bit
 quantum ADPS16 core-SVP). Proof sizes are the contextual wire encoding:
 public `u1` and the fold schedule are verifier context. If Greyhound still
 cannot secure the Ajtai commitments, the cell is `err` with a footnote; that
-is not OOM. At \(\log_2 N=30\) on this machine the 128-bit policy grows ranks
-until the worker exceeds the 109~GiB cap, so that cell is OOM.
+is not OOM. At \(\log_2 N=30\) the 128-bit policy uses about 105~GiB peak RSS,
+under the 109~GiB worker cap on this machine when the host is otherwise idle.
 
 Akita uses the generated `fp32-dense` planner schedule for the requested size.
 The catalogs shipped in the pinned Akita revisions have production rows at
