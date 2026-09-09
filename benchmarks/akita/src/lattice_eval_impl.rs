@@ -9,10 +9,10 @@ use akita_types::{
     GroupBatchStatement, OpeningClaims, OpeningClaimsLayout, OpeningScheduleSelection,
     PolynomialGroupClaims,
 };
-use jolt_field::{Fold, PseudoMersenne, Ring, Unreduced};
+use jolt_field::{Field, Fold, One, PseudoMersenne, Ring, Unreduced};
 use pcs_bench_core::{RunStatus, WorkerOutput};
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use std::collections::BTreeMap;
 use std::io::{self, Write};
 use std::process::ExitCode;
@@ -44,6 +44,8 @@ fn main() -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -75,8 +77,8 @@ fn run_cfg<Cfg>(log2_n: u32, offload: bool, catalog: &'static str) -> Result<(),
 where
     Cfg: CommitmentConfig,
     Cfg::Field:
-        Ring + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
-    Cfg::ExtField: Ring + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
+        Field + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
+    Cfg::ExtField: Field + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
 {
     let resolved = OpeningClaimsLayout::new(log2_n as usize, 1)
         .ok()
@@ -91,6 +93,8 @@ where
             timings_ns: BTreeMap::new(),
             proof_bytes: None,
             commitment_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
             state_bytes: None,
             peak_rss_bytes: peak_rss_bytes(),
         })?;
@@ -104,26 +108,16 @@ where
             .filter(|fold| fold.params.setup_prefix().is_some())
             .count();
         if offload_edges == 0 {
-            emit(&WorkerOutput {
-                status: RunStatus::Error,
-                status_detail: Some(format!(
-                    "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
-                )),
-                log2_n: Some(log2_n),
-                timings_ns: BTreeMap::new(),
-                proof_bytes: None,
-                commitment_bytes: None,
-                state_bytes: None,
-                peak_rss_bytes: peak_rss_bytes(),
-            })?;
-            return Ok(());
+            return Err(format!(
+                "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
+            ));
         }
     }
 
     let output = std::thread::Builder::new()
         .name("akita-lattice-eval".into())
         .stack_size(256 * 1024 * 1024)
-        .spawn(move || timed_dense::<Cfg>(log2_n, offload))
+        .spawn(move || timed_dense::<Cfg>(log2_n, catalog))
         .map_err(|error| error.to_string())?
         .join()
         .map_err(|_| "Akita worker thread panicked".to_owned())??;
@@ -132,12 +126,12 @@ where
 }
 
 #[allow(clippy::too_many_lines)]
-fn timed_dense<Cfg>(log2_n: u32, offload: bool) -> Result<WorkerOutput, String>
+fn timed_dense<Cfg>(log2_n: u32, catalog: &'static str) -> Result<WorkerOutput, String>
 where
     Cfg: CommitmentConfig,
     Cfg::Field:
-        Ring + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
-    Cfg::ExtField: Ring + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
+        Field + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
+    Cfg::ExtField: Field + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
 {
     let num_vars = log2_n as usize;
     let evaluations = dense_evaluations::<Cfg::Field>(num_vars);
@@ -158,8 +152,6 @@ where
     let t0 = Instant::now();
     let setup = AkitaCommitmentScheme::<Cfg>::setup_prover(num_vars, 1)
         .map_err(|error| error.to_string())?;
-    let setup_ns = elapsed_ns(t0);
-
     let prepared = CpuBackend::DEFAULT
         .prepare_setup(&setup)
         .map_err(|error| error.to_string())?;
@@ -169,6 +161,9 @@ where
         setup.expanded.as_ref(),
     )
     .map_err(|error| error.to_string())?;
+    let verifier_setup =
+        AkitaCommitmentScheme::<Cfg>::setup_verifier(&setup).map_err(|error| error.to_string())?;
+    let setup_ns = elapsed_ns(t0);
 
     let t0 = Instant::now();
     let commit_output = AkitaCommitmentScheme::<Cfg>::commit::<_, _>(
@@ -193,8 +188,6 @@ where
         .filter(|fold| fold.params.setup_prefix().is_some())
         .count();
     let selection = resolved.selection();
-    let verifier_setup =
-        AkitaCommitmentScheme::<Cfg>::setup_verifier(&setup).map_err(|error| error.to_string())?;
 
     let t0 = Instant::now();
     let mut prover_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
@@ -230,19 +223,61 @@ where
     .map_err(|error| error.to_string())?;
     let verify_ns = elapsed_ns(t0);
 
+    if negative_check_enabled() {
+        let altered_opening = opening + Cfg::ExtField::one();
+        let mut negative_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
+        if AkitaCommitmentScheme::<Cfg>::batched_verify(
+            &proof,
+            &verifier_setup,
+            &mut negative_transcript,
+            verifier_claims::<Cfg>(
+                selection,
+                &point,
+                &[altered_opening],
+                &commit_output.committed_group,
+            )?,
+            BasisMode::Lagrange,
+        )
+        .is_ok()
+        {
+            return Err("Akita verifier accepted an altered opening claim".into());
+        }
+    }
+
     let mut timings_ns = BTreeMap::new();
     timings_ns.insert("setup".into(), setup_ns);
     timings_ns.insert("commit".into(), commit_ns);
     timings_ns.insert("open".into(), open_ns);
     timings_ns.insert("verify".into(), verify_ns);
 
+    // The group profile is verifier context selected by the shared catalog.
+    // Charge only the cryptographic commitment payload, not the self-describing
+    // `CommittedGroup` envelope used to reconstruct that context.
+    let commitment_bytes = commit_output
+        .committed_group
+        .commitment()
+        .serialized_size(Compress::No) as u64;
+    if commitment_bytes != 128 {
+        return Err(format!(
+            "unexpected Akita commitment payload size: {commitment_bytes} bytes"
+        ));
+    }
+    let public_context_bytes = (commit_output
+        .committed_group
+        .serialized_size(Compress::No) as u64)
+        .saturating_sub(commitment_bytes);
+
     Ok(WorkerOutput {
         status: RunStatus::Ok,
-        status_detail: offload.then(|| format!("setup_offload_edges={offload_edges}")),
+        status_detail: Some(format!(
+            "catalog={catalog},distribution=full-field-uniform,point=full-extension-uniform,setup_offload_edges={offload_edges}"
+        )),
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof.serialized_size(Compress::No) as u64),
-        commitment_bytes: Some(commit_output.committed_group.serialized_size(Compress::No) as u64),
+        commitment_bytes: Some(commitment_bytes),
+        evaluation_bytes: Some(opening.serialized_size(Compress::No) as u64),
+        public_context_bytes: Some(public_context_bytes),
         state_bytes: Some(setup.expanded.serialized_size(Compress::No) as u64),
         peak_rss_bytes: peak_rss_bytes(),
     })
@@ -285,19 +320,27 @@ where
     GroupBatchStatement::new(selection, claims).map_err(|error| error.to_string())
 }
 
-fn dense_evaluations<F: Ring>(num_vars: usize) -> Vec<F> {
-    let mut rng = StdRng::seed_from_u64(INPUT_SEED);
-    let half_bound = 1i64 << 30;
+fn dense_evaluations<F: Field>(num_vars: usize) -> Vec<F> {
+    let mut rng = StdRng::seed_from_u64(configured_seed(INPUT_SEED));
     (0..(1usize << num_vars))
-        .map(|_| F::from_i64(rng.gen_range(-half_bound..half_bound)))
+        .map(|_| F::random(&mut rng))
         .collect()
 }
 
-fn opening_point<E: Ring>(num_vars: usize) -> Vec<E> {
-    let mut rng = StdRng::seed_from_u64(POINT_SEED);
-    (0..num_vars)
-        .map(|_| E::from_u64(rng.gen::<u64>()))
-        .collect()
+fn opening_point<E: Field>(num_vars: usize) -> Vec<E> {
+    let mut rng = StdRng::seed_from_u64(configured_seed(POINT_SEED));
+    (0..num_vars).map(|_| E::random(&mut rng)).collect()
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
 }
 
 fn init_thread_pool(threads: u32) {

@@ -1,15 +1,17 @@
 # Hash PCS evaluation
 
-This experiment compares Akita with the hash-based PCS roster on **dense**
-payloads \(2^{27}\) through \(2^{35}\) bits. It is the source of
+This native-configuration survey compares Akita with the hash-based PCS roster
+on **dense nominal payloads** \(2^{27}\) through \(2^{35}\) bits. It is not an
+equivalent-security or equivalent-statement ranking. It is the source of
 `tab:eval-hash-time` and `tab:eval-hash-resources`. Generated reports also
-record the host CPU, whether AVX-512F was advertised/activated, and a GitHub
-commit URL per row.
+record the host/build identity, whether AVX-512F was advertised, and the
+recorded implementation revision per row.
 
 ## What is being compared
 
-Payload is the target value of \(N \log_2 |\mathbb{F}|\) used in the lattice
-table. Schemes do **not** share one coefficient width:
+Nominal payload is the target value of \(N \log_2 |\mathbb{F}|\) used in the
+lattice table. It is field-capacity accounting, not sampled input entropy.
+Schemes do **not** share one coefficient width:
 
 | Scheme | Field | \(\log_2 N\) vs payload |
 | --- | --- | --- |
@@ -27,7 +29,10 @@ Each scheme keeps its **native** security target, hash, and rate. Cells are
 not \(\lambda\)-comparable.
 
 - **Akita:** generated planner schedules at the native 32-, 64-, and 128-bit
-  primes. `fp32-dense` includes `nv=22` and `nv=24` from
+  primes, with uniform full-field coefficients and uniform extension-field
+  opening points. The PCS commitment payload is 128 bytes; the larger
+  self-describing `CommittedGroup` is verifier-context/archival metadata.
+  `fp32-dense` includes `nv=22` and `nv=24` from
   `scripts/fetch-vendors.sh`. `fp64-dense` adds `nv=21/23/25/27` and
   `fp128-dense` adds `nv=20/22` via `scripts/extend-akita-fp64-dense.sh` and
   `scripts/extend-akita-fp128-dense.sh`, installed from `vendor/akita-catalogs/`.
@@ -48,13 +53,19 @@ not \(\lambda\)-comparable.
   The worker searches grinding budgets 20–30 independently (KoalaBear cannot
   grind 31+ bits) and prefers capacity bound at rate \(1/2\). If that cannot
   meet 128 bits within the grind limit, it tries the Johnson bound, then
-  unique decoding, and then rate \(1/4\).
+  unique decoding, and then rate \(1/4\). This is a first-valid
+  decoding-priority objective, not a measured minimum-latency search.
 - **Binius64 BaseFold:** \(\mathbb F_{2^{128}}\), rate \(1/2\), SHA-256,
   unique decoding at 100 bits (not the 96-bit product default). The
+  worker uses `OptimalPackedB128` and the upstream multithreaded,
+  pre-expanded NTT with the requested thread count. The
   commitment is the SHA-256 Merkle root (32 bytes) written at commit time;
   proof bytes are the rest of the Fiat–Shamir transcript.
 - **Flock Ligerito:** native Fast profile (`mXX_fast.toml`), SHA-256,
-  Johnson+OOD. `m` is the bit-variable count; packed length is \(2^{m-7}\).
+  Johnson+OOD. `m` is the input bit exponent; the measured statement is an
+  \((m-7)\)-variable packed \(\mathbb F_{2^{128}}\) MLE. The worker generates
+  packed data directly and constructs the factored `EqPoint` basis inside
+  opening time, without a byte-per-bit fixture or dense equality table.
 - **WHIR (ProveKit):** `worldfnd/whir` Goldilocks3 (`Basefield<Field64_3>`),
   Johnson bound, rate \(1/4\), fold 8, SHA-256, 133-bit internal target.
   The commit-phase narg is a SHA-256 Merkle root (32 bytes) plus one
@@ -68,8 +79,11 @@ Timing rows are collected at **1 and 8 threads**. A dash denotes an
 unsupported parallel mode. Communication columns are independent of thread
 count; peak RSS is reported for both.
 
-Every worker is launched as a fresh process. The virtual-memory ceiling is
-**90% of host RAM**. An OOM cell is recorded as `oom` / `\evaloom`.
+Workers are built once from checked-in lockfiles, then every sample executes
+that exact recorded binary in a fresh process. `ulimit -v` applies a virtual
+address-space ceiling numerically equal to **90% of host RAM**; it is not an
+RSS limit. Only corroborated allocation failures become `oom` / `\evaloom`;
+an unexplained SIGKILL remains an error.
 Unmeasured roster cells are `pending` / `\evalpending`.
 
 Do not mix machines, ISAs, or silently remap sizes.
@@ -84,13 +98,12 @@ Do not mix machines, ISAs, or silently remap sizes.
 | WHIR (`p3-whir`) | https://github.com/Plonky3/Plonky3 | [`9d496524`](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) |
 | Binius64 BaseFold | https://github.com/binius-zk/binius64 | [`6e75a2d1`](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) |
 | Flock Ligerito | https://github.com/succinctlabs/flock | [`43f0eee0`](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) |
-| WHIR (ProveKit) | https://github.com/worldfnd/ProveKit | [`6481f961`](https://github.com/worldfnd/ProveKit/commit/6481f961fc78615811b9cbaa9aa2380f1f6703c9) |
-| whir crate | https://github.com/worldfnd/whir | [`8804e80e`](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) |
+| WHIR (ProveKit adapter) | https://github.com/worldfnd/whir | [`8804e80e`](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) |
 | BaseFold (SLOP) | https://github.com/succinctlabs/sp1 | [`0f2a1e13`](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) |
 
 Hash-eval adapters are isolated Cargo trees under `benchmarks/` so they do
-not unify with the lattice workspace. Cargo fetches the pinned git revisions
-on first build. The Plonky2 worker sets `RUSTC_BOOTSTRAP=1` because
+not unify with the lattice workspace. Their checked-in `Cargo.lock` files are
+built with `--locked`. The Plonky2 worker sets `RUSTC_BOOTSTRAP=1` because
 `elliottech/plonky2` uses `#![feature(specialization)]` on stable 1.95.
 
 ## Machine requirements
@@ -112,7 +125,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 # One scheme, one payload, one thread count, one measured sample
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
 
-# Full 110-cell table (hours, 90% of host RAM cap)
+# New measurements default to 1 warmup + 10 measured processes and varied,
+# recorded workload seeds. Use --seed-mode fixed in a separate machine-noise run.
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \

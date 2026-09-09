@@ -63,9 +63,6 @@ pub const BINIUS64_REVISION: &str = "6e75a2d1d2e716578ae3ccb62806413fb1615176";
 /// Pinned [Flock](https://github.com/succinctlabs/flock) revision.
 pub const FLOCK_REVISION: &str = "43f0eee06d887d87ad25d72614cbc2b17fe91430";
 
-/// Pinned [ProveKit](https://github.com/worldfnd/ProveKit) revision.
-pub const PROVEKIT_REVISION: &str = "6481f961fc78615811b9cbaa9aa2380f1f6703c9";
-
 /// Pinned [worldfnd/whir](https://github.com/worldfnd/whir) revision used by ProveKit WHIR.
 pub const WHIR_PROVEKIT_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
 
@@ -255,7 +252,7 @@ impl HashSchemeId {
             }
             Self::Binius64 => "https://github.com/binius-zk/binius64",
             Self::FlockLigerito => "https://github.com/succinctlabs/flock",
-            Self::WhirProvekit => "https://github.com/worldfnd/ProveKit",
+            Self::WhirProvekit => "https://github.com/worldfnd/whir",
             Self::Basefold => "https://github.com/succinctlabs/sp1",
         }
     }
@@ -270,7 +267,7 @@ impl HashSchemeId {
             Self::Whir => PLONKY3_REVISION,
             Self::Binius64 => BINIUS64_REVISION,
             Self::FlockLigerito => FLOCK_REVISION,
-            Self::WhirProvekit => PROVEKIT_REVISION,
+            Self::WhirProvekit => WHIR_PROVEKIT_WHIR_REVISION,
             Self::Basefold => SP1_REVISION,
         }
     }
@@ -292,22 +289,43 @@ impl HashSchemeId {
         }
     }
 
-    /// Extra pin URL (ProveKit WHIR crate), when the table SHA is not the PCS crate.
-    #[must_use]
-    pub fn extra_commit_url(self) -> Option<String> {
-        match self {
-            Self::WhirProvekit => Some(format!(
-                "https://github.com/worldfnd/whir/commit/{WHIR_PROVEKIT_WHIR_REVISION}"
-            )),
-            _ => None,
-        }
-    }
-
     /// Abbreviated SHA used in tables.
     #[must_use]
     pub fn short_sha(self) -> &'static str {
         let sha = self.revision();
         sha.get(..8).unwrap_or(sha)
+    }
+
+    /// Native transcript-error target used by the benchmark configuration.
+    #[must_use]
+    pub const fn security_bits(self) -> u32 {
+        match self {
+            Self::Plonky2Fri
+            | Self::Plonky3Fri
+            | Self::Plonky3Stir
+            | Self::Binius64
+            | Self::FlockLigerito => HASH_SECURITY_BITS_100,
+            Self::WhirProvekit => PROVEKIT_SECURITY_BITS,
+            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 | Self::Whir | Self::Basefold => {
+                HASH_SECURITY_BITS
+            }
+        }
+    }
+
+    /// Polynomial statement measured by this adapter.
+    #[must_use]
+    pub const fn statement(self) -> &'static str {
+        match self {
+            Self::Plonky2Fri | Self::Plonky3Fri | Self::Plonky3Stir => "univariate",
+            Self::FlockLigerito => "packed F128 MLE",
+            Self::Akita
+            | Self::AkitaFp64
+            | Self::AkitaFp128
+            | Self::Whir
+            | Self::Binius64
+            | Self::WhirProvekit
+            | Self::Basefold => "multilinear",
+        }
     }
 }
 
@@ -730,6 +748,5 @@ mod tests {
             HashSchemeId::Plonky3Fri.revision(),
             HashSchemeId::Plonky3Stir.revision()
         );
-        assert!(HashSchemeId::WhirProvekit.extra_commit_url().is_some());
     }
 }

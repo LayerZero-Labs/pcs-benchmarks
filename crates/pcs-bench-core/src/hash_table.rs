@@ -5,8 +5,8 @@ use crate::lattice::PAYLOAD_LOG2;
 use crate::observation::{looks_like_oom, HashRecord, RunStatus};
 use crate::table::{
     apply_mark, footnote_index, format_gib, format_prep, gap_token, gap_token_pending,
-    latex_footnotes, markdown_footnotes, median_f64, median_u64, phase_seconds_from, sample_std,
-    timing_millis_cell, timing_seconds_cell, unique_gap_notes, GapNote,
+    latex_footnotes, markdown_footnotes, median_ci95, median_f64, median_u64, phase_seconds_from,
+    timing_millis_cell, timing_seconds_cell, unique_gap_notes, unknown_token, GapNote,
 };
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -18,6 +18,8 @@ pub struct HashTimingTableRow {
     pub payload_log2: u32,
     /// Scheme.
     pub scheme: HashSchemeId,
+    /// Recorded implementation revision used by this aggregate.
+    pub implementation_revision: Option<String>,
     /// Field label.
     pub field: String,
     /// Native `log2 N`.
@@ -28,20 +30,20 @@ pub struct HashTimingTableRow {
     pub status: RunStatus,
     /// Median commit seconds, when `status` is ok.
     pub commit_s: Option<f64>,
-    /// Sample standard deviation of commit seconds.
-    pub commit_s_std: Option<f64>,
+    /// Distribution-free two-sided confidence interval for median commit seconds.
+    pub commit_s_ci95: Option<(f64, f64)>,
     /// Median opening/prove seconds, when `status` is ok.
     pub open_s: Option<f64>,
-    /// Sample standard deviation of opening seconds.
-    pub open_s_std: Option<f64>,
-    /// Median commit+open seconds, when `status` is ok.
+    /// Distribution-free two-sided confidence interval for median opening seconds.
+    pub open_s_ci95: Option<(f64, f64)>,
+    /// Median cold setup+commit+open seconds, when `status` is ok.
     pub total_s: Option<f64>,
-    /// Sample standard deviation of per-sample commit+open seconds.
-    pub total_s_std: Option<f64>,
+    /// Confidence interval for median cold setup+commit+open seconds.
+    pub total_s_ci95: Option<(f64, f64)>,
     /// Median verify seconds, when `status` is ok.
     pub verify_s: Option<f64>,
-    /// Sample standard deviation of verify seconds.
-    pub verify_s_std: Option<f64>,
+    /// Distribution-free two-sided confidence interval for median verify seconds.
+    pub verify_s_ci95: Option<(f64, f64)>,
     /// Number of non-warmup ok samples used for the median.
     pub n_ok: usize,
     /// Whether any sample was recorded for this cell.
@@ -57,12 +59,18 @@ pub struct HashResourceTableRow {
     pub payload_log2: u32,
     /// Scheme.
     pub scheme: HashSchemeId,
+    /// Recorded implementation revision used by this aggregate.
+    pub implementation_revision: Option<String>,
     /// Cell outcome after aggregating 1-thread samples (communication / prep).
     pub status: RunStatus,
     /// Median commitment size in bytes.
     pub commitment_bytes: Option<u64>,
     /// Median opening-proof size in bytes.
     pub proof_bytes: Option<u64>,
+    /// Median separately transmitted evaluation size in bytes.
+    pub evaluation_bytes: Option<u64>,
+    /// Median excluded public/verifier context size in bytes.
+    pub public_context_bytes: Option<u64>,
     /// Median peak RSS at 1 thread.
     pub peak_rss_bytes_1: Option<u64>,
     /// Median peak RSS at 8 threads.
@@ -127,11 +135,65 @@ fn measured_samples(
                 && record.scheme == scheme
                 && record.threads == threads
                 && !record.warmup
-                && !record.historical
         })
         .collect()
 }
 
+fn incomparable_samples(samples: &[&HashRecord]) -> bool {
+    let Some(first) = samples.first() else {
+        return false;
+    };
+    let mut first_provenance = first.provenance.clone();
+    first_provenance.workload_seed = None;
+    samples.iter().skip(1).any(|record| {
+        let mut provenance = record.provenance.clone();
+        provenance.workload_seed = None;
+        record.implementation_revision != first.implementation_revision
+            || record.log2_n != first.log2_n
+            || record.field != first.field
+            || record.native_param != first.native_param
+            || record.threads != first.threads
+            || provenance != first_provenance
+    })
+}
+
+fn different_builds_across_threads(samples_1: &[&HashRecord], samples_8: &[&HashRecord]) -> bool {
+    let (Some(one), Some(eight)) = (samples_1.first(), samples_8.first()) else {
+        return false;
+    };
+    let mut one_provenance = one.provenance.clone();
+    let mut eight_provenance = eight.provenance.clone();
+    one_provenance.threads = 0;
+    eight_provenance.threads = 0;
+    one_provenance.workload_seed = None;
+    eight_provenance.workload_seed = None;
+    one.implementation_revision != eight.implementation_revision
+        || one.log2_n != eight.log2_n
+        || one.field != eight.field
+        || one.native_param != eight.native_param
+        || one_provenance != eight_provenance
+}
+
+fn invalid_success_timings(samples: &[&HashRecord]) -> bool {
+    samples.iter().any(|record| {
+        record.status == RunStatus::Ok
+            && ["commit", "open", "verify"]
+                .iter()
+                .any(|phase| !record.timings_ns.contains_key(*phase))
+    })
+}
+
+fn invalid_success_resources(samples: &[&HashRecord]) -> bool {
+    samples.iter().any(|record| {
+        record.status == RunStatus::Ok
+            && (record.proof_bytes.is_none()
+                || record.commitment_bytes.is_none()
+                || record.evaluation_bytes.is_none()
+                || record.public_context_bytes.is_none())
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 fn hash_timing_row(
     payload_log2: u32,
     scheme: HashSchemeId,
@@ -144,21 +206,73 @@ fn hash_timing_row(
         return HashTimingTableRow {
             payload_log2,
             scheme,
+            implementation_revision: None,
             field: field.to_owned(),
             log2_n: planned_log2_n,
             threads,
             status: RunStatus::Error,
             commit_s: None,
-            commit_s_std: None,
+            commit_s_ci95: None,
             open_s: None,
-            open_s_std: None,
+            open_s_ci95: None,
             total_s: None,
-            total_s_std: None,
+            total_s_ci95: None,
             verify_s: None,
-            verify_s_std: None,
+            verify_s_ci95: None,
             n_ok: 0,
             measured: false,
             gap_note: planned_gap_note(scheme, planned_log2_n.unwrap_or(0)),
+        };
+    }
+
+    if incomparable_samples(samples) {
+        return HashTimingTableRow {
+            payload_log2,
+            scheme,
+            implementation_revision: None,
+            field: field.to_owned(),
+            log2_n: planned_log2_n,
+            threads,
+            status: RunStatus::Error,
+            commit_s: None,
+            commit_s_ci95: None,
+            open_s: None,
+            open_s_ci95: None,
+            total_s: None,
+            total_s_ci95: None,
+            verify_s: None,
+            verify_s_ci95: None,
+            n_ok: 0,
+            measured: true,
+            gap_note: Some(GapNote::Custom(
+                "Samples with different revisions, parameters, or environments were rejected."
+                    .into(),
+            )),
+        };
+    }
+
+    if invalid_success_timings(samples) {
+        return HashTimingTableRow {
+            payload_log2,
+            scheme,
+            implementation_revision: Some(samples[0].implementation_revision.clone()),
+            field: field.to_owned(),
+            log2_n: planned_log2_n,
+            threads,
+            status: RunStatus::Error,
+            commit_s: None,
+            commit_s_ci95: None,
+            open_s: None,
+            open_s_ci95: None,
+            total_s: None,
+            total_s_ci95: None,
+            verify_s: None,
+            verify_s_ci95: None,
+            n_ok: 0,
+            measured: true,
+            gap_note: Some(GapNote::Custom(
+                "A successful sample was missing a required timing phase.".into(),
+            )),
         };
     }
 
@@ -167,34 +281,36 @@ fn hash_timing_row(
         .copied()
         .filter(|record| record.status == RunStatus::Ok)
         .collect();
-    if !ok.is_empty() {
+    if ok.len() == samples.len() {
         let commit = phase_seconds_from(&ok, "commit", |record| &record.timings_ns);
         let open = phase_seconds_from(&ok, "open", |record| &record.timings_ns);
         let total: Vec<f64> = ok
             .iter()
             .filter_map(|record| {
+                let setup = record.timings_ns.get("setup").copied().unwrap_or(0);
                 let commit = *record.timings_ns.get("commit")? as f64 / 1e9;
                 let open = *record.timings_ns.get("open")? as f64 / 1e9;
-                Some(commit + open)
+                Some(setup as f64 / 1e9 + commit + open)
             })
             .collect();
         return HashTimingTableRow {
             payload_log2,
             scheme,
+            implementation_revision: Some(ok[0].implementation_revision.clone()),
             field: field.to_owned(),
             log2_n: ok[0].log2_n.or(planned_log2_n),
             threads,
             status: RunStatus::Ok,
             commit_s: median_f64(&commit),
-            commit_s_std: sample_std(&commit),
+            commit_s_ci95: median_ci95(&commit),
             open_s: median_f64(&open),
-            open_s_std: sample_std(&open),
+            open_s_ci95: median_ci95(&open),
             total_s: median_f64(&total),
-            total_s_std: sample_std(&total),
+            total_s_ci95: median_ci95(&total),
             verify_s: median_f64(&phase_seconds_from(&ok, "verify", |record| {
                 &record.timings_ns
             })),
-            verify_s_std: sample_std(&phase_seconds_from(&ok, "verify", |record| {
+            verify_s_ci95: median_ci95(&phase_seconds_from(&ok, "verify", |record| {
                 &record.timings_ns
             })),
             n_ok: ok.len(),
@@ -208,38 +324,66 @@ fn hash_timing_row(
     HashTimingTableRow {
         payload_log2,
         scheme,
+        implementation_revision: Some(samples[0].implementation_revision.clone()),
         field: field.to_owned(),
         log2_n: planned_log2_n,
         threads,
         status,
         commit_s: None,
-        commit_s_std: None,
+        commit_s_ci95: None,
         open_s: None,
-        open_s_std: None,
+        open_s_ci95: None,
         total_s: None,
-        total_s_std: None,
+        total_s_ci95: None,
         verify_s: None,
-        verify_s_std: None,
-        n_ok: 0,
+        verify_s_ci95: None,
+        n_ok: ok.len(),
         measured: true,
-        gap_note: hash_gap_note(status, samples)
+        gap_note: mixed_outcome_note(samples)
+            .or_else(|| hash_gap_note(status, samples))
             .or_else(|| planned_gap_note(scheme, planned_log2_n.unwrap_or(0))),
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn hash_resource_row(
     payload_log2: u32,
     scheme: HashSchemeId,
     samples_1: &[&HashRecord],
     samples_8: &[&HashRecord],
 ) -> HashResourceTableRow {
-    let comm = if samples_1
-        .iter()
-        .any(|record| record.status == RunStatus::Ok)
+    if invalid_success_resources(samples_1)
+        || invalid_success_resources(samples_8)
+        || incomparable_samples(samples_1)
+        || incomparable_samples(samples_8)
+        || different_builds_across_threads(samples_1, samples_8)
     {
-        samples_1
-    } else {
+        return HashResourceTableRow {
+            payload_log2,
+            scheme,
+            implementation_revision: None,
+            status: RunStatus::Error,
+            commitment_bytes: None,
+            proof_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
+            peak_rss_bytes_1: None,
+            peak_rss_bytes_8: None,
+            prep_s: None,
+            state_bytes: None,
+            measured: !samples_1.is_empty() || !samples_8.is_empty(),
+            measured_8: !samples_8.is_empty(),
+            status_8: RunStatus::Error,
+            gap_note: Some(GapNote::Custom(
+                "Incomplete or incomparable resource samples were rejected.".into(),
+            )),
+        };
+    }
+
+    let comm = if samples_1.is_empty() {
         samples_8
+    } else {
+        samples_1
     };
     let ok_comm: Vec<&HashRecord> = comm
         .iter()
@@ -257,7 +401,7 @@ fn hash_resource_row(
         .filter(|record| record.status == RunStatus::Ok)
         .collect();
 
-    if ok_comm.is_empty() {
+    if ok_comm.is_empty() || ok_comm.len() != comm.len() {
         let status = if samples_1.is_empty() && samples_8.is_empty() {
             RunStatus::Error
         } else {
@@ -272,9 +416,14 @@ fn hash_resource_row(
         return HashResourceTableRow {
             payload_log2,
             scheme,
+            implementation_revision: comm
+                .first()
+                .map(|record| record.implementation_revision.clone()),
             status,
             commitment_bytes: None,
             proof_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
             peak_rss_bytes_1: None,
             peak_rss_bytes_8: None,
             prep_s: None,
@@ -283,10 +432,16 @@ fn hash_resource_row(
             measured_8: !samples_8.is_empty(),
             status_8: if samples_8.is_empty() {
                 RunStatus::Error
+            } else if samples_8
+                .iter()
+                .all(|record| record.status == RunStatus::Ok)
+            {
+                RunStatus::Ok
             } else {
                 aggregate_gap_status(samples_8)
             },
-            gap_note: hash_gap_note(status, samples_1)
+            gap_note: mixed_outcome_note(comm)
+                .or_else(|| hash_gap_note(status, samples_1))
                 .or_else(|| whir_soundness_note(samples_1))
                 .or_else(|| planned_gap_note(scheme, planned_log2_n(scheme, payload_log2))),
         };
@@ -296,16 +451,23 @@ fn hash_resource_row(
     HashResourceTableRow {
         payload_log2,
         scheme,
+        implementation_revision: Some(ok_comm[0].implementation_revision.clone()),
         status: RunStatus::Ok,
         commitment_bytes: median_u64(ok_comm.iter().filter_map(|record| record.commitment_bytes)),
         proof_bytes: median_u64(ok_comm.iter().filter_map(|record| record.proof_bytes)),
+        evaluation_bytes: median_u64(ok_comm.iter().filter_map(|record| record.evaluation_bytes)),
+        public_context_bytes: median_u64(
+            ok_comm
+                .iter()
+                .filter_map(|record| record.public_context_bytes),
+        ),
         peak_rss_bytes_1: median_u64(ok_1.iter().filter_map(|record| record.peak_rss_bytes)),
         peak_rss_bytes_8: median_u64(ok_8.iter().filter_map(|record| record.peak_rss_bytes)),
         prep_s: median_f64(&prep),
         state_bytes: median_u64(ok_comm.iter().filter_map(|record| record.state_bytes)),
         measured: !samples_1.is_empty() || !samples_8.is_empty(),
         measured_8: !samples_8.is_empty(),
-        status_8: if ok_8.is_empty() {
+        status_8: if ok_8.is_empty() || ok_8.len() != samples_8.len() {
             if samples_8.is_empty() {
                 RunStatus::Error
             } else {
@@ -334,6 +496,31 @@ fn aggregate_gap_status(samples: &[&HashRecord]) -> RunStatus {
     }
 }
 
+fn mixed_outcome_note(samples: &[&HashRecord]) -> Option<GapNote> {
+    let ok = samples
+        .iter()
+        .filter(|record| record.status == RunStatus::Ok)
+        .count();
+    if ok == 0 || ok == samples.len() {
+        return None;
+    }
+    let oom = samples
+        .iter()
+        .filter(|record| {
+            record.status == RunStatus::Oom || looks_like_oom(record.status_detail.as_deref())
+        })
+        .count();
+    let unsupported = samples
+        .iter()
+        .filter(|record| record.status == RunStatus::Unsupported)
+        .count();
+    let errors = samples.len().saturating_sub(ok + oom + unsupported);
+    Some(GapNote::Custom(format!(
+        "Partial result rejected: {ok}/{} samples succeeded, {oom} OOM, {unsupported} unsupported, {errors} errors.",
+        samples.len()
+    )))
+}
+
 fn hash_gap_note(status: RunStatus, samples: &[&HashRecord]) -> Option<GapNote> {
     if status != RunStatus::Unsupported && status != RunStatus::Error {
         return None;
@@ -356,6 +543,18 @@ fn planned_gap_note(scheme: HashSchemeId, log2_n: u32) -> Option<GapNote> {
         .map(|_| GapNote::PackedUnivariate)
 }
 
+fn statement_label(row: &HashTimingTableRow) -> &'static str {
+    if matches!(
+        row.scheme,
+        HashSchemeId::Plonky3Fri | HashSchemeId::Plonky3Stir
+    ) && row.log2_n.is_some_and(plonky3_is_packed)
+    {
+        "univariate batch"
+    } else {
+        row.scheme.statement()
+    }
+}
+
 fn whir_soundness_note(samples: &[&HashRecord]) -> Option<GapNote> {
     samples
         .iter()
@@ -368,23 +567,29 @@ fn whir_soundness_note(samples: &[&HashRecord]) -> Option<GapNote> {
         .then_some(GapNote::WhirUniqueDecoding)
 }
 
-fn scheme_cell(scheme: HashSchemeId, latex: bool, mark: Option<u32>) -> String {
+fn scheme_cell(
+    scheme: HashSchemeId,
+    implementation_revision: Option<&str>,
+    latex: bool,
+    mark: Option<u32>,
+) -> String {
+    let label = apply_mark(
+        if latex {
+            scheme.latex_name()
+        } else {
+            scheme.display_name()
+        },
+        mark,
+        latex,
+    );
+    let Some(revision) = implementation_revision else {
+        return label;
+    };
+    let url = format!("{}/commit/{revision}", scheme.source_repo());
     if latex {
-        apply_mark(
-            &format!(
-                r"\href{{{}}}{{{}}}",
-                scheme.commit_url(),
-                scheme.latex_name()
-            ),
-            mark,
-            true,
-        )
+        format!(r"\href{{{url}}}{{{label}}}")
     } else {
-        format!(
-            "[{}]({})",
-            apply_mark(scheme.display_name(), mark, false),
-            scheme.commit_url()
-        )
+        format!("[{label}]({url})")
     }
 }
 
@@ -414,7 +619,7 @@ fn resource_value_cell(
         return gap_token_pending(latex);
     }
     match status {
-        RunStatus::Ok => value.unwrap_or_else(|| gap_token(RunStatus::Unsupported, latex)),
+        RunStatus::Ok => value.unwrap_or_else(|| unknown_token(latex)),
         other => apply_mark(&gap_token(other, latex), mark, latex),
     }
 }
@@ -430,7 +635,7 @@ fn log2_n_cell(row: &HashTimingTableRow, latex: bool, mark: Option<u32>) -> Stri
 }
 
 fn total_bytes(row: &HashResourceTableRow) -> Option<u64> {
-    Some(row.commitment_bytes? + row.proof_bytes?)
+    Some(row.commitment_bytes? + row.evaluation_bytes? + row.proof_bytes?)
 }
 
 fn unique_gap_notes_timing(rows: &[HashTimingTableRow]) -> Vec<GapNote> {
@@ -446,40 +651,47 @@ fn unique_gap_notes_resources(rows: &[HashResourceTableRow]) -> Vec<GapNote> {
 pub fn render_markdown_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
     let notes = unique_gap_notes_timing(rows);
     let mut out = String::from(
-        "| Payload | Scheme | Field | log₂ N | Threads | Commit (s) | Open (s) | Total (s) | Verify (ms) |\n",
+        "| Nominal payload | Scheme | Security target | Statement | Field | log₂ N | Threads | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |\n",
     );
-    out.push_str("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n");
+    out.push_str("| ---: | --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         let _ = writeln!(
             out,
-            "| 2^{{{}}} | {} | ${}$ | {} | {} | {} | {} | {} | {} |",
+            "| 2^{{{}}} | {} | {} bits | {} | ${}$ | {} | {} | {} | {} | {} | {} |",
             row.payload_log2,
-            scheme_cell(row.scheme, false, mark),
+            scheme_cell(
+                row.scheme,
+                row.implementation_revision.as_deref(),
+                false,
+                mark
+            ),
+            row.scheme.security_bits(),
+            statement_label(row),
             row.field,
             log2_n_cell(row, false, mark),
             row.threads,
             timing_cell(
                 row,
-                timing_seconds_cell(row.commit_s, row.commit_s_std, false),
+                timing_seconds_cell(row.commit_s, row.commit_s_ci95, false),
                 false,
                 mark
             ),
             timing_cell(
                 row,
-                timing_seconds_cell(row.open_s, row.open_s_std, false),
+                timing_seconds_cell(row.open_s, row.open_s_ci95, false),
                 false,
                 mark
             ),
             timing_cell(
                 row,
-                timing_seconds_cell(row.total_s, row.total_s_std, false),
+                timing_seconds_cell(row.total_s, row.total_s_ci95, false),
                 false,
                 mark
             ),
             timing_cell(
                 row,
-                timing_millis_cell(row.verify_s, row.verify_s_std, false),
+                timing_millis_cell(row.verify_s, row.verify_s_ci95, false),
                 false,
                 mark
             ),
@@ -494,20 +706,32 @@ pub fn render_markdown_hash_timing_table(rows: &[HashTimingTableRow]) -> String 
 pub fn render_markdown_hash_resource_table(rows: &[HashResourceTableRow]) -> String {
     let notes = unique_gap_notes_resources(rows);
     let mut out = String::from(
-        "| Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |\n",
+        "| Nominal payload | Scheme | Commitment (B) | Evaluation (B) | Proof (B) | Total sent (B) | Excluded context (B) | Peak RSS 1-thread (GiB) | Peak RSS 8-thread (GiB) | Prep. (s) | State (GiB) |\n",
     );
-    out.push_str("| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
+    out.push_str("| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         let _ = writeln!(
             out,
-            "| 2^{{{}}} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            "| 2^{{{}}} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
             row.payload_log2,
-            scheme_cell(row.scheme, false, mark),
+            scheme_cell(
+                row.scheme,
+                row.implementation_revision.as_deref(),
+                false,
+                mark
+            ),
             resource_value_cell(
                 row.measured,
                 row.status,
                 row.commitment_bytes.map(|v| v.to_string()),
+                false,
+                mark
+            ),
+            resource_value_cell(
+                row.measured,
+                row.status,
+                row.evaluation_bytes.map(|v| v.to_string()),
                 false,
                 mark
             ),
@@ -522,6 +746,13 @@ pub fn render_markdown_hash_resource_table(rows: &[HashResourceTableRow]) -> Str
                 row.measured,
                 row.status,
                 total_bytes(row).map(|v| v.to_string()),
+                false,
+                mark
+            ),
+            resource_value_cell(
+                row.measured,
+                row.status,
+                row.public_context_bytes.map(|v| v.to_string()),
                 false,
                 mark
             ),
@@ -567,18 +798,19 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
         "\\begin{table}[H]\n\
          \\centering\n\
          \\caption[Timing comparison with hash-based PCSs]{Commitment, opening, and\n\
-         verification time for the hash-based PCS roster on matched dense payloads.\n\
+         verification time for the hash-based PCS roster on declared nominal payloads.\n\
+         Security and statement columns expose configurations that are not directly comparable.\n\
          A dash denotes an unsupported parallel mode.\n\
-         Timing cells are the median of fresh processes after warmup, shown as\n\
-         median $\\pm$ sample standard deviation when $n\\ge 2$.\n\
+         Timing cells are the median of fresh processes after warmup, followed by\n\
+         a conservative distribution-free 95\\% confidence interval when the sample count supports one.\n\
          Scheme names link to the exact git commit that was measured.}\n\
          \\label{tab:eval-hash-time}\n\
          \\scriptsize\n\
          \\setlength{\\tabcolsep}{4pt}\n\
-         \\begin{tabular}{@{}llcccrrrr@{}}\n\
+         \\begin{tabular}{@{}llclcccrrrr@{}}\n\
          \\toprule\n\
-         Payload & Scheme & Field & $\\log_2 N$ & Threads\n\
-         & Commit (s) & Open (s) & Total (s) & Verify (ms) \\\\\n\
+         Nominal payload & Scheme & Security & Statement & Field & $\\log_2 N$ & Threads\n\
+         & Commit (s) & Open (s) & Cold total (s) & Verify (ms) \\\\\n\
          \\midrule\n",
     );
     append_payload_groups(
@@ -586,33 +818,40 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
         |row| {
             let mark = footnote_index(&notes, row.gap_note.as_ref());
             format!(
-                "$2^{{{}}}$ & {} & ${}$ & {} & {} & {} & {} & {} & {} \\\\",
+                "$2^{{{}}}$ & {} & {} bits & {} & ${}$ & {} & {} & {} & {} & {} & {} \\\\",
                 row.payload_log2,
-                scheme_cell(row.scheme, true, mark),
+                scheme_cell(
+                    row.scheme,
+                    row.implementation_revision.as_deref(),
+                    true,
+                    mark
+                ),
+                row.scheme.security_bits(),
+                statement_label(row),
                 row.field,
                 log2_n_cell(row, true, mark),
                 row.threads,
                 timing_cell(
                     row,
-                    timing_seconds_cell(row.commit_s, row.commit_s_std, true),
+                    timing_seconds_cell(row.commit_s, row.commit_s_ci95, true),
                     true,
                     mark
                 ),
                 timing_cell(
                     row,
-                    timing_seconds_cell(row.open_s, row.open_s_std, true),
+                    timing_seconds_cell(row.open_s, row.open_s_ci95, true),
                     true,
                     mark
                 ),
                 timing_cell(
                     row,
-                    timing_seconds_cell(row.total_s, row.total_s_std, true),
+                    timing_seconds_cell(row.total_s, row.total_s_ci95, true),
                     true,
                     mark
                 ),
                 timing_cell(
                     row,
-                    timing_millis_cell(row.verify_s, row.verify_s_std, true),
+                    timing_millis_cell(row.verify_s, row.verify_s_ci95, true),
                     true,
                     mark
                 ),
@@ -628,6 +867,7 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
 
 /// LaTeX `tabular` matching `tab:eval-hash-resources`.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String {
     let notes = unique_gap_notes_resources(rows);
     let mut out = String::from(
@@ -635,16 +875,17 @@ pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String
          \\centering\n\
          \\caption[Communication and memory comparison with hash-based PCSs]{Proof\n\
          communication, prover memory, and reusable preprocessing for the workloads in\n\
-         \\Cref{tab:eval-hash-time}.}\n\
+         \\Cref{tab:eval-hash-time}. Total sent includes commitment, separately transmitted\n\
+         evaluation, and proof; excluded verifier context is shown separately.}\n\
          \\label{tab:eval-hash-resources}\n\
          \\scriptsize\n\
          \\setlength{\\tabcolsep}{4pt}\n\
-         \\begin{tabular}{@{}llrrrrrrr@{}}\n\
+         \\begin{tabular}{@{}llrrrrrrrrr@{}}\n\
          \\toprule\n\
-         Payload & Scheme & Commitment (B) & Proof (B) & Total (B)\n\
+         Nominal payload & Scheme & Commitment (B) & Evaluation (B) & Proof (B) & Total sent (B) & Excl. context (B)\n\
          & \\multicolumn{2}{c}{Peak RSS (GiB)} & Prep. (s) & State (GiB) \\\\\n\
-         \\cmidrule(lr){6-7}\n\
-         & & & & & 1 thread & 8 threads & & \\\\\n\
+         \\cmidrule(lr){8-9}\n\
+         & & & & & & & 1 thread & 8 threads & & \\\\\n\
          \\midrule\n",
     );
 
@@ -661,13 +902,25 @@ pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String
                 let mark = footnote_index(&notes, row.gap_note.as_ref());
                 let _ = writeln!(
                     out,
-                    "$2^{{{}}}$ & {} & {} & {} & {} & {} & {} & {} & {} \\\\",
+                    "$2^{{{}}}$ & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} \\\\",
                     row.payload_log2,
-                    scheme_cell(row.scheme, true, mark),
+                    scheme_cell(
+                        row.scheme,
+                        row.implementation_revision.as_deref(),
+                        true,
+                        mark
+                    ),
                     resource_value_cell(
                         row.measured,
                         row.status,
                         row.commitment_bytes.map(|v| v.to_string()),
+                        true,
+                        mark
+                    ),
+                    resource_value_cell(
+                        row.measured,
+                        row.status,
+                        row.evaluation_bytes.map(|v| v.to_string()),
                         true,
                         mark
                     ),
@@ -682,6 +935,13 @@ pub fn render_latex_hash_resource_table(rows: &[HashResourceTableRow]) -> String
                         row.measured,
                         row.status,
                         total_bytes(row).map(|v| v.to_string()),
+                        true,
+                        mark
+                    ),
+                    resource_value_cell(
+                        row.measured,
+                        row.status,
+                        row.public_context_bytes.map(|v| v.to_string()),
                         true,
                         mark
                     ),
@@ -753,7 +1013,7 @@ mod tests {
         render_markdown_hash_timing_table,
     };
     use crate::hash::HashSchemeId;
-    use crate::observation::{HashRecord, Provenance, RunStatus, RESULT_SCHEMA_VERSION};
+    use crate::observation::{HashRecord, Provenance, RunStatus};
     use crate::table::GapNote;
     use std::collections::BTreeMap;
 
@@ -777,7 +1037,6 @@ mod tests {
             timings_ns.insert("verify".into(), (seconds * 1e9) as u64);
         }
         HashRecord {
-            schema_version: RESULT_SCHEMA_VERSION,
             status,
             status_detail: None,
             scheme,
@@ -792,10 +1051,11 @@ mod tests {
             threads,
             sample: 0,
             warmup: false,
-            historical: false,
             timings_ns,
             proof_bytes: Some(61_337),
             commitment_bytes: Some(32),
+            evaluation_bytes: Some(16),
+            public_context_bytes: Some(0),
             state_bytes: Some(1_048_576),
             peak_rss_bytes: Some(119_000_000),
             provenance: Provenance::test_fixture(),
@@ -843,8 +1103,11 @@ mod tests {
         assert!(akita.peak_rss_bytes_8.is_some());
         let resource_md = render_markdown_hash_resource_table(&resources);
         assert!(resource_md.contains("Proof (B)"));
+        assert!(resource_md.contains("Evaluation (B)"));
+        assert!(resource_md.contains("Excluded context (B)"));
         assert!(!resource_md.contains("KiB"));
         assert!(resource_md.contains("| 61337 |"));
+        assert!(resource_md.contains("| 61385 |"));
         let resource_tex = render_latex_hash_resource_table(&resources);
         assert!(resource_tex.contains("Proof (B)"));
         assert!(resource_tex.contains("61337"));
@@ -917,5 +1180,95 @@ mod tests {
             })
             .expect("unpacked fri");
         assert_eq!(unpacked.gap_note, None);
+    }
+
+    #[test]
+    fn partial_success_does_not_hide_oom_samples() {
+        let ok = record(
+            27,
+            HashSchemeId::Akita,
+            1,
+            RunStatus::Ok,
+            Some(1.0),
+            Some(2.0),
+            Some(0.1),
+        );
+        let mut oom_one = ok.clone();
+        oom_one.sample = 1;
+        oom_one.status = RunStatus::Oom;
+        oom_one.timings_ns.clear();
+        let mut oom_two = oom_one.clone();
+        oom_two.sample = 2;
+
+        let records = [ok, oom_one, oom_two];
+        let rows = aggregate_hash_timing_rows(&records);
+        let row = rows
+            .iter()
+            .find(|row| {
+                row.payload_log2 == 27 && row.scheme == HashSchemeId::Akita && row.threads == 1
+            })
+            .expect("row");
+        assert_eq!(row.status, RunStatus::Oom);
+        assert_eq!(row.n_ok, 1);
+        assert_eq!(row.total_s, None);
+        assert!(matches!(
+            row.gap_note,
+            Some(GapNote::Custom(ref note)) if note.contains("1/3 samples succeeded")
+        ));
+    }
+
+    #[test]
+    fn mixed_environments_are_rejected() {
+        let one = record(
+            27,
+            HashSchemeId::Akita,
+            1,
+            RunStatus::Ok,
+            Some(1.0),
+            Some(2.0),
+            Some(0.1),
+        );
+        let mut two = one.clone();
+        two.sample = 1;
+        two.provenance.cpu_model = "different machine".into();
+
+        let rows = aggregate_hash_timing_rows(&[one, two]);
+        let row = rows
+            .iter()
+            .find(|row| {
+                row.payload_log2 == 27 && row.scheme == HashSchemeId::Akita && row.threads == 1
+            })
+            .expect("row");
+        assert_eq!(row.status, RunStatus::Error);
+        assert_eq!(row.n_ok, 0);
+        assert!(matches!(
+            row.gap_note,
+            Some(GapNote::Custom(ref note)) if note.contains("different revisions")
+        ));
+    }
+
+    #[test]
+    fn resource_row_does_not_replace_failed_one_thread_samples() {
+        let mut failed = record(27, HashSchemeId::Akita, 1, RunStatus::Oom, None, None, None);
+        failed.timings_ns.clear();
+        failed.commitment_bytes = None;
+        let eight = record(
+            27,
+            HashSchemeId::Akita,
+            8,
+            RunStatus::Ok,
+            Some(1.0),
+            Some(2.0),
+            Some(0.1),
+        );
+
+        let rows = aggregate_hash_resource_rows(&[failed, eight]);
+        let row = rows
+            .iter()
+            .find(|row| row.payload_log2 == 27 && row.scheme == HashSchemeId::Akita)
+            .expect("row");
+        assert_eq!(row.status, RunStatus::Oom);
+        assert_eq!(row.status_8, RunStatus::Ok);
+        assert_eq!(row.commitment_bytes, None);
     }
 }

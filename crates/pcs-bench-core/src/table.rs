@@ -12,6 +12,8 @@ pub struct TimingTableRow {
     pub payload_log2: u32,
     /// Scheme.
     pub scheme: SchemeId,
+    /// Recorded implementation revision used by this aggregate.
+    pub implementation_revision: Option<String>,
     /// Field label.
     pub field: String,
     /// Native `log2 N`, when the scheme has a matching instance.
@@ -20,20 +22,20 @@ pub struct TimingTableRow {
     pub status: RunStatus,
     /// Median commit seconds, when `status` is ok.
     pub commit_s: Option<f64>,
-    /// Sample standard deviation of commit seconds.
-    pub commit_s_std: Option<f64>,
+    /// Distribution-free two-sided confidence interval for median commit seconds.
+    pub commit_s_ci95: Option<(f64, f64)>,
     /// Median opening/prove seconds, when `status` is ok.
     pub open_s: Option<f64>,
-    /// Sample standard deviation of opening seconds.
-    pub open_s_std: Option<f64>,
-    /// Median commit+open seconds, when `status` is ok.
+    /// Distribution-free two-sided confidence interval for median opening seconds.
+    pub open_s_ci95: Option<(f64, f64)>,
+    /// Median cold setup+commit+open seconds, when `status` is ok.
     pub total_s: Option<f64>,
-    /// Sample standard deviation of per-sample commit+open seconds.
-    pub total_s_std: Option<f64>,
+    /// Confidence interval for median cold setup+commit+open seconds.
+    pub total_s_ci95: Option<(f64, f64)>,
     /// Median verify seconds, when `status` is ok.
     pub verify_s: Option<f64>,
-    /// Sample standard deviation of verify seconds.
-    pub verify_s_std: Option<f64>,
+    /// Distribution-free two-sided confidence interval for median verify seconds.
+    pub verify_s_ci95: Option<(f64, f64)>,
     /// Number of non-warmup ok samples used for the median.
     pub n_ok: usize,
     /// Whether any sample was recorded for this cell.
@@ -49,12 +51,18 @@ pub struct ResourceTableRow {
     pub payload_log2: u32,
     /// Scheme.
     pub scheme: SchemeId,
+    /// Recorded implementation revision used by this aggregate.
+    pub implementation_revision: Option<String>,
     /// Cell outcome after aggregating samples.
     pub status: RunStatus,
     /// Median commitment size in bytes.
     pub commitment_bytes: Option<u64>,
     /// Median opening-proof size in bytes.
     pub proof_bytes: Option<u64>,
+    /// Median separately transmitted evaluation size in bytes.
+    pub evaluation_bytes: Option<u64>,
+    /// Median excluded public/verifier context size in bytes.
+    pub public_context_bytes: Option<u64>,
     /// Median peak RSS in bytes.
     pub peak_rss_bytes: Option<u64>,
     /// Median preprocessing / CRS-generation seconds.
@@ -88,7 +96,7 @@ pub enum GapNote {
     Custom(String),
 }
 
-/// Aggregate measured (non-warmup, non-historical) records into timing rows.
+/// Aggregate measured non-warmup records into timing rows.
 #[must_use]
 pub fn aggregate_timing_rows(records: &[LatticeRecord]) -> Vec<TimingTableRow> {
     lattice_matrix()
@@ -126,14 +134,49 @@ fn measured_samples(
     records
         .iter()
         .filter(|record| {
-            record.payload_log2 == payload_log2
-                && record.scheme == scheme
-                && !record.warmup
-                && !record.historical
+            record.payload_log2 == payload_log2 && record.scheme == scheme && !record.warmup
         })
         .collect()
 }
 
+fn incomparable_samples(samples: &[&LatticeRecord]) -> bool {
+    let Some(first) = samples.first() else {
+        return false;
+    };
+    let mut first_provenance = first.provenance.clone();
+    first_provenance.workload_seed = None;
+    samples.iter().skip(1).any(|record| {
+        let mut provenance = record.provenance.clone();
+        provenance.workload_seed = None;
+        record.implementation_revision != first.implementation_revision
+            || record.log2_n != first.log2_n
+            || record.field != first.field
+            || record.native_param != first.native_param
+            || record.threads != first.threads
+            || provenance != first_provenance
+    })
+}
+
+fn invalid_success_timings(samples: &[&LatticeRecord]) -> bool {
+    samples.iter().any(|record| {
+        record.status == RunStatus::Ok
+            && ["commit", "open", "verify"]
+                .iter()
+                .any(|phase| !record.timings_ns.contains_key(*phase))
+    })
+}
+
+fn invalid_success_resources(samples: &[&LatticeRecord]) -> bool {
+    samples.iter().any(|record| {
+        record.status == RunStatus::Ok
+            && (record.proof_bytes.is_none()
+                || record.commitment_bytes.is_none()
+                || record.evaluation_bytes.is_none()
+                || record.public_context_bytes.is_none())
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 fn timing_row_from_samples(
     payload_log2: u32,
     scheme: SchemeId,
@@ -150,20 +193,70 @@ fn timing_row_from_samples(
         return TimingTableRow {
             payload_log2,
             scheme,
+            implementation_revision: None,
             field: field.to_owned(),
             log2_n: planned_log2_n,
             status,
             commit_s: None,
-            commit_s_std: None,
+            commit_s_ci95: None,
             open_s: None,
-            open_s_std: None,
+            open_s_ci95: None,
             total_s: None,
-            total_s_std: None,
+            total_s_ci95: None,
             verify_s: None,
-            verify_s_std: None,
+            verify_s_ci95: None,
             n_ok: 0,
             measured: false,
             gap_note: gap_note(scheme, status, samples),
+        };
+    }
+
+    if incomparable_samples(samples) {
+        return TimingTableRow {
+            payload_log2,
+            scheme,
+            implementation_revision: None,
+            field: field.to_owned(),
+            log2_n: planned_log2_n,
+            status: RunStatus::Error,
+            commit_s: None,
+            commit_s_ci95: None,
+            open_s: None,
+            open_s_ci95: None,
+            total_s: None,
+            total_s_ci95: None,
+            verify_s: None,
+            verify_s_ci95: None,
+            n_ok: 0,
+            measured: true,
+            gap_note: Some(GapNote::Custom(
+                "Samples with different revisions, parameters, thread counts, or environments were rejected."
+                    .into(),
+            )),
+        };
+    }
+
+    if invalid_success_timings(samples) {
+        return TimingTableRow {
+            payload_log2,
+            scheme,
+            implementation_revision: Some(samples[0].implementation_revision.clone()),
+            field: field.to_owned(),
+            log2_n: planned_log2_n,
+            status: RunStatus::Error,
+            commit_s: None,
+            commit_s_ci95: None,
+            open_s: None,
+            open_s_ci95: None,
+            total_s: None,
+            total_s_ci95: None,
+            verify_s: None,
+            verify_s_ci95: None,
+            n_ok: 0,
+            measured: true,
+            gap_note: Some(GapNote::Custom(
+                "A successful sample was missing a required timing phase.".into(),
+            )),
         };
     }
 
@@ -172,31 +265,33 @@ fn timing_row_from_samples(
         .copied()
         .filter(|record| record.status == RunStatus::Ok)
         .collect();
-    if !ok.is_empty() {
+    if ok.len() == samples.len() {
         let commit = phase_seconds(&ok, "commit");
         let open = phase_seconds(&ok, "open");
         let total: Vec<f64> = ok
             .iter()
             .filter_map(|record| {
+                let setup = record.timings_ns.get("setup").copied().unwrap_or(0);
                 let commit = *record.timings_ns.get("commit")? as f64 / 1e9;
                 let open = *record.timings_ns.get("open")? as f64 / 1e9;
-                Some(commit + open)
+                Some(setup as f64 / 1e9 + commit + open)
             })
             .collect();
         return TimingTableRow {
             payload_log2,
             scheme,
+            implementation_revision: Some(ok[0].implementation_revision.clone()),
             field: field.to_owned(),
             log2_n: ok[0].log2_n.or(planned_log2_n),
             status: RunStatus::Ok,
             commit_s: median_f64(&commit),
-            commit_s_std: sample_std(&commit),
+            commit_s_ci95: median_ci95(&commit),
             open_s: median_f64(&open),
-            open_s_std: sample_std(&open),
+            open_s_ci95: median_ci95(&open),
             total_s: median_f64(&total),
-            total_s_std: sample_std(&total),
+            total_s_ci95: median_ci95(&total),
             verify_s: median_f64(&phase_seconds(&ok, "verify")),
-            verify_s_std: sample_std(&phase_seconds(&ok, "verify")),
+            verify_s_ci95: median_ci95(&phase_seconds(&ok, "verify")),
             n_ok: ok.len(),
             measured: true,
             gap_note: None,
@@ -207,20 +302,21 @@ fn timing_row_from_samples(
     TimingTableRow {
         payload_log2,
         scheme,
+        implementation_revision: Some(samples[0].implementation_revision.clone()),
         field: field.to_owned(),
         log2_n: planned_log2_n,
         status,
         commit_s: None,
-        commit_s_std: None,
+        commit_s_ci95: None,
         open_s: None,
-        open_s_std: None,
+        open_s_ci95: None,
         total_s: None,
-        total_s_std: None,
+        total_s_ci95: None,
         verify_s: None,
-        verify_s_std: None,
-        n_ok: 0,
+        verify_s_ci95: None,
+        n_ok: ok.len(),
         measured: true,
-        gap_note: gap_note(scheme, status, samples),
+        gap_note: mixed_outcome_note(samples).or_else(|| gap_note(scheme, status, samples)),
     }
 }
 
@@ -239,9 +335,12 @@ fn resource_row_from_samples(
         return ResourceTableRow {
             payload_log2,
             scheme,
+            implementation_revision: None,
             status,
             commitment_bytes: None,
             proof_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
             peak_rss_bytes: None,
             prep_s: None,
             state_bytes: None,
@@ -250,30 +349,46 @@ fn resource_row_from_samples(
         };
     }
 
+    if invalid_success_resources(samples) || incomparable_samples(samples) {
+        return ResourceTableRow {
+            payload_log2,
+            scheme,
+            implementation_revision: None,
+            status: RunStatus::Error,
+            commitment_bytes: None,
+            proof_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
+            peak_rss_bytes: None,
+            prep_s: None,
+            state_bytes: None,
+            measured: true,
+            gap_note: Some(GapNote::Custom(
+                "Incomplete or incomparable resource samples were rejected.".into(),
+            )),
+        };
+    }
+
     let ok: Vec<&LatticeRecord> = samples
         .iter()
         .copied()
         .filter(|record| record.status == RunStatus::Ok)
         .collect();
-    if !ok.is_empty() {
+    if ok.len() == samples.len() {
         let prep = phase_seconds(&ok, "setup");
-        let prep_s = if prep.is_empty() && matches!(scheme, SchemeId::Greyhound) {
-            Some(0.0)
-        } else {
-            median_f64(&prep)
-        };
+        let prep_s = median_f64(&prep);
         let state_bytes = median_u64(ok.iter().filter_map(|record| record.state_bytes));
-        let state_bytes = if state_bytes.is_none() && matches!(scheme, SchemeId::Greyhound) {
-            Some(0)
-        } else {
-            state_bytes
-        };
         return ResourceTableRow {
             payload_log2,
             scheme,
+            implementation_revision: Some(ok[0].implementation_revision.clone()),
             status: RunStatus::Ok,
             commitment_bytes: median_u64(ok.iter().filter_map(|record| record.commitment_bytes)),
             proof_bytes: median_u64(ok.iter().filter_map(|record| record.proof_bytes)),
+            evaluation_bytes: median_u64(ok.iter().filter_map(|record| record.evaluation_bytes)),
+            public_context_bytes: median_u64(
+                ok.iter().filter_map(|record| record.public_context_bytes),
+            ),
             peak_rss_bytes: median_u64(ok.iter().filter_map(|record| record.peak_rss_bytes)),
             prep_s,
             state_bytes,
@@ -286,14 +401,17 @@ fn resource_row_from_samples(
     ResourceTableRow {
         payload_log2,
         scheme,
+        implementation_revision: Some(samples[0].implementation_revision.clone()),
         status,
         commitment_bytes: None,
         proof_bytes: None,
+        evaluation_bytes: None,
+        public_context_bytes: None,
         peak_rss_bytes: None,
         prep_s: None,
         state_bytes: None,
         measured: true,
-        gap_note: gap_note(scheme, status, samples),
+        gap_note: mixed_outcome_note(samples).or_else(|| gap_note(scheme, status, samples)),
     }
 }
 
@@ -310,6 +428,31 @@ fn aggregate_gap_status(samples: &[&LatticeRecord]) -> RunStatus {
     } else {
         RunStatus::Error
     }
+}
+
+fn mixed_outcome_note(samples: &[&LatticeRecord]) -> Option<GapNote> {
+    let ok = samples
+        .iter()
+        .filter(|record| record.status == RunStatus::Ok)
+        .count();
+    if ok == 0 || ok == samples.len() {
+        return None;
+    }
+    let oom = samples
+        .iter()
+        .filter(|record| {
+            record.status == RunStatus::Oom || looks_like_oom(record.status_detail.as_deref())
+        })
+        .count();
+    let unsupported = samples
+        .iter()
+        .filter(|record| record.status == RunStatus::Unsupported)
+        .count();
+    let errors = samples.len().saturating_sub(ok + oom + unsupported);
+    Some(GapNote::Custom(format!(
+        "Partial result rejected: {ok}/{} samples succeeded, {oom} OOM, {unsupported} unsupported, {errors} errors.",
+        samples.len()
+    )))
 }
 
 fn gap_note(scheme: SchemeId, status: RunStatus, samples: &[&LatticeRecord]) -> Option<GapNote> {
@@ -528,23 +671,36 @@ where
     }
 }
 
-/// Sample standard deviation (Bessel-corrected). `None` when `n < 2`.
+/// Conservative distribution-free two-sided confidence interval for a median.
+///
+/// Returns `None` when there are too few observations to attain at least 95%
+/// coverage using order statistics.
 #[must_use]
-pub(crate) fn sample_std(values: &[f64]) -> Option<f64> {
-    if values.len() < 2 {
+pub(crate) fn median_ci95(values: &[f64]) -> Option<(f64, f64)> {
+    let n = values.len();
+    if n == 0 {
         return None;
     }
-    let n = values.len() as f64;
-    let mean = values.iter().sum::<f64>() / n;
-    let var = values
-        .iter()
-        .map(|value| {
-            let delta = value - mean;
-            delta * delta
-        })
-        .sum::<f64>()
-        / (n - 1.0);
-    Some(var.sqrt())
+    let mut sorted = values.to_vec();
+    sorted.sort_by(f64::total_cmp);
+
+    let mut coefficient = 1.0;
+    let probability = 0.5f64.powi(i32::try_from(n).ok()?);
+    let mut lower_tail = 0.0;
+    let mut endpoint = None;
+    for k in 0..=(n / 2) {
+        if k > 0 {
+            coefficient *= (n + 1 - k) as f64 / k as f64;
+        }
+        let next_tail = lower_tail + coefficient * probability;
+        if next_tail > 0.025 {
+            break;
+        }
+        lower_tail = next_tail;
+        endpoint = Some(k);
+    }
+    let endpoint = endpoint?;
+    Some((sorted[endpoint], sorted[n - 1 - endpoint]))
 }
 
 /// Format a wall-clock second value with paper-style significant figures.
@@ -559,18 +715,6 @@ pub fn format_seconds(seconds: f64) -> String {
     }
 }
 
-/// Format a standard-deviation in seconds with enough digits to be visible.
-#[must_use]
-pub(crate) fn format_spread_seconds(seconds: f64) -> String {
-    if seconds >= 1.0 {
-        format!("{seconds:.2}")
-    } else if seconds >= 0.01 {
-        format!("{seconds:.3}")
-    } else {
-        format!("{seconds:.4}")
-    }
-}
-
 /// Format verification time in milliseconds.
 #[must_use]
 pub fn format_millis(seconds: f64) -> String {
@@ -582,19 +726,10 @@ pub fn format_millis(seconds: f64) -> String {
     }
 }
 
-pub(crate) fn format_spread_millis(seconds: f64) -> String {
-    let millis = seconds * 1_000.0;
-    if millis >= 10.0 {
-        format!("{millis:.1}")
-    } else {
-        format!("{millis:.2}")
-    }
-}
-
-pub(crate) fn format_pm(median: &str, spread: Option<String>, latex: bool) -> String {
-    match spread {
-        Some(spread) if latex => format!("${median} \\pm {spread}$"),
-        Some(spread) => format!("{median} ± {spread}"),
+pub(crate) fn format_ci95(median: &str, interval: Option<(String, String)>, latex: bool) -> String {
+    match interval {
+        Some((low, high)) if latex => format!("${median}\\;[{low}, {high}]$"),
+        Some((low, high)) => format!("{median} [{low}, {high}]"),
         None => median.to_owned(),
     }
 }
@@ -624,15 +759,19 @@ pub(crate) fn format_prep(seconds: f64) -> String {
     }
 }
 
-fn scheme_cell(scheme: SchemeId, latex: bool) -> String {
+fn scheme_cell(scheme: SchemeId, implementation_revision: Option<&str>, latex: bool) -> String {
+    let Some(revision) = implementation_revision else {
+        return if latex {
+            scheme.latex_name().to_owned()
+        } else {
+            scheme.display_name().to_owned()
+        };
+    };
+    let url = format!("{}/commit/{revision}", scheme.source_repo());
     if latex {
-        format!(
-            r"\href{{{}}}{{{}}}",
-            scheme.commit_url(),
-            scheme.latex_name()
-        )
+        format!(r"\href{{{url}}}{{{}}}", scheme.latex_name())
     } else {
-        format!("[{}]({})", scheme.display_name(), scheme.commit_url())
+        format!("[{}]({url})", scheme.display_name())
     }
 }
 
@@ -656,8 +795,16 @@ fn resource_cell(
         return gap_token_pending(latex);
     }
     match row.status {
-        RunStatus::Ok => value.unwrap_or_else(|| gap_token_pending(latex)),
+        RunStatus::Ok => value.unwrap_or_else(|| unknown_token(latex)),
         other => apply_mark(&gap_token(other, latex), mark, latex),
+    }
+}
+
+pub(crate) fn unknown_token(latex: bool) -> String {
+    if latex {
+        r"\textit{unknown}".into()
+    } else {
+        "unknown".into()
     }
 }
 
@@ -691,24 +838,24 @@ fn log2_n_cell(row: &TimingTableRow, latex: bool, mark: Option<u32>) -> String {
 
 pub(crate) fn timing_seconds_cell(
     median: Option<f64>,
-    std: Option<f64>,
+    ci95: Option<(f64, f64)>,
     latex: bool,
 ) -> Option<String> {
-    Some(format_pm(
+    Some(format_ci95(
         &format_seconds(median?),
-        std.map(format_spread_seconds),
+        ci95.map(|(low, high)| (format_seconds(low), format_seconds(high))),
         latex,
     ))
 }
 
 pub(crate) fn timing_millis_cell(
     median: Option<f64>,
-    std: Option<f64>,
+    ci95: Option<(f64, f64)>,
     latex: bool,
 ) -> Option<String> {
-    Some(format_pm(
+    Some(format_ci95(
         &format_millis(median?),
-        std.map(format_spread_millis),
+        ci95.map(|(low, high)| (format_millis(low), format_millis(high))),
         latex,
     ))
 }
@@ -718,7 +865,7 @@ pub(crate) fn timing_millis_cell(
 pub fn render_markdown_timing_table(rows: &[TimingTableRow]) -> String {
     let notes = unique_gap_notes_timing(rows);
     let mut out = String::from(
-        "| Payload | Scheme | Field | log₂ N | Commit (s) | Open (s) | Total (s) | Verify (ms) |\n",
+        "| Nominal payload | Scheme | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |\n",
     );
     out.push_str("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
@@ -727,30 +874,30 @@ pub fn render_markdown_timing_table(rows: &[TimingTableRow]) -> String {
             out,
             "| 2^{{{}}} | {} | ${}$ | {} | {} | {} | {} | {} |",
             row.payload_log2,
-            scheme_cell(row.scheme, false),
+            scheme_cell(row.scheme, row.implementation_revision.as_deref(), false),
             row.field,
             log2_n_cell(row, false, mark),
             cell(
                 row,
-                timing_seconds_cell(row.commit_s, row.commit_s_std, false),
+                timing_seconds_cell(row.commit_s, row.commit_s_ci95, false),
                 false,
                 mark
             ),
             cell(
                 row,
-                timing_seconds_cell(row.open_s, row.open_s_std, false),
+                timing_seconds_cell(row.open_s, row.open_s_ci95, false),
                 false,
                 mark
             ),
             cell(
                 row,
-                timing_seconds_cell(row.total_s, row.total_s_std, false),
+                timing_seconds_cell(row.total_s, row.total_s_ci95, false),
                 false,
                 mark
             ),
             cell(
                 row,
-                timing_millis_cell(row.verify_s, row.verify_s_std, false),
+                timing_millis_cell(row.verify_s, row.verify_s_ci95, false),
                 false,
                 mark
             ),
@@ -765,24 +912,36 @@ pub fn render_markdown_timing_table(rows: &[TimingTableRow]) -> String {
 pub fn render_markdown_resource_table(rows: &[ResourceTableRow]) -> String {
     let notes = unique_gap_notes_resources(rows);
     let mut out = String::from(
-        "| Payload | Scheme | Commitment (B) | Proof (B) | Total (B) | Peak RSS (GiB) | Prep. (s) | State (GiB) |\n",
+        "| Nominal payload | Scheme | Commitment (B) | Evaluation (B) | Proof (B) | Total sent (B) | Excluded context (B) | Peak RSS (GiB) | Prep. (s) | State (GiB) |\n",
     );
-    out.push_str("| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n");
+    out.push_str("| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         let _ = writeln!(
             out,
-            "| 2^{{{}}} | {} | {} | {} | {} | {} | {} | {} |",
+            "| 2^{{{}}} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
             row.payload_log2,
-            scheme_cell(row.scheme, false),
+            scheme_cell(row.scheme, row.implementation_revision.as_deref(), false),
             resource_cell(
                 row,
                 row.commitment_bytes.map(|v| v.to_string()),
                 false,
                 mark
             ),
+            resource_cell(
+                row,
+                row.evaluation_bytes.map(|v| v.to_string()),
+                false,
+                mark
+            ),
             resource_cell(row, row.proof_bytes.map(|v| v.to_string()), false, mark),
             resource_cell(row, total_bytes(row).map(|v| v.to_string()), false, mark),
+            resource_cell(
+                row,
+                row.public_context_bytes.map(|v| v.to_string()),
+                false,
+                mark
+            ),
             resource_cell(row, row.peak_rss_bytes.map(format_gib), false, mark),
             resource_cell(row, row.prep_s.map(format_prep), false, mark),
             resource_cell(row, row.state_bytes.map(format_gib), false, mark),
@@ -793,7 +952,7 @@ pub fn render_markdown_resource_table(rows: &[ResourceTableRow]) -> String {
 }
 
 fn total_bytes(row: &ResourceTableRow) -> Option<u64> {
-    Some(row.commitment_bytes? + row.proof_bytes?)
+    Some(row.commitment_bytes? + row.evaluation_bytes? + row.proof_bytes?)
 }
 
 /// LaTeX `tabular` matching `tab:eval-lattice-time`.
@@ -805,19 +964,19 @@ pub fn render_latex_timing_table(rows: &[TimingTableRow]) -> String {
          \\centering\n\
          \\caption[Timing comparison with lattice-based PCSs]{Commitment, opening, and\n\
          verification time for Akita (direct and setup-offload) and prior lattice-based PCSs on dense\n\
-         polynomial openings. Payload is the target value of\n\
+         polynomial openings. Nominal payload is the target value of\n\
          $N\\log_2|\\mathbb F|$.  A dash denotes an unsupported input; numbered\n\
          footnotes give the reason.\n\
-         Timing cells are the median of fresh processes after warmup, shown as\n\
-         median $\\pm$ sample standard deviation when $n\\ge 2$.\n\
+         Timing cells are the median of fresh processes after warmup, followed by\n\
+         a conservative distribution-free 95\\% confidence interval when the sample count supports one.\n\
          Scheme names link to the exact git commit that was measured.}\n\
          \\label{tab:eval-lattice-time}\n\
          \\scriptsize\n\
          \\setlength{\\tabcolsep}{4pt}\n\
          \\begin{tabular}{@{}llccrrrr@{}}\n\
          \\toprule\n\
-         Payload & Scheme & Field & $\\log_2 N$\n\
-         & Commit (s) & Open (s) & Total (s) & Verify (ms) \\\\\n\
+         Nominal payload & Scheme & Field & $\\log_2 N$\n\
+         & Commit (s) & Open (s) & Cold total (s) & Verify (ms) \\\\\n\
          \\midrule\n",
     );
     append_payload_groups(&mut out, rows, |row| {
@@ -825,30 +984,30 @@ pub fn render_latex_timing_table(rows: &[TimingTableRow]) -> String {
         format!(
             "$2^{{{}}}$ & {} & ${}$ & {} & {} & {} & {} & {} \\\\",
             row.payload_log2,
-            scheme_cell(row.scheme, true),
+            scheme_cell(row.scheme, row.implementation_revision.as_deref(), true),
             row.field,
             log2_n_cell(row, true, mark),
             cell(
                 row,
-                timing_seconds_cell(row.commit_s, row.commit_s_std, true),
+                timing_seconds_cell(row.commit_s, row.commit_s_ci95, true),
                 true,
                 mark
             ),
             cell(
                 row,
-                timing_seconds_cell(row.open_s, row.open_s_std, true),
+                timing_seconds_cell(row.open_s, row.open_s_ci95, true),
                 true,
                 mark
             ),
             cell(
                 row,
-                timing_seconds_cell(row.total_s, row.total_s_std, true),
+                timing_seconds_cell(row.total_s, row.total_s_ci95, true),
                 true,
                 mark
             ),
             cell(
                 row,
-                timing_millis_cell(row.verify_s, row.verify_s_std, true),
+                timing_millis_cell(row.verify_s, row.verify_s_ci95, true),
                 true,
                 mark
             ),
@@ -869,17 +1028,18 @@ pub fn render_latex_resource_table(rows: &[ResourceTableRow]) -> String {
          \\centering\n\
          \\caption[Communication and memory comparison with lattice-based PCSs]{Proof\n\
          communication, prover memory, and reusable preprocessing for the workloads in\n\
-         \\Cref{tab:eval-lattice-time}.  Total communication is the commitment plus the\n\
-         opening proof.  RoKoKo reports an encoded bit count rather than a materialized\n\
+         \\Cref{tab:eval-lattice-time}. Total sent is commitment plus separately transmitted\n\
+         evaluation plus opening proof; excluded verifier context is shown separately.\n\
+         RoKoKo reports an encoded bit count rather than a materialized\n\
          byte string. Scheme names link to the measured git commit.\n\
          Numbered footnotes mark unsupported inputs.}\n\
          \\label{tab:eval-lattice-resources}\n\
          \\scriptsize\n\
          \\setlength{\\tabcolsep}{4pt}\n\
-         \\begin{tabular}{@{}llrrrrrr@{}}\n\
+         \\begin{tabular}{@{}llrrrrrrrr@{}}\n\
          \\toprule\n\
-         Payload & Scheme & Commitment (B) & Proof (B) & Total (B)\n\
-         & Peak RSS (GiB) & Prep. (s) & State (GiB) \\\\\n\
+         Nominal payload & Scheme & Commitment (B) & Evaluation (B) & Proof (B) & Total sent (B)\n\
+         & Excl. context (B) & Peak RSS (GiB) & Prep. (s) & State (GiB) \\\\\n\
          \\midrule\n",
     );
 
@@ -896,12 +1056,19 @@ pub fn render_latex_resource_table(rows: &[ResourceTableRow]) -> String {
                 let mark = footnote_index(&notes, row.gap_note.as_ref());
                 let _ = writeln!(
                     out,
-                    "$2^{{{}}}$ & {} & {} & {} & {} & {} & {} & {} \\\\",
+                    "$2^{{{}}}$ & {} & {} & {} & {} & {} & {} & {} & {} & {} \\\\",
                     row.payload_log2,
-                    scheme_cell(row.scheme, true),
+                    scheme_cell(row.scheme, row.implementation_revision.as_deref(), true),
                     resource_cell(row, row.commitment_bytes.map(|v| v.to_string()), true, mark),
+                    resource_cell(row, row.evaluation_bytes.map(|v| v.to_string()), true, mark),
                     resource_cell(row, row.proof_bytes.map(|v| v.to_string()), true, mark),
                     resource_cell(row, total_bytes(row).map(|v| v.to_string()), true, mark),
+                    resource_cell(
+                        row,
+                        row.public_context_bytes.map(|v| v.to_string()),
+                        true,
+                        mark
+                    ),
                     resource_cell(row, row.peak_rss_bytes.map(format_gib), true, mark),
                     resource_cell(row, row.prep_s.map(format_prep), true, mark),
                     resource_cell(row, row.state_bytes.map(format_gib), true, mark),
@@ -940,14 +1107,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        aggregate_resource_rows, aggregate_timing_rows, format_millis, format_seconds,
+        aggregate_resource_rows, aggregate_timing_rows, format_millis, format_seconds, median_ci95,
         render_latex_resource_table, render_latex_timing_table, render_markdown_resource_table,
-        render_markdown_timing_table, sample_std, GapNote,
+        render_markdown_timing_table, GapNote,
     };
     use crate::lattice::SchemeId;
-    use crate::observation::{
-        looks_like_oom, LatticeRecord, Provenance, RunStatus, RESULT_SCHEMA_VERSION,
-    };
+    use crate::observation::{looks_like_oom, LatticeRecord, Provenance, RunStatus};
     use std::collections::BTreeMap;
 
     fn record(
@@ -970,7 +1135,6 @@ mod tests {
             timings_ns.insert("verify".into(), (seconds * 1e9) as u64);
         }
         LatticeRecord {
-            schema_version: RESULT_SCHEMA_VERSION,
             status,
             status_detail: None,
             scheme,
@@ -985,10 +1149,11 @@ mod tests {
             threads: 1,
             sample: 0,
             warmup: false,
-            historical: false,
             timings_ns,
             proof_bytes: Some(61_337),
             commitment_bytes: Some(3072),
+            evaluation_bytes: Some(8),
+            public_context_bytes: Some(0),
             state_bytes: Some(18_563_072),
             peak_rss_bytes: Some(119_000_000),
             provenance: Provenance::test_fixture(),
@@ -1004,8 +1169,15 @@ mod tests {
         assert_eq!(format_millis(0.0419), "41.9");
         assert_eq!(format_millis(0.177), "177");
         assert_eq!(format_millis(0.0116), "11.6");
-        let std = sample_std(&[1.0, 2.0, 3.0]).expect("n=3");
-        assert!((std - 1.0).abs() < 1e-9);
+        assert_eq!(median_ci95(&[1.0, 2.0, 3.0]), None);
+        assert_eq!(
+            median_ci95(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            Some((1.0, 6.0))
+        );
+        assert_eq!(
+            median_ci95(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+            Some((2.0, 9.0))
+        );
     }
 
     #[test]
@@ -1064,13 +1236,18 @@ mod tests {
         let resources = render_latex_resource_table(&aggregate_resource_rows(&records));
         assert!(resources.contains(r"\label{tab:eval-lattice-resources}"));
         assert!(resources.contains("Proof (B)"));
-        assert!(resources.contains("Total (B)"));
+        assert!(resources.contains("Evaluation (B)"));
+        assert!(resources.contains("Excl. context (B)"));
+        assert!(resources.contains("Total sent (B)"));
         assert!(!resources.contains("KiB"));
         assert!(resources.contains("3072"));
         assert!(resources.contains("61337"));
         let resources_md = render_markdown_resource_table(&aggregate_resource_rows(&records));
         assert!(resources_md.contains("Proof (B)"));
+        assert!(resources_md.contains("Evaluation (B)"));
+        assert!(resources_md.contains("Excluded context (B)"));
         assert!(resources_md.contains("| 61337 |"));
+        assert!(resources_md.contains("| 64417 |"));
     }
 
     #[test]
@@ -1243,5 +1420,95 @@ mod tests {
         let resources = render_markdown_resource_table(std::slice::from_ref(greyhound_res));
         assert!(resources.contains("err(1)"));
         assert!(resources.contains("Ajtai commitments SIS-secure"));
+    }
+
+    #[test]
+    fn partial_success_does_not_hide_oom_samples() {
+        let ok = record(
+            27,
+            SchemeId::Akita,
+            RunStatus::Ok,
+            Some(22),
+            Some(1.0),
+            Some(2.0),
+            Some(0.1),
+        );
+        let mut oom_one = ok.clone();
+        oom_one.sample = 1;
+        oom_one.status = RunStatus::Oom;
+        oom_one.timings_ns.clear();
+        let mut oom_two = oom_one.clone();
+        oom_two.sample = 2;
+
+        let records = [ok, oom_one, oom_two];
+        let rows = aggregate_timing_rows(&records);
+        let row = rows
+            .iter()
+            .find(|row| row.payload_log2 == 27 && row.scheme == SchemeId::Akita)
+            .expect("row");
+        assert_eq!(row.status, RunStatus::Oom);
+        assert_eq!(row.n_ok, 1);
+        assert_eq!(row.total_s, None);
+        assert!(matches!(
+            row.gap_note,
+            Some(GapNote::Custom(ref note)) if note.contains("1/3 samples succeeded")
+        ));
+    }
+
+    #[test]
+    fn mixed_thread_counts_and_environments_are_rejected() {
+        let one = record(
+            27,
+            SchemeId::Akita,
+            RunStatus::Ok,
+            Some(22),
+            Some(1.0),
+            Some(2.0),
+            Some(0.1),
+        );
+        let mut two = one.clone();
+        two.sample = 1;
+        two.threads = 8;
+        two.provenance.threads = 8;
+
+        let rows = aggregate_timing_rows(&[one, two]);
+        let row = rows
+            .iter()
+            .find(|row| row.payload_log2 == 27 && row.scheme == SchemeId::Akita)
+            .expect("row");
+        assert_eq!(row.status, RunStatus::Error);
+        assert_eq!(row.n_ok, 0);
+        assert!(matches!(
+            row.gap_note,
+            Some(GapNote::Custom(ref note)) if note.contains("thread counts")
+        ));
+    }
+
+    #[test]
+    fn ten_samples_report_a_distribution_free_median_interval() {
+        let records: Vec<_> = (1..=10)
+            .map(|seconds| {
+                let mut sample = record(
+                    27,
+                    SchemeId::Akita,
+                    RunStatus::Ok,
+                    Some(22),
+                    Some(f64::from(seconds)),
+                    Some(1.0),
+                    Some(0.1),
+                );
+                sample.sample = seconds as u32 - 1;
+                sample
+            })
+            .collect();
+        let rows = aggregate_timing_rows(&records);
+        let row = rows
+            .iter()
+            .find(|row| row.payload_log2 == 27 && row.scheme == SchemeId::Akita)
+            .expect("row");
+        assert_eq!(row.commit_s, Some(5.5));
+        assert_eq!(row.commit_s_ci95, Some((2.0, 9.0)));
+        let markdown = render_markdown_timing_table(std::slice::from_ref(row));
+        assert!(markdown.contains("5.50 [2.00, 9.00]"));
     }
 }

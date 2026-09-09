@@ -33,12 +33,16 @@ static uint64_t monotonic_ns(void) {
 }
 
 static uint64_t peak_rss_bytes(void) {
+#ifdef __linux__
     struct rusage usage;
     if (getrusage(RUSAGE_SELF, &usage) != 0) {
         return 0;
     }
     /* Linux reports ru_maxrss in kilobytes. */
     return (uint64_t)usage.ru_maxrss * 1024ull;
+#else
+    return 0;
+#endif
 }
 
 static int parse_log2_n(int argc, char **argv, uint32_t *log2_n) {
@@ -49,6 +53,11 @@ static int parse_log2_n(int argc, char **argv, uint32_t *log2_n) {
         }
     }
     return 1;
+}
+
+static int negative_check_enabled(void) {
+    const char *value = getenv("PCS_BENCH_NEGATIVE_CHECK");
+    return value && strcmp(value, "1") == 0;
 }
 
 static const char *commit_error(int ret) {
@@ -79,14 +88,16 @@ static void emit(
     printf(",\"log2_n\":%" PRIu32, log2_n);
     if (have_timings) {
         printf(
-            ",\"timings_ns\":{\"setup\":0,\"commit\":%" PRIu64 ",\"open\":%" PRIu64 ",\"verify\":%" PRIu64 "}",
+            ",\"timings_ns\":{\"commit\":%" PRIu64 ",\"open\":%" PRIu64 ",\"verify\":%" PRIu64 "}",
             commit_ns,
             open_ns,
             verify_ns
         );
         printf(",\"proof_bytes\":%" PRIu64, proof_bytes);
         printf(",\"commitment_bytes\":%" PRIu64, commitment_bytes);
-        printf(",\"state_bytes\":0");
+        printf(",\"evaluation_bytes\":8");
+        printf(",\"public_context_bytes\":0");
+        printf(",\"state_bytes\":%" PRIu64, (uint64_t)comkey_len * (uint64_t)sizeof(polx));
     }
     printf(",\"peak_rss_bytes\":%" PRIu64 "}\n", peak_rss_bytes());
 }
@@ -107,27 +118,45 @@ int main(int argc, char **argv) {
     }
 
     const size_t len = (size_t)1 << (log2_n - 6);
-    /* SIS search and fold grinding are randomized; a prove/verify pair can
-     * fail even at supported sizes. Retry with a fresh polynomial and do not
-     * include failed attempts in the timings. */
-    enum { kMaxAttempts = 8 };
-    const char *last_error = "greyhound attempts exhausted";
+    polz *s = _aligned_alloc(64, len * sizeof(polz));
+    if (s == NULL) {
+        emit("oom", "polynomial allocation failed", log2_n, 0, 0, 0, 0, 0, 0);
+        return 1;
+    }
 
-    for (int attempt = 0; attempt < kMaxAttempts; attempt++) {
-        polz *s = _aligned_alloc(64, len * sizeof(polz));
-        if (s == NULL) {
-            emit("oom", "polynomial allocation failed", log2_n, 0, 0, 0, 0, 0, 0);
+    /* The statement is fixed across legitimate prover retries. */
+    uint8_t seed[16] __attribute__((aligned(16)));
+    const char *seed_text = getenv("PCS_BENCH_SEED");
+    if (seed_text && seed_text[0] != '\0') {
+        char *end = NULL;
+        const uint64_t workload_seed = strtoull(seed_text, &end, 10);
+        if (end == seed_text || *end != '\0') {
+            emit("error", "invalid PCS_BENCH_SEED", log2_n, 0, 0, 0, 0, 0, 0);
+            free(s);
             return 1;
         }
-
-        uint8_t seed[16] __attribute__((aligned(16)));
+        const uint64_t second = workload_seed ^ 0x9e3779b97f4a7c15ull;
+        for (size_t i = 0; i < 8; i++) {
+            seed[i] = (uint8_t)(workload_seed >> (8 * i));
+            seed[8 + i] = (uint8_t)(second >> (8 * i));
+        }
+    } else {
         randombytes(seed, 16);
-        polzvec_almostuniform(s, len, seed, 0);
-        polzvec_center(s, len);
+    }
+    polzvec_almostuniform(s, len, seed, 0);
+    polzvec_center(s, len);
 
-        const int64_t x = 43;
-        const int64_t y = polzvec_eval(s, len, x);
+    const int64_t x = 43;
+    int64_t y = 0;
 
+    /* The pinned path is deterministic after the statement is fixed. Treat a
+     * prover failure as a failed observation instead of repeating identical work. */
+    enum { kMaxAttempts = 1 };
+    uint64_t total_commit_ns = 0;
+    uint64_t total_open_ns = 0;
+    uint64_t total_verify_ns = 0;
+
+    for (int attempt = 0; attempt < kMaxAttempts; attempt++) {
         polcomctx ctx = {0};
         polcomprf pi = {0};
         composite proof = {0};
@@ -135,45 +164,127 @@ int main(int argc, char **argv) {
         uint64_t t0 = monotonic_ns();
         int ret = polcom_commit(&ctx, s, len);
         uint64_t commit_ns = monotonic_ns() - t0;
+        total_commit_ns += commit_ns;
         if (ret) {
-            last_error = commit_error(ret);
+            char detail[160];
+            snprintf(
+                detail,
+                sizeof(detail),
+                "%s; attempts=%d; reusable-key setup is embedded in commit",
+                commit_error(ret),
+                attempt + 1
+            );
+            emit(
+                "error",
+                detail,
+                log2_n,
+                total_commit_ns,
+                total_open_ns,
+                total_verify_ns,
+                0,
+                0,
+                1
+            );
             free(s);
             free_comkey();
-            continue;
+            return 1;
         }
+
+        t0 = monotonic_ns();
+        y = polzvec_eval(s, len, x);
+        total_open_ns += monotonic_ns() - t0;
 
         t0 = monotonic_ns();
         ret = composite_prove_polcom(&proof, &pi, &ctx, (uint32_t)x, (uint32_t)y);
         uint64_t open_ns = monotonic_ns() - t0;
+        total_open_ns += open_ns;
         if (ret) {
-            last_error = "composite_prove_polcom failed";
-            free(s);
             free_polcomctx(&ctx);
             free_polcomprf(&pi);
             free_composite(&proof);
-            free_comkey();
             continue;
         }
 
         t0 = monotonic_ns();
         ret = composite_verify_polcom(&proof, &pi);
         uint64_t verify_ns = monotonic_ns() - t0;
+        total_verify_ns += verify_ns;
         const uint64_t proof_bytes =
             (uint64_t)greyhound_pack_contextual_serialized_size(&pi, &proof);
         /* Public commitment u1 (verifier context). u2 lives in the proof. */
         const uint64_t commitment_bytes =
             (uint64_t)ctx.cpp->kappa1 * (uint64_t)N * (uint64_t)QBYTES;
         if (ret) {
-            last_error = "composite_verify_polcom failed";
-            free(s);
+            char detail[160];
+            snprintf(
+                detail,
+                sizeof(detail),
+                "composite_verify_polcom failed; attempts=%d; statement retained",
+                attempt + 1
+            );
+            emit(
+                "error",
+                detail,
+                log2_n,
+                total_commit_ns,
+                total_open_ns,
+                total_verify_ns,
+                proof_bytes,
+                commitment_bytes,
+                1
+            );
             free_polcomctx(&ctx);
             free_polcomprf(&pi);
             free_composite(&proof);
             free_comkey();
-            continue;
+            free(s);
+            return 1;
         }
 
-        emit("ok", "", log2_n, commit_ns, open_ns, verify_ns, proof_bytes, commitment_bytes, 1);
+        if (negative_check_enabled()) {
+            const int64_t valid_y = pi.y;
+            pi.y = valid_y + 1;
+            ret = composite_verify_polcom(&proof, &pi);
+            pi.y = valid_y;
+            if (ret == 0) {
+                emit(
+                    "error",
+                    "Greyhound verifier accepted an altered opening claim",
+                    log2_n,
+                    total_commit_ns,
+                    total_open_ns,
+                    total_verify_ns,
+                    proof_bytes,
+                    commitment_bytes,
+                    1
+                );
+                free(s);
+                free_polcomctx(&ctx);
+                free_polcomprf(&pi);
+                free_composite(&proof);
+                free_comkey();
+                return 1;
+            }
+        }
+
+        char detail[160];
+        snprintf(
+            detail,
+            sizeof(detail),
+            "attempts=%d; statement retained; distribution=bounded-native; point=fixed-43; evaluation=separate; reusable-key setup is embedded in commit",
+            attempt + 1
+        );
+        emit(
+            "ok",
+            detail,
+            log2_n,
+            total_commit_ns,
+            total_open_ns,
+            total_verify_ns,
+            proof_bytes,
+            commitment_bytes,
+            1
+        );
         free(s);
         free_polcomctx(&ctx);
         free_polcomprf(&pi);
@@ -182,6 +293,25 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    emit("error", last_error, log2_n, 0, 0, 0, 0, 0, 0);
+    char detail[160];
+    snprintf(
+        detail,
+        sizeof(detail),
+        "composite_prove_polcom exhausted %d attempts for one retained statement",
+        kMaxAttempts
+    );
+    emit(
+        "error",
+        detail,
+        log2_n,
+        total_commit_ns,
+        total_open_ns,
+        total_verify_ns,
+        0,
+        0,
+        1
+    );
+    free(s);
+    free_comkey();
     return 1;
 }

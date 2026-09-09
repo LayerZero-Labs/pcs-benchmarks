@@ -6,9 +6,6 @@ use crate::workload::Workload;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// Stable schema version for persisted benchmark records.
-pub const RESULT_SCHEMA_VERSION: u32 = 2;
-
 /// Outcome of one attempted lattice-eval cell.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -54,9 +51,8 @@ pub fn looks_like_greyhound_sis(detail: Option<&str>) -> bool {
 
 /// One raw, process-isolated benchmark observation from a Criterion path.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Observation {
-    /// Schema version.
-    pub schema_version: u32,
     /// Scheme and implementation name.
     pub implementation: String,
     /// Exact source revision of the implementation.
@@ -77,6 +73,7 @@ pub struct Observation {
 
 /// Slim JSON object emitted by a scheme worker. The runner fills provenance.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct WorkerOutput {
     /// Cell outcome.
     pub status: RunStatus,
@@ -95,6 +92,12 @@ pub struct WorkerOutput {
     /// Serialized commitment size, when supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commitment_bytes: Option<u64>,
+    /// Claimed evaluation bytes sent separately from commitment and proof.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evaluation_bytes: Option<u64>,
+    /// Excluded public/verifier context bytes, when materialized and known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub public_context_bytes: Option<u64>,
     /// Reusable preprocessing / CRS state size, when supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state_bytes: Option<u64>,
@@ -105,9 +108,8 @@ pub struct WorkerOutput {
 
 /// One lattice-eval cell attempt. This is the unit the comparison tables consume.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LatticeRecord {
-    /// Schema version.
-    pub schema_version: u32,
     /// Cell outcome.
     pub status: RunStatus,
     /// Human-readable reason for a non-ok status.
@@ -133,8 +135,6 @@ pub struct LatticeRecord {
     pub sample: u32,
     /// Whether this sample was discarded as warmup.
     pub warmup: bool,
-    /// Non-normalized historical measurement; never used for headline ratios.
-    pub historical: bool,
     /// Phase timings in nanoseconds (`setup`, `commit`, `open`, `verify`).
     #[serde(default)]
     pub timings_ns: BTreeMap<String, u64>,
@@ -144,6 +144,12 @@ pub struct LatticeRecord {
     /// Serialized commitment size, when supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commitment_bytes: Option<u64>,
+    /// Claimed evaluation bytes sent separately from commitment and proof.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evaluation_bytes: Option<u64>,
+    /// Excluded public/verifier context bytes, when materialized and known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub public_context_bytes: Option<u64>,
     /// Reusable preprocessing / CRS state size, when supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state_bytes: Option<u64>,
@@ -156,9 +162,8 @@ pub struct LatticeRecord {
 
 /// One hash-eval cell attempt. Same measurement contract as [`LatticeRecord`].
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct HashRecord {
-    /// Schema version.
-    pub schema_version: u32,
     /// Cell outcome.
     pub status: RunStatus,
     /// Human-readable reason for a non-ok status.
@@ -184,8 +189,6 @@ pub struct HashRecord {
     pub sample: u32,
     /// Whether this sample was discarded as warmup.
     pub warmup: bool,
-    /// Non-normalized historical measurement; never used for headline ratios.
-    pub historical: bool,
     /// Phase timings in nanoseconds (`setup`, `commit`, `open`, `verify`).
     #[serde(default)]
     pub timings_ns: BTreeMap<String, u64>,
@@ -195,6 +198,12 @@ pub struct HashRecord {
     /// Serialized commitment size, when supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commitment_bytes: Option<u64>,
+    /// Claimed evaluation bytes sent separately from commitment and proof.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evaluation_bytes: Option<u64>,
+    /// Excluded public/verifier context bytes, when materialized and known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub public_context_bytes: Option<u64>,
     /// Reusable preprocessing / CRS state size, when supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state_bytes: Option<u64>,
@@ -207,15 +216,25 @@ pub struct HashRecord {
 
 /// Environment fields needed to decide whether observations are comparable.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Provenance {
     /// Benchmark harness revision.
     pub harness_revision: String,
+    /// UTC timestamp at which the run was started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timestamp_utc: Option<String>,
+    /// Complete runner command for this run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_command: Option<String>,
     /// Rust compiler version.
     pub rustc_version: String,
     /// Operating system and architecture.
     pub target: String,
     /// CPU model.
     pub cpu_model: String,
+    /// Privacy-preserving hash used to distinguish physical benchmark hosts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub machine_id_hash: Option<String>,
     /// Number of worker threads.
     pub threads: u32,
     /// Effective compiler flags.
@@ -235,6 +254,24 @@ pub struct Provenance {
     /// Worker `ulimit -v` ceiling in bytes (90% of host RAM when measured).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory_limit_bytes: Option<u64>,
+    /// SHA-256 digest of the exact executable invoked for this observation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub executable_sha256: Option<String>,
+    /// Compiler version that built this worker (Rust or C, as applicable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worker_compiler_version: Option<String>,
+    /// SHA-256 digest of the dependency lockfile used for the worker build.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lockfile_sha256: Option<String>,
+    /// Exact command used to build the worker executable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build_command: Option<String>,
+    /// Deterministic workload seed requested for this observation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workload_seed: Option<u64>,
+    /// Whether repetitions vary workload seeds or hold one workload fixed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed_mode: Option<String>,
 }
 
 impl Provenance {
@@ -243,9 +280,12 @@ impl Provenance {
     pub fn test_fixture() -> Self {
         Self {
             harness_revision: "test".into(),
+            timestamp_utc: None,
+            run_command: None,
             rustc_version: "test".into(),
             target: "test".into(),
             cpu_model: "test".into(),
+            machine_id_hash: None,
             threads: 1,
             rustflags: String::new(),
             avx512: true,
@@ -253,6 +293,12 @@ impl Provenance {
             logical_cpus: 1,
             memory_bytes: None,
             memory_limit_bytes: None,
+            executable_sha256: None,
+            worker_compiler_version: None,
+            lockfile_sha256: None,
+            build_command: None,
+            workload_seed: None,
+            seed_mode: None,
         }
     }
 

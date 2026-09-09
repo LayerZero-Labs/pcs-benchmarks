@@ -53,6 +53,8 @@ fn main() -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -85,6 +87,8 @@ fn run() -> Result<(), String> {
             timings_ns: BTreeMap::new(),
             proof_bytes: None,
             commitment_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
             state_bytes: Some(0),
             peak_rss_bytes: peak_rss_bytes(),
         });
@@ -95,6 +99,7 @@ fn run() -> Result<(), String> {
 
 #[allow(clippy::too_many_lines)]
 fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
+    let setup_start = Instant::now();
     let derived = derive_whir_config(log2_n)?;
     let num_variables = log2_n as usize;
     let folding_factor = whir_folding_factor(log2_n, derived.starting_log_inv_rate);
@@ -106,9 +111,6 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let merkle_compress = MerkleCompress::new(poseidon16.clone());
     let mmcs = MyMmcs::new(merkle_hash, merkle_compress, 0);
 
-    let mut rng = StdRng::seed_from_u64(0);
-    let table = Table::rand(&mut rng, 1, num_variables);
-    let witness = Layout::new_witness(vec![table], folding_factor.at_round(0));
     let point_schedule: PointSchedule = vec![OpeningBatch::new(vec![0], Vec::new())];
     let protocol = OpeningProtocol::new(vec![TableSpec::new(
         TableShape::new(num_variables, 1),
@@ -123,18 +125,21 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
         derived.pow_bits,
         derived.config.max_pow_bits()
     );
-    let t0 = Instant::now();
     let config = derived.config;
     let challenger = MyChallenger::new(poseidon16);
     let dft = Radix2DFTSmallBatch::<F>::new(1 << config.max_fft_size());
     let pcs = MyPcs::new(config, dft, mmcs);
-    let setup_ns = elapsed_ns(t0);
+    let setup_ns = elapsed_ns(setup_start);
 
+    let mut rng = StdRng::seed_from_u64(configured_seed(0));
+    let table = Table::rand(&mut rng, 1, num_variables);
+    let witness = Layout::new_witness(vec![table], folding_factor.at_round(0));
+
+    let t0 = Instant::now();
     let mut prover_challenger = challenger.clone();
     let mut domainsep = DomainSeparator::new(vec![]);
     pcs.add_domain_separator::<8>(&mut domainsep);
     domainsep.observe_domain_separator(&mut prover_challenger);
-    let t0 = Instant::now();
     let (commitment, prover_data) =
         <MyPcs as MultilinearPcs<EF, MyChallenger>>::commit(&pcs, witness, &mut prover_challenger);
     let commit_ns = elapsed_ns(t0);
@@ -148,25 +153,48 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     );
     let open_ns = elapsed_ns(t0);
 
-    let proof_bytes = postcard::to_allocvec(&proof)
-        .map_err(|error| error.to_string())?
-        .len() as u64;
+    let proof_encoding = postcard::to_allocvec(&proof).map_err(|error| error.to_string())?;
+    let proof_bytes = proof_encoding.len() as u64;
     let commitment_bytes = postcard_len(&commitment);
 
-    let mut verifier_challenger = challenger;
+    let t0 = Instant::now();
+    let mut verifier_challenger = challenger.clone();
     let mut domainsep = DomainSeparator::new(vec![]);
     pcs.add_domain_separator::<8>(&mut domainsep);
     domainsep.observe_domain_separator(&mut verifier_challenger);
-    let t0 = Instant::now();
     <MyPcs as MultilinearPcs<EF, MyChallenger>>::verify(
         &pcs,
         &commitment,
         &proof,
         &mut verifier_challenger,
-        protocol,
+        protocol.clone(),
     )
     .map_err(|error| error.to_string())?;
     let verify_ns = elapsed_ns(t0);
+
+    if negative_check_enabled() {
+        let mut altered_encoding = proof_encoding;
+        if let Some(last) = altered_encoding.last_mut() {
+            *last ^= 1;
+        }
+        if let Ok(altered_proof) = postcard::from_bytes(&altered_encoding) {
+            let mut negative_challenger = challenger;
+            let mut domainsep = DomainSeparator::new(vec![]);
+            pcs.add_domain_separator::<8>(&mut domainsep);
+            domainsep.observe_domain_separator(&mut negative_challenger);
+            if <MyPcs as MultilinearPcs<EF, MyChallenger>>::verify(
+                &pcs,
+                &commitment,
+                &altered_proof,
+                &mut negative_challenger,
+                protocol,
+            )
+            .is_ok()
+            {
+                return Err("WHIR verifier accepted an altered proof".into());
+            }
+        }
+    }
 
     let mut timings_ns = BTreeMap::new();
     timings_ns.insert("setup".into(), setup_ns);
@@ -177,7 +205,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     Ok(WorkerOutput {
         status: RunStatus::Ok,
         status_detail: Some(format!(
-            "soundness={:?},rate=1/{},pow_bits={}",
+            "statement=multilinear,distribution=full-field-uniform,point=transcript-extension,evaluation=proof-embedded,soundness={:?},rate=1/{},pow_bits={},selection_objective=first-valid-capacity-johnson-unique",
             derived.soundness,
             1usize << derived.starting_log_inv_rate,
             derived.pow_bits
@@ -186,7 +214,9 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
         timings_ns,
         proof_bytes: Some(proof_bytes),
         commitment_bytes,
-        state_bytes: Some(0),
+        evaluation_bytes: Some(0),
+        public_context_bytes: Some(0),
+        state_bytes: None,
         peak_rss_bytes: peak_rss_bytes(),
     })
 }
@@ -263,6 +293,17 @@ fn init_thread_pool(threads: u32) {
         .num_threads(threads.max(1) as usize)
         .stack_size(64 * 1024 * 1024)
         .build_global();
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
 }
 
 fn parse_u32_flag(name: &str) -> Result<u32, String> {

@@ -11,6 +11,8 @@ pub struct RokokoTimings {
     pub proof_bytes: Option<u64>,
     /// Inner recursive commitment size when the executor printed one.
     pub commitment_bytes: Option<u64>,
+    /// Opening evaluations sent separately from the proof.
+    pub evaluation_bytes: Option<u64>,
     /// Expanded prover CRS resident size when the executor printed one.
     pub state_bytes: Option<u64>,
     /// Process peak RSS when the executor printed one.
@@ -23,6 +25,7 @@ pub fn parse_rokoko_stdout(stdout: &str) -> Option<RokokoTimings> {
     let mut timings_ns = BTreeMap::new();
     let mut proof_bytes = None;
     let mut commitment_bytes = None;
+    let mut evaluation_bytes = None;
     let mut state_bytes = None;
     let mut peak_rss_bytes = None;
 
@@ -38,6 +41,8 @@ pub fn parse_rokoko_stdout(stdout: &str) -> Option<RokokoTimings> {
             timings_ns.insert("verify".into(), ns);
         } else if let Some(bytes) = parse_bytes_line(line, "TOTAL Commitment size:") {
             commitment_bytes = Some(bytes);
+        } else if let Some(bytes) = parse_bytes_line(line, "TOTAL Evaluation size:") {
+            evaluation_bytes = Some(bytes);
         } else if let Some(bytes) = parse_bytes_line(line, "TOTAL CRS size:") {
             state_bytes = Some(bytes);
         } else if let Some(bytes) = parse_bytes_line(line, "Peak RSS:") {
@@ -59,6 +64,7 @@ pub fn parse_rokoko_stdout(stdout: &str) -> Option<RokokoTimings> {
             timings_ns,
             proof_bytes,
             commitment_bytes,
+            evaluation_bytes,
             state_bytes,
             peak_rss_bytes,
         })
@@ -99,6 +105,7 @@ TOTAL CRS size: 1048576 bytes
 TOTAL Commit time: 2560000000 ns
 TOTAL Commitment size: 3072 bytes
 TOTAL Prover time: 1820000000 ns
+TOTAL Evaluation size: 512 bytes
 Total proof size: 157 KB
 Wire proof size: 157.0 KB (serialise 1.200 ms, deserialise 0.800 ms)
 TOTAL Verifier time: 11600000 ns
@@ -111,6 +118,7 @@ Peak RSS: 2147483648 bytes
         assert_eq!(parsed.timings_ns.get("verify"), Some(&11_600_000));
         assert_eq!(parsed.proof_bytes, Some(160_768));
         assert_eq!(parsed.commitment_bytes, Some(3072));
+        assert_eq!(parsed.evaluation_bytes, Some(512));
         assert_eq!(parsed.state_bytes, Some(1_048_576));
         assert_eq!(parsed.peak_rss_bytes, Some(2_147_483_648));
     }

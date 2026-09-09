@@ -35,6 +35,8 @@ fn main() -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -51,6 +53,7 @@ fn run() -> Result<(), String> {
 fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let num_variables = log2_n as usize;
     let num_coeffs = 1usize << num_variables;
+    let t0 = Instant::now();
     let whir_params = ProtocolParameters {
         security_level: PROVEKIT_SECURITY_BITS as usize,
         pow_bits: 20,
@@ -66,35 +69,32 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let ds = DomainSeparator::protocol(&params)
         .session(&"akita-benchmark whir-provekit".to_owned())
         .instance(&Empty);
+    let mut prover_state = ProverState::new_std(&ds);
+    let setup_ns = elapsed_ns(t0);
 
-    let mut rng = StdRng::seed_from_u64(0);
+    let mut rng = StdRng::seed_from_u64(configured_seed(0));
     let vector: Vec<Field64> = (0..num_coeffs)
-        .map(|_| Field64::from(rng.gen::<u64>()))
+        .map(|_| random_goldilocks(&mut rng))
         .collect();
     let vector_buffer = Buffer::from(vector.as_slice());
 
-    let point: Vec<<M as whir::algebra::embedding::Embedding>::Target> =
-        vec![<M as whir::algebra::embedding::Embedding>::Target::from(1u64); num_variables];
+    let point: Vec<<M as whir::algebra::embedding::Embedding>::Target> = (0..num_variables)
+        .map(|_| {
+            Field64_3::new(
+                random_goldilocks(&mut rng),
+                random_goldilocks(&mut rng),
+                random_goldilocks(&mut rng),
+            )
+        })
+        .collect();
     let linear_form = MultilinearExtension::new(point);
-    let evaluation = linear_form.evaluate(params.embedding(), &vector);
-
-    let t0 = Instant::now();
-    let mut prover_state = ProverState::new_std(&ds);
-    let setup_ns = elapsed_ns(t0);
 
     let t0 = Instant::now();
     let witness = params.commit(&mut prover_state, &[&vector_buffer]);
     let commit_ns = elapsed_ns(t0);
-    let mut root_narg = Vec::new();
-    hash::Hash::default().serialize_into_narg(&mut root_narg);
-    let mut ood_narg = Vec::new();
-    evaluation.serialize_into_narg(&mut ood_narg);
-    let commitment_bytes = (root_narg.len()
-        + params.initial_out_domain_samples
-            * params.initial_committer.num_vectors()
-            * ood_narg.len()) as u64;
 
     let t0 = Instant::now();
+    let evaluation = linear_form.evaluate(params.embedding(), &vector);
     let _ = params.prove(
         &mut prover_state,
         &[&vector_buffer],
@@ -104,6 +104,14 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     );
     let open_ns = elapsed_ns(t0);
     let proof = prover_state.proof();
+    let mut root_narg = Vec::new();
+    hash::Hash::default().serialize_into_narg(&mut root_narg);
+    let mut ood_narg = Vec::new();
+    evaluation.serialize_into_narg(&mut ood_narg);
+    let commitment_bytes = (root_narg.len()
+        + params.initial_out_domain_samples
+            * params.initial_committer.num_vectors()
+            * ood_narg.len()) as u64;
     let transcript_and_hints = (proof.narg_string.len() + proof.hints.len()) as u64;
     let proof_bytes = transcript_and_hints.saturating_sub(commitment_bytes);
 
@@ -122,6 +130,30 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
         .map_err(|error| format!("final claim: {error:?}"))?;
     let verify_ns = elapsed_ns(t0);
 
+    if negative_check_enabled() {
+        let mut negative_state = VerifierState::new_std(&ds, &proof);
+        let negative_commitment = params
+            .receive_commitment(&mut negative_state)
+            .map_err(|error| format!("negative receive commitment: {error:?}"))?;
+        let altered_evaluation =
+            evaluation + <M as whir::algebra::embedding::Embedding>::Target::from(1u64);
+        if let Ok(altered_final_claim) = params.verify(
+            &mut negative_state,
+            &[&negative_commitment],
+            &[altered_evaluation],
+        ) {
+            if altered_final_claim
+                .verify(std::iter::once(
+                    &linear_form
+                        as &dyn LinearForm<<M as whir::algebra::embedding::Embedding>::Target>,
+                ))
+                .is_ok()
+            {
+                return Err("ProveKit WHIR verifier accepted an altered opening claim".into());
+            }
+        }
+    }
+
     let mut timings_ns = BTreeMap::new();
     timings_ns.insert("setup".into(), setup_ns);
     timings_ns.insert("commit".into(), commit_ns);
@@ -131,7 +163,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     Ok(WorkerOutput {
         status: RunStatus::Ok,
         status_detail: Some(format!(
-            "goldilocks3,johnson,rate=1/{},fold={},pow_bits={},security={}",
+            "statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform,evaluation=separate,goldilocks3,johnson,rate=1/{},fold={},pow_bits={},security={}",
             1usize << whir_params.starting_log_inv_rate,
             whir_params.folding_factor,
             whir_params.pow_bits,
@@ -141,6 +173,8 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
         timings_ns,
         proof_bytes: Some(proof_bytes),
         commitment_bytes: Some(commitment_bytes),
+        evaluation_bytes: Some(ood_narg.len() as u64),
+        public_context_bytes: Some(0),
         state_bytes: Some(0),
         peak_rss_bytes: peak_rss_bytes(),
     })
@@ -151,6 +185,27 @@ fn init_thread_pool(threads: u32) {
         .num_threads(threads.max(1) as usize)
         .stack_size(64 * 1024 * 1024)
         .build_global();
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
+}
+
+fn random_goldilocks(rng: &mut StdRng) -> Field64 {
+    const MODULUS: u64 = u64::MAX - (1u64 << 32) + 2;
+    loop {
+        let candidate = rng.gen::<u64>();
+        if candidate < MODULUS {
+            return Field64::from(candidate);
+        }
+    }
 }
 
 fn parse_u32_flag(name: &str) -> Result<u32, String> {

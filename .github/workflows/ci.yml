@@ -28,23 +28,111 @@ jobs:
         with:
           components: clippy,rustfmt
 
-      # benchmarks/akita is a workspace member with path deps under
-      # third_party/akita. Cargo resolves the whole workspace even for
-      # `-p pcs-bench-core`, so the pin must exist before any cargo command.
-      - name: Fetch pinned Akita
-        run: ./scripts/fetch-vendors.sh --akita
-
-      # `--all` recurses into path dependencies, which would format the pinned
-      # Akita checkout under third_party. Name the workspace members instead.
       - name: Check formatting
-        run: cargo fmt -p pcs-bench-core -p pcs-bench-runner -p pcs-bench-akita --check
+        run: cargo fmt --all --check
 
       - name: Test shared contracts
         run: cargo test -p pcs-bench-core -p pcs-bench-runner --locked
 
-      - name: Compile every benchmark
+      - name: Compile workspace benchmark
         run: cargo check --workspace --all-targets --locked
 
       - name: Lint
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  akita-adapter:
+    name: Adapter · Akita
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          toolchain: "1.95"
+          components: rustfmt
+
+      - name: Fetch pinned Akita
+        run: ./scripts/fetch-vendors.sh --akita
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path benchmarks/akita/Cargo.toml --check
+
+      - name: Check locked worker
+        run: cargo check --locked --manifest-path benchmarks/akita/Cargo.toml --bins
+
+  isolated-rust-adapters:
+    name: Adapter · ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: ""
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: WHIR
+            manifest: benchmarks/whir/Cargo.toml
+          - name: SP1 BaseFold
+            manifest: benchmarks/basefold/Cargo.toml
+          - name: Plonky2 FRI
+            manifest: benchmarks/plonky2-fri/Cargo.toml
+            bootstrap: "1"
+          - name: Plonky3 FRI/STIR
+            manifest: benchmarks/plonky3-uni/Cargo.toml
+          - name: Binius64
+            manifest: benchmarks/binius64/Cargo.toml
+          - name: Flock Ligerito
+            manifest: benchmarks/flock-ligerito/Cargo.toml
+          - name: ProveKit WHIR
+            manifest: benchmarks/whir-provekit/Cargo.toml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          toolchain: "1.95"
+
+      - name: Check locked worker
+        run: cargo check --locked --manifest-path "${{ matrix.manifest }}" --bins
+        env:
+          RUSTC_BOOTSTRAP: ${{ matrix.bootstrap || '' }}
+
+  rokoko-adapter:
+    name: Adapter · RoKoKo
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          toolchain: nightly-2026-09-03
+
+      - name: Fetch and patch pinned RoKoKo
+        run: ./scripts/fetch-vendors.sh --rokoko
+
+      - name: Check representative locked configuration
+        working-directory: third_party/rokoko
+        run: cargo +nightly-2026-09-03 check --locked --no-default-features --features incomplete-rexl,unsafe-sumcheck,p-26
+
+  greyhound-adapter-source:
+    name: Adapter · Greyhound source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Fetch pinned Greyhound
+        run: ./scripts/fetch-vendors.sh --greyhound
+
+      - name: Check benchmark C sources
+        run: >-
+          cc -fsyntax-only -std=c2x -D_GNU_SOURCE
+          -Ithird_party/greyhound-reference
+          benchmarks/greyhound/src/lattice_eval.c
+          benchmarks/greyhound/src/randombytes_deterministic.c
+
+      - name: Explain hardware-only coverage
+        run: echo "Linking and correctness execution require the controlled x86_64 AVX-512 benchmark host."
 
