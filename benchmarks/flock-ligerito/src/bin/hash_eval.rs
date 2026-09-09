@@ -2,13 +2,12 @@
 
 use flock_core::challenger::FsChallenger;
 use flock_core::field::F128;
-use flock_core::lincheck::build_eq_table;
 use flock_core::merkle::HashKind;
 use flock_core::pcs::commit::{commit, PcsParams};
 use flock_core::pcs::ligerito::{
     embedded_initial_k_or_default, prover_config_for, verifier_config_for, LigeritoProfile,
 };
-use flock_core::pcs::pack::pack_witness;
+use flock_core::pcs::ring_switch::{build_eq_split, split_n_lo};
 use flock_core::pcs::{
     open_batch_mixed_ligerito_with_precomputed_s_hat_v_and_grinding,
     verify_opening_batch_ligerito_mixed_with_grinding, DirectEqInd, PackedDirectClaim,
@@ -18,6 +17,7 @@ use flock_core::zerocheck::PaddingSpec;
 use pcs_bench_core::{RunStatus, WorkerOutput, FLOCK_LOG_PACKING};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::collections::BTreeMap;
 use std::io::{self, Write};
 use std::process::ExitCode;
@@ -36,6 +36,8 @@ fn main() -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -54,6 +56,7 @@ fn timed_ligerito(m: u32) -> Result<WorkerOutput, String> {
     if m < FLOCK_LOG_PACKING as usize {
         return Err(format!("m={m} is below Flock packing width"));
     }
+    let t0 = Instant::now();
     let profile = LigeritoProfile::Fast;
     let log_batch_size = embedded_initial_k_or_default(m, profile);
     let log_n = m - FLOCK_LOG_PACKING as usize;
@@ -67,37 +70,53 @@ fn timed_ligerito(m: u32) -> Result<WorkerOutput, String> {
     };
     let lig_p = prover_config_for(log_n, log_batch_size, profile).map_err(|e| e)?;
     let lig_v = verifier_config_for(log_n, log_batch_size, profile).map_err(|e| e)?;
+    let setup_ns = elapsed_ns(t0);
 
-    let mut rng = StdRng::seed_from_u64(0xF10C_0000 ^ m as u64);
-    let z: Vec<bool> = (0..(1usize << m)).map(|_| rng.gen()).collect();
-    let packed = pack_witness(&z, m);
+    let mut rng = StdRng::seed_from_u64(configured_seed(0xF10C_0000 ^ m as u64));
+    // Generate the declared packed-field witness directly. Uniform F128
+    // elements are exactly uniformly random groups of 128 input bits, without
+    // a byte-per-bit fixture that dominates process RSS.
+    let packed: Vec<F128> = (0..(1usize << log_n))
+        .map(|_| F128 {
+            lo: rng.gen(),
+            hi: rng.gen(),
+        })
+        .collect();
     let point: Vec<F128> = (0..log_n)
         .map(|_| F128 {
             lo: rng.gen(),
             hi: rng.gen(),
         })
         .collect();
-    let eq = build_eq_table(&point);
-    let value = packed
-        .iter()
-        .zip(eq.iter())
-        .fold(F128::ZERO, |acc, (&a, &b)| acc + a * b);
-
-    let t0 = Instant::now();
-    let setup_ns = elapsed_ns(t0);
 
     let t0 = Instant::now();
     let (commitment, prover_data) = commit(&packed, &params);
     let commit_ns = elapsed_ns(t0);
 
+    let t0 = Instant::now();
+    // The supplied claim is useful point-dependent prover input, so its
+    // computation belongs to end-to-end opening. Factor the equality tensor
+    // to avoid a second full witness-sized allocation.
+    let n_lo = split_n_lo(log_n);
+    let (eq_lo, eq_hi) = build_eq_split(&point, n_lo);
+    let low_mask = (1usize << n_lo) - 1;
+    let value = packed
+        .par_iter()
+        .enumerate()
+        .map(|(index, &coefficient)| coefficient * eq_lo[index & low_mask] * eq_hi[index >> n_lo])
+        .reduce(|| F128::ZERO, |left, right| left + right);
+    drop(eq_lo);
+    drop(eq_hi);
+
     let claim = PackedDirectClaim {
         point: point.clone(),
         value,
-        eq_ind: DirectEqInd::Dense(eq),
+        // The prover constructs the point-dependent factored basis inside the
+        // timed opening phase.
+        eq_ind: DirectEqInd::EqPoint(point.clone()),
     };
     let grinding = params.opening_grinding();
     let mut prover_ch = FsChallenger::new(b"akita-bench-flock");
-    let t0 = Instant::now();
     let proof = open_batch_mixed_ligerito_with_precomputed_s_hat_v_and_grinding(
         packed,
         &prover_data,
@@ -116,8 +135,8 @@ fn timed_ligerito(m: u32) -> Result<WorkerOutput, String> {
         point: &point,
         value,
     };
-    let mut verifier_ch = FsChallenger::new(b"akita-bench-flock");
     let t0 = Instant::now();
+    let mut verifier_ch = FsChallenger::new(b"akita-bench-flock");
     verify_opening_batch_ligerito_mixed_with_grinding(
         &commitment,
         &[],
@@ -132,6 +151,29 @@ fn timed_ligerito(m: u32) -> Result<WorkerOutput, String> {
     .map_err(|error| format!("ligerito verify failed: {error:?}"))?;
     let verify_ns = elapsed_ns(t0);
 
+    if negative_check_enabled() {
+        let altered = PackedDirectClaimRef {
+            point: &point,
+            value: value + F128::ONE,
+        };
+        let mut negative_ch = FsChallenger::new(b"akita-bench-flock");
+        if verify_opening_batch_ligerito_mixed_with_grinding(
+            &commitment,
+            &[],
+            &[],
+            &[],
+            std::slice::from_ref(&altered),
+            &proof,
+            &lig_v,
+            grinding,
+            &mut negative_ch,
+        )
+        .is_ok()
+        {
+            return Err("Flock verifier accepted an altered opening claim".into());
+        }
+    }
+
     let proof_bytes = bincode::serialized_size(&proof).unwrap_or(0);
     let commitment_bytes = bincode::serialized_size(&commitment).unwrap_or(0);
 
@@ -144,12 +186,14 @@ fn timed_ligerito(m: u32) -> Result<WorkerOutput, String> {
     Ok(WorkerOutput {
         status: RunStatus::Ok,
         status_detail: Some(format!(
-            "flock-ligerito-fast,m={m},log_n={log_n},batch={log_batch_size},hash=sha256"
+            "flock-ligerito-fast,statement=packed-field-mle,input_bits=2^{m},variables={log_n},field=F128,batch={log_batch_size},hash=sha256"
         )),
         log2_n: Some(m as u32),
         timings_ns,
         proof_bytes: Some(proof_bytes),
         commitment_bytes: Some(commitment_bytes),
+        evaluation_bytes: Some(bincode::serialized_size(&value).unwrap_or(0)),
+        public_context_bytes: Some(0),
         state_bytes: Some(0),
         peak_rss_bytes: peak_rss_bytes(),
     })
@@ -160,6 +204,17 @@ fn init_thread_pool(threads: u32) {
         .num_threads(threads.max(1) as usize)
         .stack_size(64 * 1024 * 1024)
         .build_global();
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
 }
 
 fn parse_u32_flag(name: &str) -> Result<u32, String> {

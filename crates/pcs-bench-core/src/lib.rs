@@ -20,9 +20,9 @@ pub use hash::{
     HASH_SECURITY_BITS_100, HASH_THREADS, KOALA_BEAR, KOALA_BEAR_TWO_ADICITY, PLONKY2_CAP_HEIGHT,
     PLONKY2_FRI_POW_BITS, PLONKY2_FRI_QUERIES, PLONKY2_FRI_RATE_BITS, PLONKY2_REVISION,
     PLONKY3_FRI_POW_BITS, PLONKY3_FRI_QUERIES, PLONKY3_FRI_STIR_REVISION, PLONKY3_REVISION,
-    PLONKY3_UNI_LOG_BLOWUP, PROVEKIT_REVISION, PROVEKIT_SECURITY_BITS, PROVEKIT_WHIR_FOLD,
-    PROVEKIT_WHIR_LOG_INV_RATE, SP1_REVISION, WHIR_DIRECT_SEND_VARS, WHIR_FOLDING_FACTOR,
-    WHIR_MAX_POW_BITS, WHIR_POW_BITS, WHIR_PROVEKIT_WHIR_REVISION, WHIR_STARTING_LOG_INV_RATE,
+    PLONKY3_UNI_LOG_BLOWUP, PROVEKIT_SECURITY_BITS, PROVEKIT_WHIR_FOLD, PROVEKIT_WHIR_LOG_INV_RATE,
+    SP1_REVISION, WHIR_DIRECT_SEND_VARS, WHIR_FOLDING_FACTOR, WHIR_MAX_POW_BITS, WHIR_POW_BITS,
+    WHIR_PROVEKIT_WHIR_REVISION, WHIR_STARTING_LOG_INV_RATE,
 };
 pub use hash_report::{render_latex_hash_eval_report, render_markdown_hash_eval_report};
 pub use hash_table::{
@@ -39,7 +39,7 @@ pub use lattice::{
 };
 pub use observation::{
     looks_like_greyhound_sis, looks_like_oom, HashRecord, LatticeRecord, Observation, Provenance,
-    RunStatus, WorkerOutput, RESULT_SCHEMA_VERSION,
+    RunStatus, WorkerOutput,
 };
 pub use report::{render_latex_eval_report, render_markdown_eval_report};
 pub use rokoko_log::{parse_rokoko_stdout, RokokoTimings};

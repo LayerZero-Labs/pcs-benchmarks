@@ -16,7 +16,7 @@ use pcs_bench_core::{
     render_markdown_resource_table, render_markdown_timing_table, HashRecord, HashSchemeId,
     LatticeRecord, SchemeId, HASH_THREADS, PAYLOAD_LOG2,
 };
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
@@ -69,6 +69,24 @@ enum TableFormat {
     Both,
 }
 
+#[derive(Clone, Copy, Default, ValueEnum)]
+enum SeedMode {
+    /// Use a different recorded workload seed for every process.
+    #[default]
+    Vary,
+    /// Reuse one recorded seed to isolate machine/runtime noise.
+    Fixed,
+}
+
+impl SeedMode {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Vary => "vary",
+            Self::Fixed => "fixed",
+        }
+    }
+}
+
 #[derive(clap::Args)]
 struct RunArgs {
     /// Comma-separated schemes: akita,akita-offload,greyhound,rokoko (default: all).
@@ -78,11 +96,14 @@ struct RunArgs {
     #[arg(long, value_delimiter = ',')]
     payload: Vec<u32>,
     /// Measured processes per cell after warmup.
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 10)]
     runs: u32,
     /// Discarded processes per cell.
     #[arg(long, default_value_t = 1)]
     warmups: u32,
+    /// Workload variation policy: vary inputs per process or hold them fixed.
+    #[arg(long, value_enum, default_value = "vary")]
+    seed_mode: SeedMode,
     /// Output directory. Defaults to results/lattice-<utc>.
     #[arg(long)]
     out: Option<PathBuf>,
@@ -100,11 +121,14 @@ struct HashRunArgs {
     #[arg(long, value_delimiter = ',')]
     threads: Vec<u32>,
     /// Measured processes per cell after warmup.
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 10)]
     runs: u32,
     /// Discarded processes per cell.
     #[arg(long, default_value_t = 1)]
     warmups: u32,
+    /// Workload variation policy: vary inputs per process or hold them fixed.
+    #[arg(long, value_enum, default_value = "vary")]
+    seed_mode: SeedMode,
     /// Output directory. Defaults to results/hash-<utc>.
     #[arg(long)]
     out: Option<PathBuf>,
@@ -158,45 +182,65 @@ fn print_matrix() {
 }
 
 fn run_lattice(args: RunArgs) -> Result<()> {
+    reject_negative_check_performance_run()?;
     let schemes = parse_schemes(&args.scheme)?;
     let payloads = if args.payload.is_empty() {
         PAYLOAD_LOG2.to_vec()
     } else {
         args.payload.clone()
     };
+    let mut cases = Vec::new();
+    for payload in payloads {
+        for scheme in &schemes {
+            cases.push(
+                lattice_case(payload, *scheme)
+                    .with_context(|| format!("unknown payload 2^{payload} for {scheme:?}"))?,
+            );
+        }
+    }
+    let mut prepared = std::collections::BTreeSet::new();
+    for case in &cases {
+        if case.log2_n.is_some() && prepared.insert((case.scheme, case.native_param)) {
+            worker::prepare_lattice_case(case).with_context(|| {
+                format!(
+                    "prepare {} worker for payload 2^{}",
+                    case.scheme.display_name(),
+                    case.payload_log2
+                )
+            })?;
+        }
+    }
+
     let out_dir = match args.out {
         Some(path) => path,
         None => default_out_dir()?,
     };
+    let mut provenance = provenance::capture()?;
+    provenance.seed_mode = Some(args.seed_mode.as_str().into());
     fs::create_dir_all(&out_dir)?;
     let records_path = out_dir.join("records.jsonl");
-    let mut records_file = File::create(&records_path)?;
-    let provenance = provenance::capture()?;
+    let mut records_file = create_records_file(&records_path)?;
     provenance.write(&out_dir.join("provenance.txt"))?;
 
     let mut records = Vec::new();
-    for payload in payloads {
-        for scheme in &schemes {
-            let Some(case) = lattice_case(payload, *scheme) else {
-                bail!("unknown payload 2^{payload} for {scheme:?}");
-            };
-            let samples = args.warmups.saturating_add(args.runs);
-            for sample in 0..samples {
-                let warmup = sample < args.warmups;
-                eprintln!(
-                    "[{} 2^{} {} sample {}{}]",
-                    case.scheme.token(),
-                    payload,
-                    case.native_param.unwrap_or("-"),
-                    sample,
-                    if warmup { " warmup" } else { "" }
-                );
-                let record = worker::run_case(&case, sample, warmup, provenance.clone());
-                serde_json::to_writer(&mut records_file, &record)?;
-                records_file.write_all(b"\n")?;
-                records_file.flush()?;
-                records.push(record);
-            }
+    for case in cases {
+        let samples = args.warmups.saturating_add(args.runs);
+        for sample in 0..samples {
+            let warmup = sample < args.warmups;
+            eprintln!(
+                "[{} 2^{} {} sample {}{}]",
+                case.scheme.token(),
+                case.payload_log2,
+                case.native_param.unwrap_or("-"),
+                sample,
+                if warmup { " warmup" } else { "" }
+            );
+            let seed = workload_seed(args.seed_mode, case.payload_log2, sample);
+            let record = worker::run_case(&case, sample, warmup, seed, provenance.clone());
+            serde_json::to_writer(&mut records_file, &record)?;
+            records_file.write_all(b"\n")?;
+            records_file.flush()?;
+            records.push(record);
         }
     }
 
@@ -213,6 +257,7 @@ fn compare_lattice(args: CompareArgs) -> Result<()> {
     if records.is_empty() {
         bail!("no lattice records in {}", args.input.display());
     }
+    validate_cohort("lattice", records.iter().map(|record| &record.provenance))?;
     let out_dir = args.out_dir.unwrap_or_else(|| {
         args.input
             .parent()
@@ -246,6 +291,10 @@ fn compare_lattice(args: CompareArgs) -> Result<()> {
 }
 
 fn write_tables(out_dir: &Path, records: &[LatticeRecord]) -> Result<()> {
+    validate_lattice_records(records, Path::new("in-memory lattice records"))?;
+    validate_lattice_seed_schedule(records)?;
+    validate_lattice_build_identities(records)?;
+    validate_cohort("lattice", records.iter().map(|record| &record.provenance))?;
     let rows = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     fs::write(
@@ -288,6 +337,7 @@ fn print_hash_matrix() {
 }
 
 fn run_hash(args: HashRunArgs) -> Result<()> {
+    reject_negative_check_performance_run()?;
     let schemes = parse_hash_schemes(&args.scheme)?;
     let payloads = if args.payload.is_empty() {
         PAYLOAD_LOG2.to_vec()
@@ -299,42 +349,60 @@ fn run_hash(args: HashRunArgs) -> Result<()> {
     } else {
         args.threads.clone()
     };
+    let mut cases = Vec::new();
+    for payload in payloads {
+        for scheme in &schemes {
+            for thread_count in &threads {
+                cases.push(hash_case(payload, *scheme, *thread_count).with_context(|| {
+                    format!("unknown payload 2^{payload} for {scheme:?} threads={thread_count}")
+                })?);
+            }
+        }
+    }
+    let mut prepared = std::collections::BTreeSet::new();
+    for case in &cases {
+        if prepared.insert(case.scheme) {
+            worker::prepare_hash_case(case).with_context(|| {
+                format!(
+                    "prepare {} worker for payload 2^{}",
+                    case.scheme.display_name(),
+                    case.payload_log2
+                )
+            })?;
+        }
+    }
+
     let out_dir = match args.out {
         Some(path) => path,
         None => default_hash_out_dir()?,
     };
+    let mut provenance = provenance::capture()?;
+    provenance.seed_mode = Some(args.seed_mode.as_str().into());
     fs::create_dir_all(&out_dir)?;
     let records_path = out_dir.join("records.jsonl");
-    let mut records_file = File::create(&records_path)?;
-    let provenance = provenance::capture()?;
+    let mut records_file = create_records_file(&records_path)?;
     provenance.write_hash(&out_dir.join("provenance.txt"))?;
 
     let mut records = Vec::new();
-    for payload in payloads {
-        for scheme in &schemes {
-            for thread_count in &threads {
-                let Some(case) = hash_case(payload, *scheme, *thread_count) else {
-                    bail!("unknown payload 2^{payload} for {scheme:?} threads={thread_count}");
-                };
-                let samples = args.warmups.saturating_add(args.runs);
-                for sample in 0..samples {
-                    let warmup = sample < args.warmups;
-                    eprintln!(
-                        "[{} 2^{} {} t{} sample {}{}]",
-                        case.scheme.token(),
-                        payload,
-                        case.native_param,
-                        case.threads,
-                        sample,
-                        if warmup { " warmup" } else { "" }
-                    );
-                    let record = worker::run_hash_case(&case, sample, warmup, provenance.clone());
-                    serde_json::to_writer(&mut records_file, &record)?;
-                    records_file.write_all(b"\n")?;
-                    records_file.flush()?;
-                    records.push(record);
-                }
-            }
+    for case in cases {
+        let samples = args.warmups.saturating_add(args.runs);
+        for sample in 0..samples {
+            let warmup = sample < args.warmups;
+            eprintln!(
+                "[{} 2^{} {} t{} sample {}{}]",
+                case.scheme.token(),
+                case.payload_log2,
+                case.native_param,
+                case.threads,
+                sample,
+                if warmup { " warmup" } else { "" }
+            );
+            let seed = workload_seed(args.seed_mode, case.payload_log2, sample);
+            let record = worker::run_hash_case(&case, sample, warmup, seed, provenance.clone());
+            serde_json::to_writer(&mut records_file, &record)?;
+            records_file.write_all(b"\n")?;
+            records_file.flush()?;
+            records.push(record);
         }
     }
 
@@ -354,11 +422,102 @@ fn run_hash(args: HashRunArgs) -> Result<()> {
     Ok(())
 }
 
+fn create_records_file(path: &Path) -> Result<File> {
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .with_context(|| {
+            format!(
+                "create new records file {}; refusing to overwrite an existing run",
+                path.display()
+            )
+        })
+}
+
+fn reject_negative_check_performance_run() -> Result<()> {
+    if std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1") {
+        bail!(
+            "PCS_BENCH_NEGATIVE_CHECK=1 is a correctness-only worker mode and cannot be persisted as a performance run"
+        );
+    }
+    Ok(())
+}
+
+const fn workload_seed(mode: SeedMode, payload_log2: u32, sample: u32) -> u64 {
+    let base = 0x5043_5342_454e_4348u64 ^ ((payload_log2 as u64) << 32);
+    match mode {
+        SeedMode::Vary => base ^ sample as u64,
+        SeedMode::Fixed => base,
+    }
+}
+
+fn validate_cohort<'a>(
+    label: &str,
+    mut provenances: impl Iterator<Item = &'a pcs_bench_core::Provenance>,
+) -> Result<()> {
+    let Some(expected) = provenances.next() else {
+        return Ok(());
+    };
+    for candidate in provenances {
+        if let Some(field) = cohort_mismatch(expected, candidate) {
+            bail!(
+                "{label} records do not form one comparable cohort: `{field}` differs; split the records into separate reports"
+            );
+        }
+    }
+    Ok(())
+}
+
+fn cohort_mismatch(
+    expected: &pcs_bench_core::Provenance,
+    candidate: &pcs_bench_core::Provenance,
+) -> Option<&'static str> {
+    if expected.harness_revision != candidate.harness_revision {
+        Some("harness_revision")
+    } else if expected.timestamp_utc != candidate.timestamp_utc {
+        Some("timestamp_utc")
+    } else if expected.run_command != candidate.run_command {
+        Some("run_command")
+    } else if expected.rustc_version != candidate.rustc_version {
+        Some("rustc_version")
+    } else if expected.target != candidate.target {
+        Some("target")
+    } else if expected.cpu_model != candidate.cpu_model {
+        Some("cpu_model")
+    } else if expected.cpu_scaling_driver != candidate.cpu_scaling_driver {
+        Some("cpu_scaling_driver")
+    } else if expected.cpu_governor != candidate.cpu_governor {
+        Some("cpu_governor")
+    } else if expected.cpu_energy_preference != candidate.cpu_energy_preference {
+        Some("cpu_energy_preference")
+    } else if expected.machine_id_hash != candidate.machine_id_hash {
+        Some("machine_id_hash")
+    } else if expected.logical_cpus != candidate.logical_cpus {
+        Some("logical_cpus")
+    } else if expected.memory_bytes != candidate.memory_bytes {
+        Some("memory_bytes")
+    } else if expected.memory_limit_bytes != candidate.memory_limit_bytes {
+        Some("memory_limit_bytes")
+    } else if expected.rustflags != candidate.rustflags {
+        Some("rustflags")
+    } else if expected.avx512 != candidate.avx512 {
+        Some("avx512")
+    } else if expected.isa_notes != candidate.isa_notes {
+        Some("isa_notes")
+    } else if expected.seed_mode != candidate.seed_mode {
+        Some("seed_mode")
+    } else {
+        None
+    }
+}
+
 fn compare_hash(args: CompareArgs) -> Result<()> {
     let records = load_hash_records(&args.input)?;
     if records.is_empty() {
         bail!("no hash records in {}", args.input.display());
     }
+    validate_cohort("hash", records.iter().map(|record| &record.provenance))?;
     let out_dir = args.out_dir.unwrap_or_else(|| {
         args.input
             .parent()
@@ -380,6 +539,10 @@ fn compare_hash(args: CompareArgs) -> Result<()> {
 }
 
 fn write_hash_tables(out_dir: &Path, records: &[HashRecord]) -> Result<()> {
+    validate_hash_records(records, Path::new("in-memory hash records"))?;
+    validate_hash_seed_schedule(records)?;
+    validate_hash_build_identities(records)?;
+    validate_cohort("hash", records.iter().map(|record| &record.provenance))?;
     write_hash_markdown(out_dir, records)?;
     write_hash_latex(out_dir, records)?;
     Ok(())
@@ -483,7 +646,7 @@ fn workspace_root() -> Result<PathBuf> {
 }
 
 fn load_records(path: &Path) -> Result<Vec<LatticeRecord>> {
-    if path.is_dir() {
+    let records = if path.is_dir() {
         let mut records = Vec::new();
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -494,9 +657,14 @@ fn load_records(path: &Path) -> Result<Vec<LatticeRecord>> {
                 records.extend(load_jsonl(&nested)?);
             }
         }
-        return Ok(records);
-    }
-    load_jsonl(path)
+        records
+    } else {
+        load_jsonl(path)?
+    };
+    validate_unique_lattice_records(&records)?;
+    validate_lattice_seed_schedule(&records)?;
+    validate_lattice_build_identities(&records)?;
+    Ok(records)
 }
 
 fn load_jsonl(path: &Path) -> Result<Vec<LatticeRecord>> {
@@ -509,13 +677,31 @@ fn load_jsonl(path: &Path) -> Result<Vec<LatticeRecord>> {
         }
         let record: LatticeRecord = serde_json::from_str(&line)
             .with_context(|| format!("{}:{}", path.display(), index + 1))?;
+        validate_record_timings(record.status, &record.timings_ns, path, index + 1)?;
+        validate_record_communication(
+            record.status,
+            record.proof_bytes,
+            record.commitment_bytes,
+            record.evaluation_bytes,
+            record.public_context_bytes,
+            path,
+            index + 1,
+        )?;
+        validate_lattice_record_case(&record, path, index + 1)?;
+        validate_record_provenance(
+            record.status,
+            &record.provenance,
+            record.scheme != SchemeId::Greyhound,
+            path,
+            index + 1,
+        )?;
         records.push(record);
     }
     Ok(records)
 }
 
 fn load_hash_records(path: &Path) -> Result<Vec<HashRecord>> {
-    if path.is_dir() {
+    let records = if path.is_dir() {
         let mut records = Vec::new();
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -526,9 +712,14 @@ fn load_hash_records(path: &Path) -> Result<Vec<HashRecord>> {
                 records.extend(load_hash_jsonl(&nested)?);
             }
         }
-        return Ok(records);
-    }
-    load_hash_jsonl(path)
+        records
+    } else {
+        load_hash_jsonl(path)?
+    };
+    validate_unique_hash_records(&records)?;
+    validate_hash_seed_schedule(&records)?;
+    validate_hash_build_identities(&records)?;
+    Ok(records)
 }
 
 fn load_hash_jsonl(path: &Path) -> Result<Vec<HashRecord>> {
@@ -541,7 +732,528 @@ fn load_hash_jsonl(path: &Path) -> Result<Vec<HashRecord>> {
         }
         let record: HashRecord = serde_json::from_str(&line)
             .with_context(|| format!("{}:{}", path.display(), index + 1))?;
+        validate_record_timings(record.status, &record.timings_ns, path, index + 1)?;
+        validate_record_communication(
+            record.status,
+            record.proof_bytes,
+            record.commitment_bytes,
+            record.evaluation_bytes,
+            record.public_context_bytes,
+            path,
+            index + 1,
+        )?;
+        validate_hash_record_case(&record, path, index + 1)?;
+        validate_record_provenance(record.status, &record.provenance, true, path, index + 1)?;
         records.push(record);
     }
     Ok(records)
+}
+
+fn validate_record_timings(
+    status: pcs_bench_core::RunStatus,
+    timings: &std::collections::BTreeMap<String, u64>,
+    path: &Path,
+    line: usize,
+) -> Result<()> {
+    if status != pcs_bench_core::RunStatus::Ok {
+        return Ok(());
+    }
+    for phase in ["commit", "open", "verify"] {
+        if !timings.contains_key(phase) {
+            bail!(
+                "{}:{line}: successful record is missing required phase `{phase}`",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_lattice_records(records: &[LatticeRecord], path: &Path) -> Result<()> {
+    for (index, record) in records.iter().enumerate() {
+        let line = index + 1;
+        validate_record_timings(record.status, &record.timings_ns, path, line)?;
+        validate_record_communication(
+            record.status,
+            record.proof_bytes,
+            record.commitment_bytes,
+            record.evaluation_bytes,
+            record.public_context_bytes,
+            path,
+            line,
+        )?;
+        validate_lattice_record_case(record, path, line)?;
+        validate_record_provenance(
+            record.status,
+            &record.provenance,
+            record.scheme != SchemeId::Greyhound,
+            path,
+            line,
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_hash_records(records: &[HashRecord], path: &Path) -> Result<()> {
+    for (index, record) in records.iter().enumerate() {
+        let line = index + 1;
+        validate_record_timings(record.status, &record.timings_ns, path, line)?;
+        validate_record_communication(
+            record.status,
+            record.proof_bytes,
+            record.commitment_bytes,
+            record.evaluation_bytes,
+            record.public_context_bytes,
+            path,
+            line,
+        )?;
+        validate_hash_record_case(record, path, line)?;
+        validate_record_provenance(record.status, &record.provenance, true, path, line)?;
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_record_communication(
+    status: pcs_bench_core::RunStatus,
+    proof_bytes: Option<u64>,
+    commitment_bytes: Option<u64>,
+    evaluation_bytes: Option<u64>,
+    public_context_bytes: Option<u64>,
+    path: &Path,
+    line: usize,
+) -> Result<()> {
+    if status != pcs_bench_core::RunStatus::Ok {
+        return Ok(());
+    }
+    for (field, value) in [
+        ("proof_bytes", proof_bytes),
+        ("commitment_bytes", commitment_bytes),
+        ("evaluation_bytes", evaluation_bytes),
+        ("public_context_bytes", public_context_bytes),
+    ] {
+        if value.is_none() {
+            bail!(
+                "{}:{line}: successful record is missing required field `{field}`",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_record_provenance(
+    status: pcs_bench_core::RunStatus,
+    provenance: &pcs_bench_core::Provenance,
+    requires_lockfile: bool,
+    path: &Path,
+    line: usize,
+) -> Result<()> {
+    for (field, value) in [
+        (
+            "harness_revision",
+            Some(provenance.harness_revision.as_str()),
+        ),
+        ("rustc_version", Some(provenance.rustc_version.as_str())),
+        ("target", Some(provenance.target.as_str())),
+        ("cpu_model", Some(provenance.cpu_model.as_str())),
+        ("isa_notes", Some(provenance.isa_notes.as_str())),
+        ("timestamp_utc", provenance.timestamp_utc.as_deref()),
+        ("run_command", provenance.run_command.as_deref()),
+        ("machine_id_hash", provenance.machine_id_hash.as_deref()),
+    ] {
+        if value.is_none_or(str::is_empty) {
+            bail!(
+                "{}:{line}: record is missing required provenance `{field}`",
+                path.display()
+            );
+        }
+    }
+    if provenance.logical_cpus == 0
+        || provenance.memory_bytes.is_none_or(|bytes| bytes == 0)
+        || provenance.memory_limit_bytes.is_none_or(|bytes| bytes == 0)
+    {
+        bail!(
+            "{}:{line}: record has incomplete machine resource provenance",
+            path.display()
+        );
+    }
+    if provenance.target.contains("Linux")
+        && provenance.target.contains("x86_64")
+        && provenance.cpu_governor.as_deref().is_none_or(str::is_empty)
+    {
+        bail!(
+            "{}:{line}: Linux x86_64 record is missing CPU governor provenance",
+            path.display()
+        );
+    }
+    if status != pcs_bench_core::RunStatus::Ok {
+        return Ok(());
+    }
+    for (field, value) in [
+        ("executable_sha256", provenance.executable_sha256.as_deref()),
+        (
+            "worker_compiler_version",
+            provenance.worker_compiler_version.as_deref(),
+        ),
+        ("build_command", provenance.build_command.as_deref()),
+    ] {
+        if value.is_none_or(str::is_empty) {
+            bail!(
+                "{}:{line}: successful record is missing build provenance `{field}`",
+                path.display()
+            );
+        }
+    }
+    if requires_lockfile
+        && provenance
+            .lockfile_sha256
+            .as_deref()
+            .is_none_or(str::is_empty)
+    {
+        bail!(
+            "{}:{line}: successful record is missing build provenance `lockfile_sha256`",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_lattice_record_case(record: &LatticeRecord, path: &Path, line: usize) -> Result<()> {
+    let expected = lattice_case(record.payload_log2, record.scheme).with_context(|| {
+        format!(
+            "{}:{line}: no canonical lattice case for {} payload=2^{}",
+            path.display(),
+            record.scheme.display_name(),
+            record.payload_log2
+        )
+    })?;
+    if record.log2_n != expected.log2_n
+        || record.implementation_revision != record.scheme.revision()
+        || record.field != expected.field.name
+        || record.native_param.as_deref() != expected.native_param
+        || record.threads != pcs_bench_core::THREADS_LATTICE_EVAL
+        || record.provenance.threads != record.threads
+    {
+        bail!(
+            "{}:{line}: lattice record does not match canonical matrix case",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_hash_record_case(record: &HashRecord, path: &Path, line: usize) -> Result<()> {
+    let expected =
+        hash_case(record.payload_log2, record.scheme, record.threads).with_context(|| {
+            format!(
+                "{}:{line}: no canonical hash case for {} payload=2^{} threads={}",
+                path.display(),
+                record.scheme.display_name(),
+                record.payload_log2,
+                record.threads
+            )
+        })?;
+    if record.log2_n != Some(expected.log2_n)
+        || record.implementation_revision != record.scheme.revision()
+        || record.field != expected.field.name
+        || record.native_param.as_deref() != Some(expected.native_param)
+        || record.provenance.threads != record.threads
+    {
+        bail!(
+            "{}:{line}: hash record does not match canonical matrix case",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_unique_lattice_records(records: &[LatticeRecord]) -> Result<()> {
+    let mut seen = std::collections::BTreeSet::new();
+    for record in records {
+        let identity = (
+            record.scheme,
+            record.payload_log2,
+            record.threads,
+            record.sample,
+            record.warmup,
+            record.provenance.harness_revision.as_str(),
+            record.provenance.executable_sha256.as_deref(),
+        );
+        if !seen.insert(identity) {
+            bail!(
+                "duplicate lattice observation: {} payload=2^{} threads={} sample={} warmup={}",
+                record.scheme.display_name(),
+                record.payload_log2,
+                record.threads,
+                record.sample,
+                record.warmup
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_unique_hash_records(records: &[HashRecord]) -> Result<()> {
+    let mut seen = std::collections::BTreeSet::new();
+    for record in records {
+        let identity = (
+            record.scheme,
+            record.payload_log2,
+            record.threads,
+            record.sample,
+            record.warmup,
+            record.provenance.harness_revision.as_str(),
+            record.provenance.executable_sha256.as_deref(),
+        );
+        if !seen.insert(identity) {
+            bail!(
+                "duplicate hash observation: {} payload=2^{} threads={} sample={} warmup={}",
+                record.scheme.display_name(),
+                record.payload_log2,
+                record.threads,
+                record.sample,
+                record.warmup
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_lattice_seed_schedule(records: &[LatticeRecord]) -> Result<()> {
+    for record in records {
+        validate_record_seed(
+            record.payload_log2,
+            record.sample,
+            &record.provenance,
+            record.scheme.display_name(),
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_hash_seed_schedule(records: &[HashRecord]) -> Result<()> {
+    for record in records {
+        validate_record_seed(
+            record.payload_log2,
+            record.sample,
+            &record.provenance,
+            record.scheme.display_name(),
+        )?;
+    }
+    Ok(())
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct BuildIdentity {
+    implementation_revision: String,
+    executable_sha256: Option<String>,
+    lockfile_sha256: Option<String>,
+    worker_compiler_version: Option<String>,
+    build_command: Option<String>,
+}
+
+fn record_build_identity(
+    implementation_revision: &str,
+    provenance: &pcs_bench_core::Provenance,
+) -> BuildIdentity {
+    BuildIdentity {
+        implementation_revision: implementation_revision.to_owned(),
+        executable_sha256: provenance.executable_sha256.clone(),
+        lockfile_sha256: provenance.lockfile_sha256.clone(),
+        worker_compiler_version: provenance.worker_compiler_version.clone(),
+        build_command: provenance.build_command.clone(),
+    }
+}
+
+fn validate_lattice_build_identities(records: &[LatticeRecord]) -> Result<()> {
+    let entries = records
+        .iter()
+        .filter(|record| record.status == pcs_bench_core::RunStatus::Ok)
+        .map(|record| {
+            let group = match record.scheme {
+                SchemeId::Akita | SchemeId::AkitaOffload => "akita".to_owned(),
+                SchemeId::Greyhound => "greyhound".to_owned(),
+                SchemeId::Rokoko => format!(
+                    "rokoko:{}",
+                    record.native_param.as_deref().unwrap_or("unknown")
+                ),
+            };
+            (
+                group,
+                record_build_identity(&record.implementation_revision, &record.provenance),
+            )
+        });
+    validate_build_identity_groups("lattice", entries)
+}
+
+fn validate_hash_build_identities(records: &[HashRecord]) -> Result<()> {
+    let entries = records
+        .iter()
+        .filter(|record| record.status == pcs_bench_core::RunStatus::Ok)
+        .map(|record| {
+            let group = match record.scheme {
+                HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128 => {
+                    "akita".to_owned()
+                }
+                other => other.token().to_owned(),
+            };
+            (
+                group,
+                record_build_identity(&record.implementation_revision, &record.provenance),
+            )
+        });
+    validate_build_identity_groups("hash", entries)
+}
+
+fn validate_build_identity_groups(
+    label: &str,
+    entries: impl Iterator<Item = (String, BuildIdentity)>,
+) -> Result<()> {
+    let mut identities = std::collections::BTreeMap::new();
+    for (group, identity) in entries {
+        if let Some(expected) = identities.get(&group) {
+            if expected != &identity {
+                bail!(
+                    "{label} worker `{group}` used multiple implementation/build identities; split the report"
+                );
+            }
+        } else {
+            identities.insert(group, identity);
+        }
+    }
+    Ok(())
+}
+
+fn validate_record_seed(
+    payload_log2: u32,
+    sample: u32,
+    provenance: &pcs_bench_core::Provenance,
+    label: &str,
+) -> Result<()> {
+    let mode = match provenance.seed_mode.as_deref() {
+        Some("vary") => SeedMode::Vary,
+        Some("fixed") => SeedMode::Fixed,
+        Some(other) => bail!("{label} record has unknown seed mode `{other}`"),
+        None => bail!("{label} record is missing its seed mode"),
+    };
+    let expected = workload_seed(mode, payload_log2, sample);
+    if provenance.workload_seed != Some(expected) {
+        bail!(
+            "{label} record has workload seed {:?}; expected {expected} for payload=2^{payload_log2} sample={sample}",
+            provenance.workload_seed
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        validate_build_identity_groups, validate_cohort, validate_hash_record_case,
+        validate_record_seed, validate_record_timings, validate_unique_hash_records, workload_seed,
+        BuildIdentity, SeedMode,
+    };
+    use pcs_bench_core::{HashRecord, HashSchemeId, Provenance, RunStatus};
+    use std::collections::BTreeMap;
+    use std::path::Path;
+
+    #[test]
+    fn rejects_cross_machine_report_cohort() {
+        let one = Provenance::test_fixture();
+        let mut two = one.clone();
+        two.cpu_model = "different machine".into();
+        let error =
+            validate_cohort("test", [&one, &two].into_iter()).expect_err("must reject mismatch");
+        assert!(error.to_string().contains("cpu_model"));
+    }
+
+    #[test]
+    fn rejects_imported_success_with_missing_phase() {
+        let mut timings = BTreeMap::new();
+        timings.insert("commit".into(), 1);
+        timings.insert("open".into(), 2);
+        let error = validate_record_timings(RunStatus::Ok, &timings, Path::new("records.jsonl"), 7)
+            .expect_err("must reject incomplete success");
+        assert!(error.to_string().contains("required phase `verify`"));
+    }
+
+    #[test]
+    fn rejects_imported_record_with_wrong_case_identity() {
+        let record = HashRecord {
+            status: RunStatus::Ok,
+            status_detail: None,
+            scheme: HashSchemeId::Binius64,
+            implementation_revision: HashSchemeId::Binius64.revision().into(),
+            payload_log2: 27,
+            log2_n: Some(19),
+            field: "F_{2^{128}}".into(),
+            native_param: Some("binius64-basefold-100".into()),
+            threads: 1,
+            sample: 0,
+            warmup: false,
+            timings_ns: BTreeMap::from([
+                ("commit".into(), 1),
+                ("open".into(), 2),
+                ("verify".into(), 3),
+            ]),
+            proof_bytes: None,
+            commitment_bytes: None,
+            evaluation_bytes: None,
+            public_context_bytes: None,
+            state_bytes: None,
+            peak_rss_bytes: None,
+            provenance: Provenance::test_fixture(),
+        };
+        let error = validate_hash_record_case(&record, Path::new("records.jsonl"), 1)
+            .expect_err("wrong log2_n must be rejected");
+        assert!(error.to_string().contains("canonical matrix case"));
+
+        let mut thread_mismatch = record.clone();
+        thread_mismatch.log2_n = Some(20);
+        thread_mismatch.threads = 8;
+        let error = validate_hash_record_case(&thread_mismatch, Path::new("records.jsonl"), 1)
+            .expect_err("thread provenance mismatch must be rejected");
+        assert!(error.to_string().contains("canonical matrix case"));
+
+        let mut same_coordinate = record.clone();
+        same_coordinate.provenance.workload_seed = Some(99);
+        let error = validate_unique_hash_records(&[record, same_coordinate])
+            .expect_err("sample coordinate must remain unique across seeds");
+        assert!(error.to_string().contains("duplicate hash observation"));
+    }
+
+    #[test]
+    fn rejects_seed_that_does_not_match_declared_mode() {
+        let mut provenance = Provenance::test_fixture();
+        provenance.seed_mode = Some("vary".into());
+        provenance.workload_seed = Some(7);
+        let error =
+            validate_record_seed(27, 3, &provenance, "test").expect_err("wrong seed must fail");
+        assert!(error.to_string().contains("expected"));
+
+        provenance.workload_seed = Some(workload_seed(SeedMode::Vary, 27, 3));
+        validate_record_seed(27, 3, &provenance, "test").expect("scheduled seed");
+    }
+
+    #[test]
+    fn rejects_multiple_builds_for_one_worker_group() {
+        let one = BuildIdentity {
+            implementation_revision: "revision".into(),
+            executable_sha256: Some("one".into()),
+            lockfile_sha256: Some("lock".into()),
+            worker_compiler_version: Some("compiler".into()),
+            build_command: Some("build".into()),
+        };
+        let mut two = one.clone();
+        two.executable_sha256 = Some("two".into());
+        let error = validate_build_identity_groups(
+            "test",
+            [("worker".into(), one), ("worker".into(), two)].into_iter(),
+        )
+        .expect_err("mixed build identities must be rejected");
+        assert!(error
+            .to_string()
+            .contains("multiple implementation/build identities"));
+    }
 }

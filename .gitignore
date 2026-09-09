@@ -1,4 +1,4 @@
-/target/
+target/
 /results/*
 !/results/lattice-x86_64/
 !/results/lattice-x86_64/**
@@ -10,19 +10,12 @@
 /third_party/akita/
 /third_party/akita-pr466/
 /benchmarks/whir/target/
-/benchmarks/whir/Cargo.lock
 /benchmarks/basefold/target/
-/benchmarks/basefold/Cargo.lock
 /benchmarks/plonky2-fri/target/
-/benchmarks/plonky2-fri/Cargo.lock
 /benchmarks/plonky3-uni/target/
-/benchmarks/plonky3-uni/Cargo.lock
 /benchmarks/binius64/target/
-/benchmarks/binius64/Cargo.lock
 /benchmarks/flock-ligerito/target/
-/benchmarks/flock-ligerito/Cargo.lock
 /benchmarks/whir-provekit/target/
-/benchmarks/whir-provekit/Cargo.lock
 *.profraw
 *.perf
 .DS_Store

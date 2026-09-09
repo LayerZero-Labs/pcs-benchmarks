@@ -10,13 +10,19 @@ build, and machine provenance are explicit.
 
 1. **Correctness first.** Every measured proof must verify. Adapters must also
    have a negative test that rejects a modified claim or proof before results
-   are published.
+   are published. Workers with an in-process negative check enable it with
+   `PCS_BENCH_NEGATIVE_CHECK=1`; these correctness runs use a separate output
+   directory and are not imported as performance samples.
 2. **Immutable dependencies.** PCS implementations and non-registry
    dependencies use commit hashes, never moving branches or tags.
-3. **Deterministic workloads.** Inputs use documented seeds. Input generation,
-   allocation, and expected-opening computation occur outside timed regions.
-   Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
-   the dense witness.
+3. **Deterministic workloads.** Inputs use documented seeds. Fixture generation
+   and independent correctness oracles occur outside timed regions; any
+   point-dependent claim or preprocessing supplied to the prover is included
+   in opening time. Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
+   the dense witness. End-to-end runs default to `--seed-mode vary`, which
+   records a deterministic seed per payload and process. Use
+   `--seed-mode fixed` in a separate run to estimate machine/runtime noise for
+   one workload; never merge the two modes into one aggregate.
 4. **Separated phases.** Setup, commitment, proving/opening, and verification
    are measured independently. Whether setup includes preprocessing must be
    stated.
@@ -27,10 +33,26 @@ build, and machine provenance are explicit.
    mean or a screenshot.
 7. **Stable environment.** Disable frequency-changing background workloads,
    connect laptops to power, and use a fixed performance governor where the
-   platform supports it. Record thermal or throttling anomalies.
+   platform supports it. Record the scaling driver, governor, energy preference,
+   and any thermal or throttling anomalies.
 8. **No heterogeneous deltas.** Regression percentages require the same
    physical machine, target ISA, thread count, compiler, flags, and interleaved
    runs of candidate and baseline.
+
+## Communication accounting
+
+- Report the cryptographic commitment payload, opening proof, evaluation, and
+  excluded verifier context separately. A self-describing archival or
+  application envelope is not silently charged as PCS payload.
+- `evaluation_bytes` counts only evaluations transmitted separately from the
+  commitment/proof. Zero means the adapter's wire encoding already includes
+  the evaluation; `None` means unknown. `Total sent` is commitment plus
+  separately transmitted evaluation plus proof.
+- Akita's catalog-selected `CommittedGroup` profile is verifier context. Its
+  terminal PCS commitment payload is exactly 128 bytes; the larger
+  self-describing `CommittedGroup` encoding is not the commitment-size cell.
+- Serialization/deserialization time is a separate phase when measured.
+  Reports state whether verification receives decoded objects or wire bytes.
 
 ## Cross-scheme comparability
 
@@ -58,25 +80,24 @@ Additional rules that apply only to that table:
    and Greyhound are pinned to one thread so the ratio is not a
    parallel-scaling artifact.
 2. **Process isolation.** One fresh process per sample. Discard warmup
-   processes. Median of the measured processes is the table entry, reported
-   with the sample standard deviation when \(n \ge 2\).
-3. **90% of host RAM.** `scripts/with-memlimit.sh` applies `ulimit -v` at
-   nine-tenths of detected `MemTotal` / `hw.memsize`. Exceeding it
-   is `oom`, not a slow run.
+   processes. The table reports the median and a conservative,
+   distribution-free 95% confidence interval when the sample count supports
+   one.
+3. **90% address-space ceiling.** `scripts/with-memlimit.sh` applies `ulimit -v`
+   at nine-tenths of detected `MemTotal` / `hw.memsize`. This limits virtual
+   address space, not resident memory. Explicit allocation failures are `oom`;
+   SIGKILL/137 without corroborating evidence is an unknown worker error.
 4. **Do not bit-match RoKoKo.** Report the native `p-26`/`p-28`/`p-30`
    instance next to the 32-bit payload it is closest to, and say that the
    native field is ~50 bits.
-5. **Historical rows.** If a measurement was taken with a different ISA,
-   allocator, or thread count, keep it only with `historical: true`. Those
-   rows must not form headline ratios.
-6. **Catalog honesty.** If Akita has no generated schedule for a requested
+5. **Catalog honesty.** If Akita has no generated schedule for a requested
    `nv`, record unsupported. Do not silently run a nearby size. For the
    lattice table, `nv=22` and `nv=24` are generated with the pinned revision's
    planner rather than omitted. Setup-offload rows use a separate recursive
    `fp32-dense` catalog from the same planner; a missing offload row is
    unsupported, not a fallback to the direct catalog. A recursive row with
    no setup-prefix edge is an error: that cell would not offload setup.
-7. **Greyhound reference.** Use `LayerZero-Labs/greyhound-reference` at the
+6. **Greyhound reference.** Use `LayerZero-Labs/greyhound-reference` at the
    pinned commit, not `lattice-dogs/labrador`. Run with
    `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`. Report contextual proof
    bytes (public `u1` is verifier context). If the instance still cannot
@@ -101,7 +122,8 @@ rules that apply only to that table:
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
    table, plus `fp64-dense` and `fp128-dense` rows on the hash matrix (CLI
    `akita-fp64` / `akita-fp128`). Cells are not \(\lambda\)-comparable.
-2. **Matched payloads, native \(\log_2 N\).** Convert payload bits by
+2. **Nominal payloads, native \(\log_2 N\).** Convert nominal field-capacity
+   payloads by
    coefficient width (32-bit \(-5\), 64-bit \(-6\), Goldilocks \(-6\),
    \(\mathbb F_{2^{128}}\) \(-7\), Flock bits \(=\) payload). KoalaBear univariate FRI/STIR pack
    \(\log_2 N>23\) into height \(2^{23}\) because two-adicity is 24 at rate
@@ -109,10 +131,11 @@ rules that apply only to that table:
 3. **1 and 8 threads.** Each cell is a fresh process with `RAYON_NUM_THREADS`
    set to the row's thread count. A dash is an unsupported parallel mode.
    Smoke-check that Flock and Binius64 honor the env var.
-4. **Process isolation and 90% RAM** are the same as the lattice table.
+4. **Process isolation and address-space ceiling** are the same as the lattice table.
    Record OOM; do not drop a scheme because one payload OOMs.
-5. **Immutable git pins.** Isolated Cargo trees keep those graphs out of the
-   lattice workspace. Pins are commit SHAs, never a moving branch. The
+5. **Immutable dependency graphs.** Isolated Cargo trees keep those graphs out
+   of the lattice workspace. Pins are commit SHAs, each lockfile is checked
+   in, and builds use `--locked`. The
    Plonky2 adapter enables `RUSTC_BOOTSTRAP=1` so `specialization` compiles
    on the workspace's Rust 1.95.
 
@@ -137,6 +160,6 @@ Published results must include:
 - `rustc -Vv`, Cargo profile, `RUSTFLAGS`, and enabled features;
 - sample count, warmup duration, and measurement duration.
 
-The schema in `pcs-bench-core` is versioned. Breaking result changes increment
-`RESULT_SCHEMA_VERSION`.
+Result records use one strict shape. Contract changes require replacing the
+canonical records and generated reports.
 

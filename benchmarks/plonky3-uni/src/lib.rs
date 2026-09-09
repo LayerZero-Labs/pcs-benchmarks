@@ -5,7 +5,7 @@ use p3_commit::{ExtensionMmcs, Pcs};
 use p3_dft::Radix2DFTSmallBatch;
 use p3_field::coset::TwoAdicMultiplicativeCoset;
 use p3_field::extension::QuinticTrinomialExtensionField;
-use p3_field::Field;
+use p3_field::{Field, PrimeCharacteristicRing};
 use p3_fri::{FriParameters, TwoAdicFriPcs};
 use p3_koala_bear::{KoalaBear, Poseidon2KoalaBear};
 use p3_matrix::dense::RowMajorMatrix;
@@ -61,6 +61,8 @@ pub fn main_for(kind: UniKind) -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -81,6 +83,7 @@ fn timed_univariate(kind: UniKind, log2_n: u32) -> Result<WorkerOutput, String> 
     let log_blowup = PLONKY3_UNI_LOG_BLOWUP as usize;
     let packed = log_width > 0;
 
+    let setup_start = Instant::now();
     let mut perm_rng = SmallRng::seed_from_u64(1);
     let poseidon16 = Poseidon16::new_from_rng_128(&mut perm_rng);
     let poseidon24 = Poseidon24::new_from_rng_128(&mut perm_rng);
@@ -104,12 +107,11 @@ fn timed_univariate(kind: UniKind, log2_n: u32) -> Result<WorkerOutput, String> 
                 query_proof_of_work_bits: PLONKY3_FRI_POW_BITS,
                 mmcs: challenge_mmcs,
             };
-            let t0 = Instant::now();
             let dft = Dft::new(1 << (log_height + log_blowup));
             let pcs = FriPcsTy::new(dft, val_mmcs, fri_params);
-            let setup_ns = elapsed_ns(t0);
+            let setup_ns = elapsed_ns(setup_start);
             let domain = Pcs::<EF, Challenger>::natural_domain_for_degree(&pcs, 1 << log_height);
-            let mut rng = SmallRng::seed_from_u64(0xF12);
+            let mut rng = SmallRng::seed_from_u64(configured_seed(0xF12));
             let message = RowMajorMatrix::<F>::rand(&mut rng, 1 << log_height, width);
             timed_pcs(
                 "fri",
@@ -138,12 +140,11 @@ fn timed_univariate(kind: UniKind, log2_n: u32) -> Result<WorkerOutput, String> 
                 stir_params.clone(),
             )
             .map_err(|error| error.to_string())?;
-            let t0 = Instant::now();
             let dft = Dft::new(1 << (log_height + log_blowup));
             let pcs = StirPcsTy::new(dft, val_mmcs, stir_params);
-            let setup_ns = elapsed_ns(t0);
+            let setup_ns = elapsed_ns(setup_start);
             let domain = Pcs::<EF, Challenger>::natural_domain_for_degree(&pcs, 1 << log_height);
-            let mut rng = SmallRng::seed_from_u64(0x57113);
+            let mut rng = SmallRng::seed_from_u64(configured_seed(0x57113));
             let message = RowMajorMatrix::<F>::rand(&mut rng, 1 << log_height, width);
             timed_pcs(
                 "stir",
@@ -181,15 +182,16 @@ where
     let (commit, prover_data) = pcs.commit(vec![(domain, message)]);
     let commit_ns = elapsed_ns(t0);
 
+    let t0 = Instant::now();
     observe(&mut prover_challenger, &commit);
     let zeta: EF = FieldChallenger::<F>::sample_algebra_element(&mut prover_challenger);
 
-    let t0 = Instant::now();
     let opening_points = vec![vec![zeta]];
     let (openings, proof) = pcs.open(vec![(&prover_data, opening_points)], &mut prover_challenger);
     let open_ns = elapsed_ns(t0);
     let values = openings[0][0][0].clone();
 
+    let t0 = Instant::now();
     let mut verifier_challenger = base_challenger.clone();
     observe(&mut verifier_challenger, &commit);
     let derived: EF = FieldChallenger::<F>::sample_algebra_element(&mut verifier_challenger);
@@ -197,14 +199,46 @@ where
         return Err(format!("{label} verifier challenger drifted from prover"));
     }
 
-    let t0 = Instant::now();
     pcs.verify(
-        vec![(commit.clone(), vec![(domain, vec![(zeta, values)])])],
+        vec![(
+            commit.clone(),
+            vec![(domain.clone(), vec![(zeta, values.clone())])],
+        )],
         &proof,
         &mut verifier_challenger,
     )
     .map_err(|error| format!("{label} verify failed: {error:?}"))?;
     let verify_ns = elapsed_ns(t0);
+    let evaluation_bytes = postcard::to_allocvec(&values)
+        .map_err(|error| error.to_string())?
+        .len() as u64;
+
+    if negative_check_enabled() {
+        let mut negative_challenger = base_challenger.clone();
+        observe(&mut negative_challenger, &commit);
+        let altered_zeta: EF =
+            FieldChallenger::<F>::sample_algebra_element(&mut negative_challenger);
+        let mut altered_values = values;
+        let first = altered_values
+            .first_mut()
+            .ok_or_else(|| format!("{label} returned an empty opening"))?;
+        *first += EF::ONE;
+        if pcs
+            .verify(
+                vec![(
+                    commit.clone(),
+                    vec![(domain, vec![(altered_zeta, altered_values)])],
+                )],
+                &proof,
+                &mut negative_challenger,
+            )
+            .is_ok()
+        {
+            return Err(format!(
+                "{label} verifier accepted an altered opening claim"
+            ));
+        }
+    }
 
     let proof_bytes = postcard::to_allocvec(&proof)
         .map_err(|error| error.to_string())?
@@ -221,18 +255,22 @@ where
 
     Ok(WorkerOutput {
         status: RunStatus::Ok,
-        status_detail: packed.then(|| {
+        status_detail: Some(if packed {
             format!(
-                "packed univariate,height={},width={}",
+                "statement=univariate-batch,distribution=full-field-uniform,point=transcript-extension,height={},width={}",
                 plonky3_log_height(log2_n),
                 1u32 << plonky3_log_width(log2_n)
             )
+        } else {
+            "statement=univariate,distribution=full-field-uniform,point=transcript-extension".into()
         }),
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof_bytes),
         commitment_bytes,
-        state_bytes: Some(0),
+        evaluation_bytes: Some(evaluation_bytes),
+        public_context_bytes: Some(0),
+        state_bytes: None,
         peak_rss_bytes: peak_rss_bytes(),
     })
 }
@@ -259,6 +297,17 @@ fn parse_u32_flag(name: &str) -> Result<u32, String> {
         }
     }
     Err(format!("missing {name}"))
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
 }
 
 fn elapsed_ns(start: Instant) -> u64 {

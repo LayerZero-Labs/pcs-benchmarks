@@ -42,6 +42,8 @@ fn main() -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -70,8 +72,8 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
     let evals = dense_evaluations(num_variables);
     let mle = Mle::<F>::from(evals);
     let point = opening_point(num_variables);
-    let evaluation_claim = mle.eval_at(&point)[0];
     let messages: Message<Mle<F>> = Message::from(mle);
+    let claim_source = messages[0].clone();
 
     let t0 = Instant::now();
     let fri_config = FriConfig::new(
@@ -97,6 +99,8 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
     prover_data_rounds.push(prover_data);
 
     let t0 = Instant::now();
+    let evaluation_claim = claim_source.eval_at(&point)[0];
+    drop(claim_source);
     let proof = prover
         .prove_trusted_evaluation(
             point.clone(),
@@ -107,9 +111,9 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
         .map_err(|error| error.to_string())?;
     let open_ns = elapsed_ns(t0);
 
+    let t0 = Instant::now();
     let mut verifier_challenger = GC::default_challenger();
     verifier_challenger.observe(commitment);
-    let t0 = Instant::now();
     verifier
         .verify_trusted_evaluation(
             &[commitment],
@@ -122,6 +126,24 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
         .map_err(|error| error.to_string())?;
     let verify_ns = elapsed_ns(t0);
 
+    if negative_check_enabled() {
+        let mut negative_challenger = GC::default_challenger();
+        negative_challenger.observe(commitment);
+        if verifier
+            .verify_trusted_evaluation(
+                &[commitment],
+                &[1usize << log2_n],
+                &point,
+                &proof,
+                evaluation_claim + EF::one(),
+                &mut negative_challenger,
+            )
+            .is_ok()
+        {
+            return Err("BaseFold verifier accepted an altered opening claim".into());
+        }
+    }
+
     let proof_bytes = bincode::serialized_size(&proof).unwrap_or(0);
     let commitment_bytes = bincode::serialized_size(&commitment).unwrap_or(0);
 
@@ -133,26 +155,40 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
 
     Ok(WorkerOutput {
         status: RunStatus::Ok,
-        status_detail: None,
+        status_detail: Some(
+            "statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform"
+                .into(),
+        ),
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof_bytes),
         commitment_bytes: Some(commitment_bytes),
-        state_bytes: Some(0),
+        evaluation_bytes: Some(bincode::serialized_size(&evaluation_claim).unwrap_or(0)),
+        public_context_bytes: Some(0),
+        state_bytes: None,
         peak_rss_bytes: peak_rss_bytes(),
     })
 }
 
 fn dense_evaluations(num_vars: usize) -> Vec<F> {
-    let mut rng = StdRng::seed_from_u64(INPUT_SEED);
-    (0..(1usize << num_vars))
-        .map(|_| F::from_canonical_u32(rng.gen()))
-        .collect()
+    let mut rng = StdRng::seed_from_u64(configured_seed(INPUT_SEED));
+    (0..(1usize << num_vars)).map(|_| rng.gen()).collect()
 }
 
 fn opening_point(num_vars: usize) -> Point<EF> {
-    let mut rng = StdRng::seed_from_u64(POINT_SEED);
+    let mut rng = StdRng::seed_from_u64(configured_seed(POINT_SEED));
     Point::<EF>::rand(&mut rng, num_vars as u32)
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
 }
 
 fn init_thread_pool(threads: u32) {

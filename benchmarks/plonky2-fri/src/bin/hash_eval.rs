@@ -4,6 +4,7 @@ use pcs_bench_core::{
     RunStatus, WorkerOutput, PLONKY2_CAP_HEIGHT, PLONKY2_FRI_POW_BITS, PLONKY2_FRI_QUERIES,
     PLONKY2_FRI_RATE_BITS,
 };
+use plonky2::field::extension::{Extendable, FieldExtension};
 use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::field::polynomial::PolynomialValues;
 use plonky2::field::types::Field;
@@ -41,6 +42,8 @@ fn main() -> ExitCode {
                 timings_ns: BTreeMap::new(),
                 proof_bytes: None,
                 commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
                 state_bytes: None,
                 peak_rss_bytes: peak_rss_bytes(),
             });
@@ -57,9 +60,10 @@ fn run() -> Result<(), String> {
 fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
     let degree_bits = log2_n as usize;
     let n = 1usize << degree_bits;
-    let mut rng = StdRng::seed_from_u64(0);
-    let values = PolynomialValues::new((0..n).map(|_| F::from_canonical_u64(rng.gen())).collect());
+    let mut rng = StdRng::seed_from_u64(configured_seed(0));
+    let values = PolynomialValues::new((0..n).map(|_| random_goldilocks(&mut rng)).collect());
 
+    let t0 = Instant::now();
     let fri_config = FriConfig {
         rate_bits: PLONKY2_FRI_RATE_BITS,
         cap_height: PLONKY2_CAP_HEIGHT,
@@ -68,8 +72,6 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
         num_query_rounds: PLONKY2_FRI_QUERIES,
     };
     let fri_params = fri_config.fri_params(degree_bits, false);
-
-    let t0 = Instant::now();
     let mut timing = TimingTree::default();
     let setup_ns = elapsed_ns(t0);
 
@@ -84,6 +86,9 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
     );
     let commit_ns = elapsed_ns(t0);
 
+    // End-to-end opening starts with transcript reconstruction and includes
+    // deriving and evaluating the point whose claim is supplied to FRI.
+    let t0 = Instant::now();
     let mut prover_challenger = Challenger::<F, <C as GenericConfig<D>>::Hasher>::new();
     prover_challenger.observe_cap(&oracle.merkle_tree.cap);
     let zeta = prover_challenger.get_extension_challenge::<D>();
@@ -111,7 +116,6 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
     // Same transcript order as `plonk::prover`: bind the claimed openings before FRI.
     prover_challenger.observe_openings(&openings);
 
-    let t0 = Instant::now();
     let proof = PolynomialBatch::<F, C, D>::prove_openings(
         &instance,
         &[&oracle],
@@ -123,6 +127,9 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
     );
     let open_ns = elapsed_ns(t0);
 
+    // Complete verification includes transcript reconstruction and all
+    // proof-dependent Fiat–Shamir challenge derivation.
+    let t0 = Instant::now();
     let mut verifier_challenger = Challenger::<F, <C as GenericConfig<D>>::Hasher>::new();
     verifier_challenger.observe_cap(&oracle.merkle_tree.cap);
     let zeta_v = verifier_challenger.get_extension_challenge::<D>();
@@ -140,7 +147,6 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
         None,
     );
 
-    let t0 = Instant::now();
     verify_fri_proof::<F, C, D>(
         &instance,
         &openings,
@@ -151,6 +157,44 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
     )
     .map_err(|error| error.to_string())?;
     let verify_ns = elapsed_ns(t0);
+
+    if negative_check_enabled() {
+        let altered_openings = FriOpenings {
+            batches: vec![FriOpeningBatch {
+                values: vec![
+                    claimed
+                        + <<F as Extendable<D>>::Extension as FieldExtension<D>>::from_basefield(
+                            F::ONE,
+                        ),
+                ],
+            }],
+        };
+        let mut negative_challenger = Challenger::<F, <C as GenericConfig<D>>::Hasher>::new();
+        negative_challenger.observe_cap(&oracle.merkle_tree.cap);
+        let _ = negative_challenger.get_extension_challenge::<D>();
+        negative_challenger.observe_openings(&altered_openings);
+        let altered_challenges = negative_challenger.fri_challenges::<C, D>(
+            &proof.commit_phase_merkle_caps,
+            &proof.final_poly,
+            proof.pow_witness,
+            degree_bits,
+            &fri_config,
+            None,
+            None,
+        );
+        if verify_fri_proof::<F, C, D>(
+            &instance,
+            &altered_openings,
+            &altered_challenges,
+            &[oracle.merkle_tree.cap.clone()],
+            &proof,
+            &fri_params,
+        )
+        .is_ok()
+        {
+            return Err("Plonky2 verifier accepted an altered opening claim".into());
+        }
+    }
 
     let proof_bytes = bincode_len(&proof);
     let commitment_bytes = bincode_len(&oracle.merkle_tree.cap);
@@ -164,7 +208,7 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
     Ok(WorkerOutput {
         status: RunStatus::Ok,
         status_detail: Some(format!(
-            "plonky2-fri-100,rate=1/{},queries={},pow_bits={}",
+            "plonky2-fri-100,statement=univariate,distribution=full-field-uniform,point=transcript-extension,rate=1/{},queries={},pow_bits={}",
             1usize << PLONKY2_FRI_RATE_BITS,
             PLONKY2_FRI_QUERIES,
             PLONKY2_FRI_POW_BITS
@@ -173,6 +217,8 @@ fn timed_fri(log2_n: u32) -> Result<WorkerOutput, String> {
         timings_ns,
         proof_bytes,
         commitment_bytes,
+        evaluation_bytes: bincode_len(&claimed),
+        public_context_bytes: Some(0),
         state_bytes: Some(0),
         peak_rss_bytes: peak_rss_bytes(),
     })
@@ -187,6 +233,27 @@ fn init_thread_pool(threads: u32) {
         .num_threads(threads.max(1) as usize)
         .stack_size(64 * 1024 * 1024)
         .build_global();
+}
+
+fn configured_seed(domain: u64) -> u64 {
+    std::env::var("PCS_BENCH_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or(domain, |seed| seed ^ domain)
+}
+
+fn negative_check_enabled() -> bool {
+    std::env::var("PCS_BENCH_NEGATIVE_CHECK").as_deref() == Ok("1")
+}
+
+fn random_goldilocks(rng: &mut StdRng) -> F {
+    const MODULUS: u64 = 0xffff_ffff_0000_0001;
+    loop {
+        let candidate = rng.gen::<u64>();
+        if candidate < MODULUS {
+            return F::from_canonical_u64(candidate);
+        }
+    }
 }
 
 fn parse_u32_flag(name: &str) -> Result<u32, String> {

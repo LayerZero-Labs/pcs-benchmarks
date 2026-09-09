@@ -23,21 +23,35 @@ if [[ -r /proc/cpuinfo ]] && ! grep -q avx512f /proc/cpuinfo; then
   exit 1
 fi
 
-mkdir -p "$OUT_DIR"
-if [[ -x "$OUT" && -f "$STAMP" && "$(cat "$STAMP")" == "$REVISION" ]]; then
-  echo "Greyhound worker already built at $REVISION: $OUT"
-  exit 0
-fi
-
 CC="${CC:-cc}"
 # Match greyhound-reference's Makefile: -march=native -O3 -flto, AVX-512 NTT.
 CFLAGS=(-std=c2x -O3 -flto=auto -fwrapv -pthread -march=native -mtune=native -Wall -Wno-unused-function -D_GNU_SOURCE)
 SOURCES=(
   pack.c pack_wire.c greyhound.c greyhound_wire.c dachshund.c chihuahua.c
   labrador.c proof_wire.c witness_wire.c rice.c data.c jlproj.c polx.c poly.c
-  polz.c sparsemat.c aesctr.c fips202.c randombytes.c cpucycles.c parallel.c
+  polz.c sparsemat.c aesctr.c fips202.c cpucycles.c parallel.c
+  "$ROOT/benchmarks/greyhound/src/randombytes_deterministic.c"
   ntt.S invntt.S
 )
+IFS= read -r CC_VERSION < <("$CC" --version 2>&1)
+SOURCE_STAMP="$(
+  {
+    cksum \
+      "$0" \
+      "$ROOT/benchmarks/greyhound/src/lattice_eval.c" \
+      "$ROOT/benchmarks/greyhound/src/randombytes_deterministic.c"
+    printf '%s\0' "$CC" "$CC_VERSION" "${CFLAGS[@]}"
+  } |
+    cksum |
+    awk '{print $1 ":" $2}'
+)"
+BUILD_ID="$REVISION:$SOURCE_STAMP"
+
+mkdir -p "$OUT_DIR"
+if [[ -x "$OUT" && -f "$STAMP" && "$(cat "$STAMP")" == "$BUILD_ID" ]]; then
+  echo "Greyhound worker already built at $BUILD_ID: $OUT"
+  exit 0
+fi
 
 cd "$VENDOR"
 "$CC" "${CFLAGS[@]}" \
@@ -47,5 +61,5 @@ cd "$VENDOR"
   -lm \
   -o "$OUT"
 
-printf '%s\n' "$REVISION" > "$STAMP"
+printf '%s\n' "$BUILD_ID" > "$STAMP"
 echo "Greyhound worker: $OUT"
