@@ -29,6 +29,9 @@ pub(crate) fn capture() -> Result<Provenance> {
         rustc_version: rustc_version()?,
         target: uname()?,
         cpu_model: cpu_model(),
+        cpu_scaling_driver: cpu_policy("scaling_driver"),
+        cpu_governor: cpu_policy("scaling_governor"),
+        cpu_energy_preference: cpu_policy("energy_performance_preference"),
         machine_id_hash: machine_id_hash(),
         threads: 1,
         rustflags,
@@ -62,6 +65,13 @@ fn machine_id_hash() -> Option<String> {
     Some(digest.get(..16).unwrap_or(&digest).to_owned())
 }
 
+fn cpu_policy(name: &str) -> Option<String> {
+    fs::read_to_string(format!("/sys/devices/system/cpu/cpu0/cpufreq/{name}"))
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
 pub(crate) trait ProvenanceExt {
     fn write(&self, path: &Path) -> Result<()>;
     fn write_hash(&self, path: &Path) -> Result<()>;
@@ -76,6 +86,9 @@ impl ProvenanceExt for Provenance {
              rustc_version={}\n\
              target={}\n\
              cpu_model={}\n\
+             cpu_scaling_driver={}\n\
+             cpu_governor={}\n\
+             cpu_energy_preference={}\n\
              machine_id_hash={}\n\
              threads={}\n\
              rustflags={}\n\
@@ -95,6 +108,9 @@ impl ProvenanceExt for Provenance {
             self.rustc_version,
             self.target,
             self.cpu_model,
+            self.cpu_scaling_driver.as_deref().unwrap_or("unknown"),
+            self.cpu_governor.as_deref().unwrap_or("unknown"),
+            self.cpu_energy_preference.as_deref().unwrap_or("unknown"),
             self.machine_id_hash.as_deref().unwrap_or("unknown"),
             self.threads,
             self.rustflags,
@@ -122,6 +138,9 @@ impl ProvenanceExt for Provenance {
              rustc_version={}\n\
              target={}\n\
              cpu_model={}\n\
+             cpu_scaling_driver={}\n\
+             cpu_governor={}\n\
+             cpu_energy_preference={}\n\
              machine_id_hash={}\n\
              threads={}\n\
              rustflags={}\n\
@@ -148,6 +167,9 @@ impl ProvenanceExt for Provenance {
             self.rustc_version,
             self.target,
             self.cpu_model,
+            self.cpu_scaling_driver.as_deref().unwrap_or("unknown"),
+            self.cpu_governor.as_deref().unwrap_or("unknown"),
+            self.cpu_energy_preference.as_deref().unwrap_or("unknown"),
             self.machine_id_hash.as_deref().unwrap_or("unknown"),
             self.threads,
             self.rustflags,

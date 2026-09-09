@@ -42,6 +42,8 @@ See:
   total sent, and excluded public context.
 - Peak RSS is whole-process `VmHWM`. The `ulimit -v` ceiling is an address-space
   limit, not an RSS measurement.
+- Linux reports include the active CPU scaling driver, governor, and
+  energy/performance preference.
 - Correctness-only negative checks run with
   `PCS_BENCH_NEGATIVE_CHECK=1` and cannot be persisted as performance runs.
 

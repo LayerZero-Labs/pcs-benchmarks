@@ -87,16 +87,31 @@ fn machine_sentence(provenance: &Provenance, latex: bool, homogeneous_machine: b
     } else {
         format!(", {} logical CPUs", provenance.logical_cpus)
     };
+    let policy = provenance
+        .cpu_governor
+        .as_deref()
+        .map_or_else(String::new, |governor| {
+            let driver = provenance
+                .cpu_scaling_driver
+                .as_deref()
+                .unwrap_or("unknown");
+            let preference = provenance
+                .cpu_energy_preference
+                .as_deref()
+                .unwrap_or("unknown");
+            format!(" CPU policy: driver {driver}, governor {governor}, preference {preference}.")
+        });
     if latex {
         format!(
-            "Measurements were collected on a single {} ({}{cpus}{mem}). {avx}",
+            "Measurements were collected on a single {} ({}{cpus}{mem}). {avx}{}",
             escape_tex(&provenance.cpu_model),
             escape_tex(&provenance.target),
+            escape_tex(&policy),
         )
     } else {
         format!(
-            "Measurements were collected on a single {} ({}{cpus}{mem}). {avx}",
-            provenance.cpu_model, provenance.target,
+            "Measurements were collected on a single {} ({}{cpus}{mem}). {avx}{policy}",
+            provenance.cpu_model, provenance.target
         )
     }
 }

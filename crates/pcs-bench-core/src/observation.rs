@@ -232,6 +232,15 @@ pub struct Provenance {
     pub target: String,
     /// CPU model.
     pub cpu_model: String,
+    /// Active CPU frequency-scaling driver, when exposed by the host.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_scaling_driver: Option<String>,
+    /// Active CPU frequency governor, when exposed by the host.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_governor: Option<String>,
+    /// Active CPU energy/performance preference, when exposed by the host.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_energy_preference: Option<String>,
     /// Privacy-preserving hash used to distinguish physical benchmark hosts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub machine_id_hash: Option<String>,
@@ -285,6 +294,9 @@ impl Provenance {
             rustc_version: "test".into(),
             target: "test".into(),
             cpu_model: "test".into(),
+            cpu_scaling_driver: None,
+            cpu_governor: None,
+            cpu_energy_preference: None,
             machine_id_hash: None,
             threads: 1,
             rustflags: String::new(),

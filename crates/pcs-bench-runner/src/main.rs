@@ -485,6 +485,12 @@ fn cohort_mismatch(
         Some("target")
     } else if expected.cpu_model != candidate.cpu_model {
         Some("cpu_model")
+    } else if expected.cpu_scaling_driver != candidate.cpu_scaling_driver {
+        Some("cpu_scaling_driver")
+    } else if expected.cpu_governor != candidate.cpu_governor {
+        Some("cpu_governor")
+    } else if expected.cpu_energy_preference != candidate.cpu_energy_preference {
+        Some("cpu_energy_preference")
     } else if expected.machine_id_hash != candidate.machine_id_hash {
         Some("machine_id_hash")
     } else if expected.logical_cpus != candidate.logical_cpus {
@@ -869,6 +875,15 @@ fn validate_record_provenance(
     {
         bail!(
             "{}:{line}: record has incomplete machine resource provenance",
+            path.display()
+        );
+    }
+    if provenance.target.contains("Linux")
+        && provenance.target.contains("x86_64")
+        && provenance.cpu_governor.as_deref().is_none_or(str::is_empty)
+    {
+        bail!(
+            "{}:{line}: Linux x86_64 record is missing CPU governor provenance",
             path.display()
         );
     }

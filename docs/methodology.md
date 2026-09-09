@@ -33,7 +33,8 @@ build, and machine provenance are explicit.
    mean or a screenshot.
 7. **Stable environment.** Disable frequency-changing background workloads,
    connect laptops to power, and use a fixed performance governor where the
-   platform supports it. Record thermal or throttling anomalies.
+   platform supports it. Record the scaling driver, governor, energy preference,
+   and any thermal or throttling anomalies.
 8. **No heterogeneous deltas.** Regression percentages require the same
    physical machine, target ISA, thread count, compiler, flags, and interleaved
    runs of candidate and baseline.
