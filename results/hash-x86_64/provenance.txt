@@ -1,0 +1,35 @@
+harness_revision=50ddf4db992358a2cf394b3d5c99e964d13e5c90
+timestamp_utc=2026-09-09T19:42:36Z
+run_command=target/release/pcs-bench hash-eval run --out results/hash-x86_64-clean
+rustc_version=rustc 1.95.0 (59807616e 2026-04-14)
+binary: rustc
+commit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860
+commit-date: 2026-04-14
+host: x86_64-unknown-linux-gnu
+release: 1.95.0
+LLVM version: 22.1.2
+target=Linux x86_64
+cpu_model=AMD Ryzen 9 9950X 16-Core Processor
+cpu_scaling_driver=amd-pstate-epp
+cpu_governor=powersave
+cpu_energy_preference=balance_performance
+machine_id_hash=359f7793cbd65f17
+threads=1
+rustflags=-C target-cpu=native
+avx512=true
+isa_notes=AVX-512F advertised; native-target code generation requested
+logical_cpus=32
+memory_bytes=130142986240
+memory_limit_bytes=117128687616
+seed_mode=vary
+akita=https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b
+whir=https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730
+basefold=https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86
+plonky2_fri=https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa
+plonky3_fri_stir=https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36
+binius64=https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176
+flock=https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430
+whir_provekit=https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d
+security_bits_128=128
+security_bits_100=100
+provekit_security_bits=133
