@@ -298,7 +298,7 @@ fn timing_row_from_samples(
         };
     }
 
-    let status = aggregate_gap_status(samples);
+    let status = aggregate_gap_status(scheme, samples);
     TimingTableRow {
         payload_log2,
         scheme,
@@ -397,7 +397,7 @@ fn resource_row_from_samples(
         };
     }
 
-    let status = aggregate_gap_status(samples);
+    let status = aggregate_gap_status(scheme, samples);
     ResourceTableRow {
         payload_log2,
         scheme,
@@ -415,14 +415,21 @@ fn resource_row_from_samples(
     }
 }
 
-fn aggregate_gap_status(samples: &[&LatticeRecord]) -> RunStatus {
+fn aggregate_gap_status(scheme: SchemeId, samples: &[&LatticeRecord]) -> RunStatus {
     if samples.iter().any(|record| {
         record.status == RunStatus::Oom || looks_like_oom(record.status_detail.as_deref())
     }) {
         RunStatus::Oom
-    } else if samples
-        .iter()
-        .any(|record| record.status == RunStatus::Unsupported)
+    } else if (scheme == SchemeId::AkitaOffload
+        && samples.iter().any(|record| {
+            record
+                .status_detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("no setup-prefix"))
+        }))
+        || samples
+            .iter()
+            .any(|record| record.status == RunStatus::Unsupported)
     {
         RunStatus::Unsupported
     } else {
@@ -465,7 +472,6 @@ fn gap_note(scheme: SchemeId, status: RunStatus, samples: &[&LatticeRecord]) -> 
         return Some(GapNote::GreyhoundSis);
     }
     if scheme == SchemeId::AkitaOffload
-        && status == RunStatus::Error
         && samples.iter().any(|record| {
             record
                 .status_detail
@@ -1337,10 +1343,10 @@ mod tests {
             .iter()
             .find(|row| row.payload_log2 == 27 && row.scheme == SchemeId::AkitaOffload)
             .expect("row");
-        assert_eq!(row.status, RunStatus::Error);
+        assert_eq!(row.status, RunStatus::Unsupported);
         assert_eq!(row.gap_note, Some(GapNote::AkitaOffloadNoPrefix));
         let markdown = render_markdown_timing_table(std::slice::from_ref(row));
-        assert!(markdown.contains("err(1)"));
+        assert!(markdown.contains("—(1)"));
         assert!(markdown.contains("no setup-prefix edge"));
         let latex = render_latex_timing_table(std::slice::from_ref(row));
         assert!(latex.contains(r"\evalunsupported$^{(1)}$"));

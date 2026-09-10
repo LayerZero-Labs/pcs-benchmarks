@@ -33,7 +33,7 @@ be interpreted as sampled information content or used to rescale throughput.
 | Nominal payload | Scheme | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | $2^{32}-99$ | 22 | 0.100 [0.099, 0.101] | 0.998 [0.996, 1.00] | 1.11 [1.10, 1.11] | 7.6 [7.6, 7.7] |
-| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | $2^{32}-99$ | 22 | err(1) | err(1) | err(1) | err(1) |
+| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | $2^{32}-99$ | —(1) | —(1) | —(1) | —(1) | —(1) |
 | 2^{27} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | $2^{32}-99$ | 22 | 0.108 [0.107, 0.111] | 0.183 [0.177, 0.196] | 0.293 [0.284, 0.304] | 73.8 [71.3, 74.2] |
 | 2^{27} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | $2^{50}-2687$ | —(2) | —(2) | —(2) | —(2) | —(2) |
 | 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | $2^{32}-99$ | 24 | 0.348 [0.345, 0.351] | 1.52 [1.52, 1.52] | 1.88 [1.87, 1.88] | 9.3 [9.2, 9.6] |
@@ -60,7 +60,7 @@ be interpreted as sampled information content or used to rescale throughput.
 | Nominal payload | Scheme | Commitment (B) | Evaluation (B) | Proof (B) | Total sent (B) | Excluded context (B) | Peak RSS (GiB) | Prep. (s) | State (GiB) |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 61284 | 61428 | 214 | 0.125 | 0.0083 | 0.0020 |
-| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | err(1) | err(1) | err(1) | err(1) | err(1) | err(1) | err(1) | err(1) |
+| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) |
 | 2^{27} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397) | 2048 | 8 | 59296 | 61352 | 0 | 0.329 | unknown | 0.0061 |
 | 2^{27} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e) | —(2) | —(2) | —(2) | —(2) | —(2) | —(2) | —(2) | —(2) |
 | 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 61787 | 61931 | 214 | 0.252 | 0.0081 | 0.0020 |

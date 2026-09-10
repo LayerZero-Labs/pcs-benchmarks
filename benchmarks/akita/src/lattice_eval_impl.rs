@@ -108,9 +108,21 @@ where
             .filter(|fold| fold.params.setup_prefix().is_some())
             .count();
         if offload_edges == 0 {
-            return Err(format!(
-                "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
-            ));
+            emit(&WorkerOutput {
+                status: RunStatus::Unsupported,
+                status_detail: Some(format!(
+                    "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
+                )),
+                log2_n: Some(log2_n),
+                timings_ns: BTreeMap::new(),
+                proof_bytes: None,
+                commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
+                state_bytes: None,
+                peak_rss_bytes: peak_rss_bytes(),
+            })?;
+            return Ok(());
         }
     }
 
