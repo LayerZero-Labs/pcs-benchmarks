@@ -5,12 +5,13 @@ use crate::table::{
     aggregate_resource_rows, aggregate_timing_rows, render_latex_resource_table,
     render_latex_timing_table, render_markdown_resource_table, render_markdown_timing_table,
 };
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 /// Markdown report matching the paper's evaluation write-up.
 #[must_use]
 pub fn render_markdown_eval_report(records: &[LatticeRecord]) -> String {
-    let provenance = first_provenance(records);
+    let provenance = report_provenance(records);
     let homogeneous_machine = records_share_machine(records, &provenance);
     let timing = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
@@ -27,7 +28,7 @@ pub fn render_markdown_eval_report(records: &[LatticeRecord]) -> String {
 /// LaTeX report matching `tab:eval-lattice-time` and `tab:eval-lattice-resources`.
 #[must_use]
 pub fn render_latex_eval_report(records: &[LatticeRecord]) -> String {
-    let provenance = first_provenance(records);
+    let provenance = report_provenance(records);
     let homogeneous_machine = records_share_machine(records, &provenance);
     let timing = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
@@ -53,6 +54,18 @@ fn first_provenance(records: &[LatticeRecord]) -> Provenance {
                 + u32::from(provenance.memory_limit_bytes.is_some())
         })
         .map_or_else(Provenance::test_fixture, |record| record.provenance.clone())
+}
+
+fn report_provenance(records: &[LatticeRecord]) -> Provenance {
+    let mut provenance = first_provenance(records);
+    let commands = records
+        .iter()
+        .filter_map(|record| record.provenance.run_command.as_deref())
+        .collect::<BTreeSet<_>>();
+    if !commands.is_empty() {
+        provenance.run_command = Some(commands.into_iter().collect::<Vec<_>>().join("; "));
+    }
+    provenance
 }
 
 fn records_share_machine(records: &[LatticeRecord], expected: &Provenance) -> bool {
@@ -287,7 +300,7 @@ const REPRODUCTION_PROSE_MARKDOWN: &str = "\
 Machine, ISA, compiler, executable, lockfile, command, and timestamp provenance
 for this dataset are recorded with each observation. The infrastructure
 toolchain pin is Rust **1.95** (`rust-toolchain.toml`).
-Recorded runner command: `{RUN_COMMAND}`. The commands below are a template,
+Recorded runner command(s): `{RUN_COMMAND}`. The commands below are a template,
 not reconstructed provenance.
 RoKoKo uses `rustup` **nightly-2026-09-03**. Workers are built before sampling;
 every timed execution is then a fresh process wrapped
@@ -459,6 +472,17 @@ mod tests {
         assert!(pinned_report.contains(
             "https://github.com/LayerZero-Labs/akita/commit/1111111111111111111111111111111111111111"
         ));
+
+        let mut initial_run = record.clone();
+        initial_run.provenance.run_command =
+            Some("pcs-bench lattice-eval run --out results/lattice-x86_64".into());
+        let mut refreshed_scheme = record.clone();
+        refreshed_scheme.sample = 1;
+        refreshed_scheme.provenance.run_command =
+            Some("pcs-bench lattice-eval run --scheme rokoko".into());
+        let refreshed_report = render_markdown_eval_report(&[initial_run, refreshed_scheme]);
+        assert!(refreshed_report.contains("run --out results/lattice-x86_64"));
+        assert!(refreshed_report.contains("run --scheme rokoko"));
 
         let mut other_machine = record.clone();
         other_machine.sample = 1;

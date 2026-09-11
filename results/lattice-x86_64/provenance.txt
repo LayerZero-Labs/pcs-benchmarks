@@ -1,6 +1,6 @@
-harness_revision=50ddf4db992358a2cf394b3d5c99e964d13e5c90
-timestamp_utc=2026-09-09T06:31:32Z
-run_command=target/release/pcs-bench lattice-eval run --out results/lattice-x86_64
+harness_revision=50ddf4db992358a2cf394b3d5c99e964d13e5c90;61592127ee537583afb5ece87e2c6b0e720cb5c2
+timestamp_utc=2026-09-09T06:31:32Z;2026-09-11T16:32:43Z
+run_command=target/release/pcs-bench lattice-eval run --out results/lattice-x86_64;target/release/pcs-bench lattice-eval run --scheme rokoko --out results/rokoko-x86_64-26d07c73
 rustc_version=rustc 1.95.0 (59807616e 2026-04-14)
 binary: rustc
 commit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860
@@ -25,4 +25,4 @@ seed_mode=vary
 akita=https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b
 akita_offload=https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b
 greyhound=https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397
-rokoko=https://github.com/lattice-arguments/rokoko/commit/1baa91e901fc37b5fa59e65c26a630cb93849b3e
+rokoko=https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee
