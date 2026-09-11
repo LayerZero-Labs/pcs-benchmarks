@@ -14,13 +14,13 @@ uses the Apache-2.0 option.
 
 The `scripts/patch-rokoko-resources.py` patcher contains matching context for
 and modifies RoKoKo's `src/protocol/parties/executor.rs` at commit
-`1baa91e901fc37b5fa59e65c26a630cb93849b3e`. RoKoKo is licensed under
+`26d07c73c54872b9e8d2b3200117a6a0a21b10ee`. RoKoKo is licensed under
 Apache-2.0. The patcher marks the modified checkout accordingly.
 
 Upstream license texts:
 
 - Akita: <https://github.com/LayerZero-Labs/akita/tree/d1b224d809c7edc357b0dbab0f607e19b475910b>
-- RoKoKo: <https://github.com/lattice-arguments/rokoko/blob/1baa91e901fc37b5fa59e65c26a630cb93849b3e/LICENSE>
+- RoKoKo: <https://github.com/lattice-arguments/rokoko/blob/26d07c73c54872b9e8d2b3200117a6a0a21b10ee/LICENSE>
 
 Redistributions that bundle fetched source code or compiled dependencies must
 also carry all license and NOTICE files required by those dependencies.

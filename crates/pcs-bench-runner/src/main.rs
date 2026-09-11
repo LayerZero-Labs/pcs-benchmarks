@@ -257,7 +257,7 @@ fn compare_lattice(args: CompareArgs) -> Result<()> {
     if records.is_empty() {
         bail!("no lattice records in {}", args.input.display());
     }
-    validate_cohort("lattice", records.iter().map(|record| &record.provenance))?;
+    validate_lattice_cohorts(&records)?;
     let out_dir = args.out_dir.unwrap_or_else(|| {
         args.input
             .parent()
@@ -294,7 +294,7 @@ fn write_tables(out_dir: &Path, records: &[LatticeRecord]) -> Result<()> {
     validate_lattice_records(records, Path::new("in-memory lattice records"))?;
     validate_lattice_seed_schedule(records)?;
     validate_lattice_build_identities(records)?;
-    validate_cohort("lattice", records.iter().map(|record| &record.provenance))?;
+    validate_lattice_cohorts(records)?;
     let rows = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     fs::write(
@@ -469,6 +469,37 @@ fn validate_cohort<'a>(
     Ok(())
 }
 
+fn validate_lattice_cohorts(records: &[LatticeRecord]) -> Result<()> {
+    validate_environment("lattice", records.iter().map(|record| &record.provenance))?;
+    for scheme in SchemeId::all() {
+        validate_cohort(
+            &format!("lattice {}", scheme.token()),
+            records
+                .iter()
+                .filter(|record| record.scheme == scheme)
+                .map(|record| &record.provenance),
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_environment<'a>(
+    label: &str,
+    mut provenances: impl Iterator<Item = &'a pcs_bench_core::Provenance>,
+) -> Result<()> {
+    let Some(expected) = provenances.next() else {
+        return Ok(());
+    };
+    for candidate in provenances {
+        if let Some(field) = environment_mismatch(expected, candidate) {
+            bail!(
+                "{label} records were not measured in one comparable environment: `{field}` differs"
+            );
+        }
+    }
+    Ok(())
+}
+
 fn cohort_mismatch(
     expected: &pcs_bench_core::Provenance,
     candidate: &pcs_bench_core::Provenance,
@@ -479,7 +510,16 @@ fn cohort_mismatch(
         Some("timestamp_utc")
     } else if expected.run_command != candidate.run_command {
         Some("run_command")
-    } else if expected.rustc_version != candidate.rustc_version {
+    } else {
+        environment_mismatch(expected, candidate)
+    }
+}
+
+fn environment_mismatch(
+    expected: &pcs_bench_core::Provenance,
+    candidate: &pcs_bench_core::Provenance,
+) -> Option<&'static str> {
+    if expected.rustc_version != candidate.rustc_version {
         Some("rustc_version")
     } else if expected.target != candidate.target {
         Some("target")
@@ -1150,9 +1190,9 @@ fn validate_record_seed(
 #[cfg(test)]
 mod tests {
     use super::{
-        validate_build_identity_groups, validate_cohort, validate_hash_record_case,
-        validate_record_seed, validate_record_timings, validate_unique_hash_records, workload_seed,
-        BuildIdentity, SeedMode,
+        validate_build_identity_groups, validate_cohort, validate_environment,
+        validate_hash_record_case, validate_record_seed, validate_record_timings,
+        validate_unique_hash_records, workload_seed, BuildIdentity, SeedMode,
     };
     use pcs_bench_core::{HashRecord, HashSchemeId, Provenance, RunStatus};
     use std::collections::BTreeMap;
@@ -1166,6 +1206,16 @@ mod tests {
         let error =
             validate_cohort("test", [&one, &two].into_iter()).expect_err("must reject mismatch");
         assert!(error.to_string().contains("cpu_model"));
+    }
+
+    #[test]
+    fn accepts_distinct_runs_in_the_same_environment() {
+        let one = Provenance::test_fixture();
+        let mut two = one.clone();
+        two.harness_revision = "refreshed".into();
+        two.timestamp_utc = Some("later".into());
+        two.run_command = Some("lattice-eval run --scheme rokoko".into());
+        validate_environment("test", [&one, &two].into_iter()).expect("same environment");
     }
 
     #[test]

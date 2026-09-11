@@ -93,7 +93,7 @@ if [[ "$FETCH_ROKOKO" -eq 1 ]]; then
   clone_pin \
     https://github.com/lattice-arguments/rokoko.git \
     "$ROOT/third_party/rokoko" \
-    1baa91e901fc37b5fa59e65c26a630cb93849b3e
+    26d07c73c54872b9e8d2b3200117a6a0a21b10ee
   python3 "$ROOT/scripts/patch-rokoko-resources.py" "$ROOT/third_party/rokoko"
 fi
 
