@@ -4,6 +4,8 @@ target/
 !/results/lattice-x86_64/**
 !/results/hash-x86_64/
 !/results/hash-x86_64/**
+!/results/rokoko-x86_64/
+!/results/rokoko-x86_64/**
 /third_party/labrador/
 /third_party/greyhound-reference/
 /third_party/rokoko/
