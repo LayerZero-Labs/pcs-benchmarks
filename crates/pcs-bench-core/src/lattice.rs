@@ -83,7 +83,7 @@ pub const GREYHOUND_REVISION: &str = "687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397";
 pub const GREYHOUND_SIS_POLICY: &str = "l2-quantum128-adps16";
 
 /// Pinned RoKoKo revision.
-pub const ROKOKO_REVISION: &str = "1baa91e901fc37b5fa59e65c26a630cb93849b3e";
+pub const ROKOKO_REVISION: &str = "26d07c73c54872b9e8d2b3200117a6a0a21b10ee";
 
 /// Identifies a lattice PCS implementation in the comparison harness.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
