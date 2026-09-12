@@ -85,7 +85,7 @@ if [[ "$FETCH_GREYHOUND" -eq 1 ]]; then
   clone_pin \
     https://github.com/LayerZero-Labs/greyhound-reference.git \
     "$ROOT/third_party/greyhound-reference" \
-    687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397
+    f92504b6c9c194c37c4262e685b38945865f80c2
   init_greyhound_submodules "$ROOT/third_party/greyhound-reference"
 fi
 

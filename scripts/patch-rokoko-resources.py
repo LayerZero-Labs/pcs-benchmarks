@@ -3,10 +3,10 @@
 
 The upstream executor already prints phase timings and proof size. The lattice
 resources table also needs the inner recursive commitment, expanded CRS
-resident size, and process peak RSS. Its prover timer also includes an
-independent full-witness claim check; this patch ends that timer before the
-check while preserving the check. The patch is applied after `fetch-vendors.sh`
-checks out the pinned revision.
+resident size (including the CRT commitment key), and process peak RSS. Its
+prover timer also includes an independent full-witness claim check; this patch
+ends that timer before the check while preserving the check. The patch is
+applied after `fetch-vendors.sh` checks out the pinned revision.
 """
 
 from __future__ import annotations
@@ -79,10 +79,12 @@ CRS_PATCH = """\
                 n += row.preprocessed_row.len();
             }
         }
-        println!(
-            "TOTAL CRS size: {} bytes",
-            n * std::mem::size_of::<RingElement>()
-        );
+        let mut bytes = n * std::mem::size_of::<RingElement>();
+        #[cfg(feature = "crt-commitment")]
+        if let Some((_, key)) = &crs.crt_root {
+            bytes += key.bytes();
+        }
+        println!("TOTAL CRS size: {} bytes", bytes);
     }
 
     let mut sumcheck_context = init_sumcheck(&crs, &config);
@@ -98,10 +100,12 @@ SETUP_TIMING_NEEDLE = """\
                 n += row.preprocessed_row.len();
             }
         }
-        println!(
-            "TOTAL CRS size: {} bytes",
-            n * std::mem::size_of::<RingElement>()
-        );
+        let mut bytes = n * std::mem::size_of::<RingElement>();
+        #[cfg(feature = "crt-commitment")]
+        if let Some((_, key)) = &crs.crt_root {
+            bytes += key.bytes();
+        }
+        println!("TOTAL CRS size: {} bytes", bytes);
     }
 
     let mut sumcheck_context = init_sumcheck(&crs, &config);
@@ -121,10 +125,12 @@ SETUP_TIMING_PATCH = """\
                 n += row.preprocessed_row.len();
             }
         }
-        println!(
-            "TOTAL CRS size: {} bytes",
-            n * std::mem::size_of::<RingElement>()
-        );
+        let mut bytes = n * std::mem::size_of::<RingElement>();
+        #[cfg(feature = "crt-commitment")]
+        if let Some((_, key)) = &crs.crt_root {
+            bytes += key.bytes();
+        }
+        println!("TOTAL CRS size: {} bytes", bytes);
     }
 """
 
@@ -286,6 +292,7 @@ def patch(text: str) -> str:
     if (
         "TOTAL Commitment size:" in text
         and "TOTAL CRS size:" in text
+        and "crs.crt_root" in text
         and "Peak RSS:" in text
         and "PCS benchmark prover interval ends before independent claim validation" in text
         and "pcs-bench-witness-" in text

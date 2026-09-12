@@ -154,7 +154,7 @@ fn markdown_prose(provenance: &Provenance, homogeneous_machine: bool) -> String 
          setup entry is reported as unknown; reusable state size is reported when measurable.\n\
          The resources table reports communication, memory, and preprocessing.\n\n\
          RoKoKo uses the field $\\mathbb{{F}}_{{2^{{50}}-2687}}$ and fixed native parameter\n\
-         sets, so we report its closest supported input at each target payload. An OOM entry\n\
+         sets corresponding to each target's coefficient count. An OOM entry\n\
          {oom}. RoKoKo's native field has about 50 bits, but its sampler is bounded to\n\
          31-bit coefficients. The displayed payload is nominal field capacity and must not\n\
          be interpreted as sampled information content or used to rescale throughput.",
@@ -187,7 +187,7 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
          Embedded reusable setup remains charged to commitment and is otherwise reported as unknown.\n\
          \\Cref{{tab:eval-lattice-resources}} reports communication, memory, and preprocessing.\n\n\
          RoKoKo uses the field $\\mathbb F_{{2^{{50}}-2687}}$ and fixed native parameter\n\
-         sets, so we report its closest supported input at each target payload.  An\n\
+         sets corresponding to each target's coefficient count.  An\n\
          \\evaloom{{}} entry {oom}.\n\
          RoKoKo's native field has about $50$ bits, but its sampler is bounded to\n\
          31-bit coefficients. The displayed payload is nominal field capacity and must not\n\
@@ -361,8 +361,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `lattice-eval matrix`
-prints the 20-cell plan (unsupported RoKoKo sizes, Akita/Greyhound `log2 N`,
-RoKoKo `p-26`/`p-28`/`p-30`, and the Akita setup-offload row). A single supported cell should verify and emit
+prints the 20-cell plan (Akita/Greyhound `log2 N`, RoKoKo
+`p-22`/`p-24`/`p-26`/`p-28`/`p-30`, and the Akita setup-offload row). A single supported cell should verify and emit
 JSON with `status: ok`. Unit tests cover the RoKoKo log parser, OOM
 classification, and table tokens. Each sample the runner launches is equivalent
 to the worker commands below (still under the 90%-of-RAM cap).";

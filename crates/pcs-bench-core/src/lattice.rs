@@ -77,7 +77,7 @@ pub const ROKOKO_Q50: FieldSpec = FieldSpec {
 pub const AKITA_REVISION: &str = "d1b224d809c7edc357b0dbab0f607e19b475910b";
 
 /// Pinned Greyhound reference revision (`LayerZero-Labs/greyhound-reference`).
-pub const GREYHOUND_REVISION: &str = "687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397";
+pub const GREYHOUND_REVISION: &str = "f92504b6c9c194c37c4262e685b38945865f80c2";
 
 /// Euclidean SIS policy used by the Greyhound lattice-eval worker.
 pub const GREYHOUND_SIS_POLICY: &str = "l2-quantum128-adps16";
@@ -208,10 +208,12 @@ pub const fn log2_n_for_32bit_payload(payload_log2: u32) -> Option<u32> {
     payload_log2.checked_sub(AKITA_FP32.log2_bits.trailing_zeros())
 }
 
-/// Closest RoKoKo native degree feature for a target payload, if any.
+/// RoKoKo native degree feature with the corresponding coefficient count.
 #[must_use]
 pub const fn rokoko_native_for_payload(payload_log2: u32) -> Option<(u32, &'static str)> {
     match payload_log2 {
+        27 => Some((22, "p-22")),
+        29 => Some((24, "p-24")),
         31 => Some((26, "p-26")),
         33 => Some((28, "p-28")),
         35 => Some((30, "p-30")),
@@ -304,7 +306,7 @@ fn rokoko_case(payload_log2: u32) -> LatticeCase {
             log2_n: None,
             native_param: None,
             unsupported_reason: Some(
-                "RoKoKo ships fixed native sets p-26, p-28, and p-30 only; no instance matches this payload",
+                "RoKoKo ships fixed native sets p-22, p-24, p-26, p-28, and p-30 only; no instance matches this payload",
             ),
         },
     }
@@ -342,9 +344,9 @@ mod tests {
     }
 
     #[test]
-    fn rokoko_native_sets_are_the_closest_supported_payloads() {
-        assert_eq!(rokoko_native_for_payload(27), None);
-        assert_eq!(rokoko_native_for_payload(29), None);
+    fn rokoko_native_sets_cover_the_headline_coefficient_counts() {
+        assert_eq!(rokoko_native_for_payload(27), Some((22, "p-22")));
+        assert_eq!(rokoko_native_for_payload(29), Some((24, "p-24")));
         assert_eq!(rokoko_native_for_payload(31), Some((26, "p-26")));
         assert_eq!(rokoko_native_for_payload(33), Some((28, "p-28")));
         assert_eq!(rokoko_native_for_payload(35), Some((30, "p-30")));
@@ -384,7 +386,7 @@ mod tests {
                 .all(|case| case.payload_log2 == *payload));
         }
         let unsupported = matrix.iter().filter(|case| case.log2_n.is_none()).count();
-        assert_eq!(unsupported, 2);
+        assert_eq!(unsupported, 0);
         assert_eq!(
             SchemeId::parse_token("akita-offload"),
             Some(SchemeId::AkitaOffload)
@@ -403,7 +405,7 @@ mod tests {
         );
         assert_eq!(
             SchemeId::Greyhound.commit_url(),
-            "https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397"
+            "https://github.com/LayerZero-Labs/greyhound-reference/commit/f92504b6c9c194c37c4262e685b38945865f80c2"
         );
     }
 }

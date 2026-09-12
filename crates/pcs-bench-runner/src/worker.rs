@@ -240,7 +240,7 @@ fn attach_lattice_build_identity(case: &LatticeCase, provenance: &mut Provenance
                 &root.join(format!("target/rokoko-{feature}/release/rokoko")),
                 Some(&root.join("third_party/rokoko/Cargo.lock")),
                 &format!(
-                    "CARGO_TARGET_DIR=target/rokoko-{feature} cargo {ROKOKO_TOOLCHAIN} build --release --locked --no-default-features --features incomplete-rexl,unsafe-sumcheck,{feature}"
+                    "CARGO_TARGET_DIR=target/rokoko-{feature} cargo {ROKOKO_TOOLCHAIN} build --release --locked --features {feature}"
                 ),
             )?;
             provenance.worker_compiler_version =
@@ -505,7 +505,6 @@ fn build_rokoko(case: &LatticeCase) -> Result<()> {
         );
     }
     let target_dir = root.join(format!("target/rokoko-{feature}"));
-    let features = format!("incomplete-rexl,unsafe-sumcheck,{feature}");
     let status = Command::new("cargo")
         .current_dir(&rokoko_root)
         .args([
@@ -513,9 +512,8 @@ fn build_rokoko(case: &LatticeCase) -> Result<()> {
             "build",
             "--release",
             "--locked",
-            "--no-default-features",
             "--features",
-            &features,
+            feature,
         ])
         .env("CARGO_TARGET_DIR", &target_dir)
         .env("RAYON_NUM_THREADS", "1")

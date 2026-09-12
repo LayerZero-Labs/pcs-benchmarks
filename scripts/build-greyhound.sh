@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR="$ROOT/third_party/greyhound-reference"
 OUT_DIR="$ROOT/target/greyhound"
 OUT="$OUT_DIR/lattice-eval"
-REVISION="687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397"
+REVISION="f92504b6c9c194c37c4262e685b38945865f80c2"
 STAMP="$OUT_DIR/revision"
 
 if [[ ! -f "$VENDOR/greyhound.c" ]]; then

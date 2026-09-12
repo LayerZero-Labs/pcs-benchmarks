@@ -514,7 +514,7 @@ impl GapNote {
                 "The recursive `fp32-dense` planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.".into()
             }
             Self::RokokoNative => {
-                "RoKoKo ships only native sets `p-26`, `p-28`, and `p-30`; no instance matches this payload.".into()
+                "RoKoKo ships only native sets `p-22`, `p-24`, `p-26`, `p-28`, and `p-30`; no instance matches this payload.".into()
             }
             Self::GreyhoundSis => {
                 "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the `l2-quantum128-adps16` policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
@@ -541,7 +541,7 @@ impl GapNote {
                 "The recursive \\texttt{fp32-dense} planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.".into()
             }
             Self::RokokoNative => {
-                "RoKoKo ships only native sets \\texttt{p-26}, \\texttt{p-28}, and \\texttt{p-30}; no instance matches this payload.".into()
+                "RoKoKo ships only native sets \\texttt{p-22}, \\texttt{p-24}, \\texttt{p-26}, \\texttt{p-28}, and \\texttt{p-30}; no instance matches this payload.".into()
             }
             Self::GreyhoundSis => {
                 "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the \\texttt{l2-quantum128-adps16} policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()

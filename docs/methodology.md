@@ -87,9 +87,9 @@ Additional rules that apply only to that table:
    at nine-tenths of detected `MemTotal` / `hw.memsize`. This limits virtual
    address space, not resident memory. Explicit allocation failures are `oom`;
    SIGKILL/137 without corroborating evidence is an unknown worker error.
-4. **Do not bit-match RoKoKo.** Report the native `p-26`/`p-28`/`p-30`
-   instance next to the 32-bit payload it is closest to, and say that the
-   native field is ~50 bits.
+4. **Do not bit-match RoKoKo.** Report the native
+   `p-22`/`p-24`/`p-26`/`p-28`/`p-30` instance with the corresponding
+   coefficient count, and say that the native field is ~50 bits.
 5. **Catalog honesty.** If Akita has no generated schedule for a requested
    `nv`, record unsupported. Do not silently run a nearby size. For the
    lattice table, `nv=22` and `nv=24` are generated with the pinned revision's
@@ -162,4 +162,3 @@ Published results must include:
 
 Result records use one strict shape. Contract changes require replacing the
 canonical records and generated reports.
-
