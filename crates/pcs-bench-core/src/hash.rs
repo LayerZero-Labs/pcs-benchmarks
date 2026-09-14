@@ -514,57 +514,45 @@ pub fn hash_case(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Optio
     })
 }
 
+/// The six Akita roster entries differ only by field and catalog, so build them
+/// in one place instead of six near-identical match arms.
+fn akita_hash_case(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Option<HashCase> {
+    let (field, native_param) = match scheme {
+        HashSchemeId::Akita => (AKITA_FP32, "fp32-dense"),
+        HashSchemeId::AkitaOffload => (AKITA_FP32, "fp32-dense-offload"),
+        HashSchemeId::AkitaFp64 => (AKITA_FP64, "fp64-dense"),
+        HashSchemeId::AkitaFp64Offload => (AKITA_FP64, "fp64-dense-offload"),
+        HashSchemeId::AkitaFp128 => (AKITA_FP128, "fp128-dense"),
+        HashSchemeId::AkitaFp128Offload => (AKITA_FP128, "fp128-dense-offload"),
+        _ => return None,
+    };
+    let log2_n = if field.log2_bits == AKITA_FP32.log2_bits {
+        log2_n_for_32bit_payload(payload_log2).unwrap_or(0)
+    } else {
+        log2_n_for_payload_bits(payload_log2, field.log2_bits)
+    };
+    Some(HashCase {
+        payload_log2,
+        scheme,
+        field,
+        log2_n,
+        threads,
+        native_param,
+    })
+}
+
 fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> HashCase {
+    if let Some(case) = akita_hash_case(payload_log2, scheme, threads) {
+        return case;
+    }
     let log2_n_32 = log2_n_for_32bit_payload(payload_log2).unwrap_or(0);
     match scheme {
-        HashSchemeId::Akita => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP32,
-            log2_n: log2_n_32,
-            threads,
-            native_param: "fp32-dense",
-        },
-        HashSchemeId::AkitaOffload => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP32,
-            log2_n: log2_n_32,
-            threads,
-            native_param: "fp32-dense-offload",
-        },
-        HashSchemeId::AkitaFp64 => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP64,
-            log2_n: log2_n_for_payload_bits(payload_log2, 64),
-            threads,
-            native_param: "fp64-dense",
-        },
-        HashSchemeId::AkitaFp64Offload => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP64,
-            log2_n: log2_n_for_payload_bits(payload_log2, 64),
-            threads,
-            native_param: "fp64-dense-offload",
-        },
-        HashSchemeId::AkitaFp128 => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP128,
-            log2_n: log2_n_for_payload_bits(payload_log2, 128),
-            threads,
-            native_param: "fp128-dense",
-        },
-        HashSchemeId::AkitaFp128Offload => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP128,
-            log2_n: log2_n_for_payload_bits(payload_log2, 128),
-            threads,
-            native_param: "fp128-dense-offload",
-        },
+        HashSchemeId::Akita
+        | HashSchemeId::AkitaOffload
+        | HashSchemeId::AkitaFp64
+        | HashSchemeId::AkitaFp64Offload
+        | HashSchemeId::AkitaFp128
+        | HashSchemeId::AkitaFp128Offload => unreachable!("Akita cases handled above"),
         HashSchemeId::Plonky2Fri => HashCase {
             payload_log2,
             scheme,
