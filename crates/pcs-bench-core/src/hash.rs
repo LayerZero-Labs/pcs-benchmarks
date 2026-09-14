@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 /// Thread counts in the hash timing table.
 pub const HASH_THREADS: [u32; 2] = [1, 8];
 
-/// Schemes in roster order (Akita fp32/fp64/fp128 through BaseFold SP1).
-pub const HASH_SCHEME_COUNT: usize = 11;
+/// Schemes in roster order (Akita fp32/fp64/fp128, each direct then offload, through BaseFold SP1).
+pub const HASH_SCHEME_COUNT: usize = 14;
 
-/// Headline hash matrix size: 5 payloads × 11 schemes × 2 thread counts.
-pub const HASH_CELL_COUNT: usize = 110;
+/// Headline hash matrix size: 5 payloads × 14 schemes × 2 thread counts.
+pub const HASH_CELL_COUNT: usize = 140;
 
 /// KoalaBear prime `2^31 - 2^24 + 1`.
 pub const KOALA_BEAR: FieldSpec = FieldSpec {
@@ -139,10 +139,17 @@ pub const FLOCK_LOG_PACKING: u32 = 7;
 pub enum HashSchemeId {
     /// Akita at the pinned `main` commit, same direct fp32-dense catalog as lattice-eval.
     Akita,
+    /// Same pin and field as [`Self::Akita`], `fp32-dense-offload` catalog: the
+    /// recursive planner schedule that offloads setup.
+    AkitaOffload,
     /// Same pin as [`Self::Akita`], fp64-dense catalog (`q = 2^{64}-59`).
     AkitaFp64,
+    /// [`Self::AkitaFp64`] with the `fp64-dense-offload` setup-offload catalog.
+    AkitaFp64Offload,
     /// Same pin as [`Self::Akita`], fp128-dense catalog (`q = 2^{128}-2^{32}+22537`).
     AkitaFp128,
+    /// [`Self::AkitaFp128`] with the `fp128-dense-offload` setup-offload catalog.
+    AkitaFp128Offload,
     /// Plonky2 univariate FRI over Goldilocks (`elliottech/plonky2`).
     Plonky2Fri,
     /// Plonky3 univariate FRI over KoalaBear.
@@ -167,6 +174,9 @@ impl HashSchemeId {
     pub const fn display_name(self) -> &'static str {
         match self {
             Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => "Akita",
+            Self::AkitaOffload | Self::AkitaFp64Offload | Self::AkitaFp128Offload => {
+                "Akita (offload)"
+            }
             Self::Plonky2Fri => "Plonky2 FRI",
             Self::Plonky3Fri => "Plonky3 FRI",
             Self::Plonky3Stir => "Plonky3 STIR",
@@ -189,8 +199,11 @@ impl HashSchemeId {
     pub fn parse_token(token: &str) -> Option<Self> {
         match token {
             "akita" => Some(Self::Akita),
+            "akita-offload" | "akita_offload" => Some(Self::AkitaOffload),
             "akita-fp64" | "akita_fp64" => Some(Self::AkitaFp64),
+            "akita-fp64-offload" | "akita_fp64_offload" => Some(Self::AkitaFp64Offload),
             "akita-fp128" | "akita_fp128" => Some(Self::AkitaFp128),
+            "akita-fp128-offload" | "akita_fp128_offload" => Some(Self::AkitaFp128Offload),
             "plonky2" | "plonky2-fri" => Some(Self::Plonky2Fri),
             "plonky3-fri" | "p3-fri" => Some(Self::Plonky3Fri),
             "plonky3-stir" | "p3-stir" | "stir" => Some(Self::Plonky3Stir),
@@ -208,8 +221,11 @@ impl HashSchemeId {
     pub const fn token(self) -> &'static str {
         match self {
             Self::Akita => "akita",
+            Self::AkitaOffload => "akita-offload",
             Self::AkitaFp64 => "akita-fp64",
+            Self::AkitaFp64Offload => "akita-fp64-offload",
             Self::AkitaFp128 => "akita-fp128",
+            Self::AkitaFp128Offload => "akita-fp128-offload",
             Self::Plonky2Fri => "plonky2-fri",
             Self::Plonky3Fri => "plonky3-fri",
             Self::Plonky3Stir => "plonky3-stir",
@@ -226,8 +242,11 @@ impl HashSchemeId {
     pub const fn all() -> [Self; HASH_SCHEME_COUNT] {
         [
             Self::Akita,
+            Self::AkitaOffload,
             Self::AkitaFp64,
+            Self::AkitaFp64Offload,
             Self::AkitaFp128,
+            Self::AkitaFp128Offload,
             Self::Plonky2Fri,
             Self::Plonky3Fri,
             Self::Plonky3Stir,
@@ -243,9 +262,12 @@ impl HashSchemeId {
     #[must_use]
     pub const fn source_repo(self) -> &'static str {
         match self {
-            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => {
-                "https://github.com/LayerZero-Labs/akita"
-            }
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload => "https://github.com/LayerZero-Labs/akita",
             Self::Plonky2Fri => "https://github.com/elliottech/plonky2",
             Self::Plonky3Fri | Self::Plonky3Stir | Self::Whir => {
                 "https://github.com/Plonky3/Plonky3"
@@ -261,7 +283,12 @@ impl HashSchemeId {
     #[must_use]
     pub const fn revision(self) -> &'static str {
         match self {
-            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => crate::lattice::AKITA_REVISION,
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload => crate::lattice::AKITA_REVISION,
             Self::Plonky2Fri => PLONKY2_REVISION,
             Self::Plonky3Fri | Self::Plonky3Stir => PLONKY3_FRI_STIR_REVISION,
             Self::Whir => PLONKY3_REVISION,
@@ -282,9 +309,9 @@ impl HashSchemeId {
     #[must_use]
     pub const fn akita_field_arg(self) -> Option<&'static str> {
         match self {
-            Self::Akita => Some("fp32"),
-            Self::AkitaFp64 => Some("fp64"),
-            Self::AkitaFp128 => Some("fp128"),
+            Self::Akita | Self::AkitaOffload => Some("fp32"),
+            Self::AkitaFp64 | Self::AkitaFp64Offload => Some("fp64"),
+            Self::AkitaFp128 | Self::AkitaFp128Offload => Some("fp128"),
             _ => None,
         }
     }
@@ -306,9 +333,14 @@ impl HashSchemeId {
             | Self::Binius64
             | Self::FlockLigerito => HASH_SECURITY_BITS_100,
             Self::WhirProvekit => PROVEKIT_SECURITY_BITS,
-            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 | Self::Whir | Self::Basefold => {
-                HASH_SECURITY_BITS
-            }
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload
+            | Self::Whir
+            | Self::Basefold => HASH_SECURITY_BITS,
         }
     }
 
@@ -319,8 +351,11 @@ impl HashSchemeId {
             Self::Plonky2Fri | Self::Plonky3Fri | Self::Plonky3Stir => "univariate",
             Self::FlockLigerito => "packed F128 MLE",
             Self::Akita
+            | Self::AkitaOffload
             | Self::AkitaFp64
+            | Self::AkitaFp64Offload
             | Self::AkitaFp128
+            | Self::AkitaFp128Offload
             | Self::Whir
             | Self::Binius64
             | Self::WhirProvekit
@@ -457,7 +492,7 @@ pub fn whir_round_log_inv_rates_with_rate(log2_n: u32, starting_log_inv_rate: us
     rates
 }
 
-/// The headline hash matrix (5 payloads × 11 schemes × 2 thread counts).
+/// The headline hash matrix (5 payloads × 14 schemes × 2 thread counts).
 #[must_use]
 pub fn hash_matrix() -> Vec<HashCase> {
     let mut cases = Vec::with_capacity(HASH_CELL_COUNT);
@@ -490,6 +525,14 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             threads,
             native_param: "fp32-dense",
         },
+        HashSchemeId::AkitaOffload => HashCase {
+            payload_log2,
+            scheme,
+            field: AKITA_FP32,
+            log2_n: log2_n_32,
+            threads,
+            native_param: "fp32-dense-offload",
+        },
         HashSchemeId::AkitaFp64 => HashCase {
             payload_log2,
             scheme,
@@ -498,6 +541,14 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             threads,
             native_param: "fp64-dense",
         },
+        HashSchemeId::AkitaFp64Offload => HashCase {
+            payload_log2,
+            scheme,
+            field: AKITA_FP64,
+            log2_n: log2_n_for_payload_bits(payload_log2, 64),
+            threads,
+            native_param: "fp64-dense-offload",
+        },
         HashSchemeId::AkitaFp128 => HashCase {
             payload_log2,
             scheme,
@@ -505,6 +556,14 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             log2_n: log2_n_for_payload_bits(payload_log2, 128),
             threads,
             native_param: "fp128-dense",
+        },
+        HashSchemeId::AkitaFp128Offload => HashCase {
+            payload_log2,
+            scheme,
+            field: AKITA_FP128,
+            log2_n: log2_n_for_payload_bits(payload_log2, 128),
+            threads,
+            native_param: "fp128-dense-offload",
         },
         HashSchemeId::Plonky2Fri => HashCase {
             payload_log2,
@@ -707,14 +766,27 @@ mod tests {
     }
 
     #[test]
-    fn matrix_is_five_payloads_times_eleven_schemes_times_two_threads() {
+    fn matrix_is_five_payloads_times_fourteen_schemes_times_two_threads() {
         let matrix = hash_matrix();
         assert_eq!(matrix.len(), HASH_CELL_COUNT);
         assert_eq!(HashSchemeId::all().len(), HASH_SCHEME_COUNT);
         assert_eq!(HASH_THREADS, [1, 8]);
         assert_eq!(HashSchemeId::Akita.akita_field_arg(), Some("fp32"));
+        assert_eq!(HashSchemeId::AkitaOffload.akita_field_arg(), Some("fp32"));
         assert_eq!(HashSchemeId::AkitaFp64.akita_field_arg(), Some("fp64"));
+        assert_eq!(
+            HashSchemeId::AkitaFp64Offload.akita_field_arg(),
+            Some("fp64")
+        );
         assert_eq!(HashSchemeId::AkitaFp128.akita_field_arg(), Some("fp128"));
+        assert_eq!(
+            HashSchemeId::AkitaFp128Offload.akita_field_arg(),
+            Some("fp128")
+        );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-offload"),
+            Some(HashSchemeId::AkitaOffload)
+        );
         assert_eq!(
             HashSchemeId::parse_token("akita-fp64"),
             Some(HashSchemeId::AkitaFp64)
@@ -723,15 +795,36 @@ mod tests {
             HashSchemeId::parse_token("akita-fp128"),
             Some(HashSchemeId::AkitaFp128)
         );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-fp64-offload"),
+            Some(HashSchemeId::AkitaFp64Offload)
+        );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-fp128-offload"),
+            Some(HashSchemeId::AkitaFp128Offload)
+        );
         for (payload_index, payload) in PAYLOAD_LOG2.iter().enumerate() {
             let base = payload_index * HASH_SCHEME_COUNT * HASH_THREADS.len();
             assert_eq!(matrix[base].scheme, HashSchemeId::Akita);
             assert_eq!(matrix[base].threads, 1);
-            assert_eq!(matrix[base + 2].scheme, HashSchemeId::AkitaFp64);
-            assert_eq!(matrix[base + 4].scheme, HashSchemeId::AkitaFp128);
-            assert_eq!(matrix[base + 6].scheme, HashSchemeId::Plonky2Fri);
-            assert_eq!(matrix[base + 12].scheme, HashSchemeId::Whir);
-            assert_eq!(matrix[base + 20].scheme, HashSchemeId::Basefold);
+            assert_eq!(matrix[base + 2].scheme, HashSchemeId::AkitaOffload);
+            assert_eq!(
+                matrix[base + 2].native_param,
+                "fp32-dense-offload",
+                "offload rows use the recursive setup-offload catalog"
+            );
+            assert_eq!(matrix[base + 2].log2_n, matrix[base].log2_n);
+            assert_eq!(matrix[base + 4].scheme, HashSchemeId::AkitaFp64);
+            assert_eq!(matrix[base + 6].scheme, HashSchemeId::AkitaFp64Offload);
+            assert_eq!(matrix[base + 6].native_param, "fp64-dense-offload");
+            assert_eq!(matrix[base + 6].log2_n, matrix[base + 4].log2_n);
+            assert_eq!(matrix[base + 8].scheme, HashSchemeId::AkitaFp128);
+            assert_eq!(matrix[base + 10].scheme, HashSchemeId::AkitaFp128Offload);
+            assert_eq!(matrix[base + 10].native_param, "fp128-dense-offload");
+            assert_eq!(matrix[base + 10].log2_n, matrix[base + 8].log2_n);
+            assert_eq!(matrix[base + 12].scheme, HashSchemeId::Plonky2Fri);
+            assert_eq!(matrix[base + 18].scheme, HashSchemeId::Whir);
+            assert_eq!(matrix[base + 26].scheme, HashSchemeId::Basefold);
             assert!(matrix[base..base + HASH_SCHEME_COUNT * HASH_THREADS.len()]
                 .iter()
                 .all(|case| case.payload_log2 == *payload));

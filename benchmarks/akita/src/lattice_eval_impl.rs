@@ -20,6 +20,8 @@ use std::time::Instant;
 
 type DirectCfg = fp32::Dense;
 type OffloadCfg = RecursiveCommitmentConfig<fp32::Dense>;
+type Fp64OffloadCfg = RecursiveCommitmentConfig<fp64::Dense>;
+type Fp128OffloadCfg = RecursiveCommitmentConfig<fp128::Dense>;
 type ProverOpeningData<'a, Cfg, P> = SelectedProverOpeningData<
     'a,
     <Cfg as CommitmentConfig>::ExtField,
@@ -62,11 +64,10 @@ fn run() -> Result<(), String> {
     match (field.as_str(), offload) {
         ("fp32", true) => run_cfg::<OffloadCfg>(log2_n, true, "fp32-dense-recursive"),
         ("fp32", false) => run_cfg::<DirectCfg>(log2_n, false, "fp32 dense"),
+        ("fp64", true) => run_cfg::<Fp64OffloadCfg>(log2_n, true, "fp64-dense-recursive"),
         ("fp64", false) => run_cfg::<fp64::Dense>(log2_n, false, "fp64 dense"),
+        ("fp128", true) => run_cfg::<Fp128OffloadCfg>(log2_n, true, "fp128-dense-recursive"),
         ("fp128", false) => run_cfg::<fp128::Dense>(log2_n, false, "fp128 dense"),
-        ("fp64" | "fp128", true) => {
-            Err(format!("--offload is only supported for fp32, not {field}"))
-        }
         (other, _) => Err(format!(
             "unknown --field {other} (expected fp32, fp64, or fp128)"
         )),

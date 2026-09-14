@@ -348,7 +348,7 @@ export RUSTFLAGS=\"-C target-cpu=native\"
 export RAYON_NUM_THREADS=1
 
 ./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
-./scripts/extend-akita-fp32-dense-offload.sh third_party/akita   # once; fills the offload catalog
+./scripts/extend-akita-dense-offload.sh third_party/akita fp32   # once; fills the offload catalog
 ./scripts/build-greyhound.sh
 
 # Full 20-cell matrix (Akita, Akita offload, Greyhound, RoKoKo)
@@ -460,7 +460,7 @@ mod tests {
         assert!(report.contains(&SchemeId::Akita.commit_url()));
         assert!(report.contains("Reproduction template"));
         assert!(report.contains("./scripts/fetch-vendors.sh"));
-        assert!(report.contains("./scripts/extend-akita-fp32-dense-offload.sh"));
+        assert!(report.contains("./scripts/extend-akita-dense-offload.sh"));
         assert!(report.contains("./scripts/build-greyhound.sh"));
         assert!(report.contains("results/lattice-x86_64"));
         assert!(report.contains("Linux x86_64"));

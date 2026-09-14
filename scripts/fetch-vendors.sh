@@ -105,13 +105,16 @@ if [[ "$FETCH_AKITA" -eq 1 ]]; then
   install_fp32_dense_catalog \
     "$ROOT/third_party/akita" \
     "$ROOT/vendor/akita-catalogs/fp32_dense-main.rs"
-  python3 "$ROOT/scripts/patch-akita-fp32-dense-offload.py" "$ROOT/third_party/akita"
-  RECURSIVE_OVERLAY="$ROOT/vendor/akita-catalogs/fp32_dense_recursive-main.rs"
-  if [[ -f "$RECURSIVE_OVERLAY" ]]; then
-    cp "$RECURSIVE_OVERLAY" \
-      "$ROOT/third_party/akita/crates/akita-schedules/src/generated/fp32_dense_recursive.rs"
-    echo "installed $(basename "$RECURSIVE_OVERLAY") into Akita fp32_dense_recursive catalog"
-  fi
+  for FIELD in fp32 fp64 fp128; do
+    python3 "$ROOT/scripts/patch-akita-dense-offload.py" \
+      "$ROOT/third_party/akita" --field "$FIELD"
+    RECURSIVE_OVERLAY="$ROOT/vendor/akita-catalogs/${FIELD}_dense_recursive-main.rs"
+    if [[ -f "$RECURSIVE_OVERLAY" ]]; then
+      cp "$RECURSIVE_OVERLAY" \
+        "$ROOT/third_party/akita/crates/akita-schedules/src/generated/${FIELD}_dense_recursive.rs"
+      echo "installed $(basename "$RECURSIVE_OVERLAY") into Akita ${FIELD}_dense_recursive catalog"
+    fi
+  done
   install_schedule_overlay \
     "$ROOT/third_party/akita" \
     crates/akita-schedules/src/generated/fp64_dense.rs \

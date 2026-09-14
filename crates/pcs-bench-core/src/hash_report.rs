@@ -327,9 +327,9 @@ cd /path/to/akita-benchmark
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS=\"-C target-cpu=native\"
 
-./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 catalogs
+./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 + offload catalogs
 
-# Full 110-cell matrix (11 schemes × 5 payloads × {1,8} threads)
+# Full 140-cell matrix (14 schemes × 5 payloads × {1,8} threads)
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -339,13 +339,13 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `hash-eval matrix`
-prints the 110-cell plan. A single supported cell should verify and emit JSON
+prints the 140-cell plan. A single supported cell should verify and emit JSON
 with `status: ok`. Each sample the runner launches is equivalent to the worker
 commands below (still under the 90%-of-RAM cap).";
 
 const SANITY_PROSE_LATEX: &str = "\
 \\noindent Sanity-check the harness before a full run.
-\\texttt{hash-eval matrix} prints the 110-cell plan.
+\\texttt{hash-eval matrix} prints the 140-cell plan.
 A single supported cell should verify and emit JSON with \\texttt{status: ok}.";
 
 const SANITY_COMMANDS: &str = "\
@@ -358,6 +358,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme akita-fp64 --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme akita-fp128 --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-offload --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp64-offload --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme whir --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme basefold --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme plonky2-fri --payload 27 --threads 1 --runs 1 --warmups 0
@@ -425,7 +427,7 @@ mod tests {
         assert!(report.contains("unique decoding"));
         assert!(report.contains("WHIR"));
         assert!(report.contains("BaseFold"));
-        assert!(report.contains("110-cell"));
+        assert!(report.contains("140-cell"));
         assert!(report.contains("results/hash-x86_64"));
         assert!(report.contains("Linux x86_64"));
         assert!(!report.contains("leopard"));
