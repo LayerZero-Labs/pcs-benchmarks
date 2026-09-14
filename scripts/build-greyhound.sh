@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR="$ROOT/third_party/greyhound-reference"
 OUT_DIR="$ROOT/target/greyhound"
 OUT="$OUT_DIR/lattice-eval"
-REVISION="f92504b6c9c194c37c4262e685b38945865f80c2"
+REVISION="672e74100496f6ef698ba35e241cf7593e3d57af"
 STAMP="$OUT_DIR/revision"
 
 if [[ ! -f "$VENDOR/greyhound.c" ]]; then
@@ -39,7 +39,10 @@ SOURCE_STAMP="$(
     cksum \
       "$0" \
       "$ROOT/benchmarks/greyhound/src/lattice_eval.c" \
-      "$ROOT/benchmarks/greyhound/src/randombytes_deterministic.c"
+      "$ROOT/benchmarks/greyhound/src/randombytes_deterministic.c" \
+      "$VENDOR/greyhound.c" \
+      "$VENDOR/labrador.c" \
+      "$VENDOR/labrador.h"
     printf '%s\0' "$CC" "$CC_VERSION" "${CFLAGS[@]}"
   } |
     cksum |

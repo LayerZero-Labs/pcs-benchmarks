@@ -77,7 +77,7 @@ pub const ROKOKO_Q50: FieldSpec = FieldSpec {
 pub const AKITA_REVISION: &str = "d1b224d809c7edc357b0dbab0f607e19b475910b";
 
 /// Pinned Greyhound reference revision (`LayerZero-Labs/greyhound-reference`).
-pub const GREYHOUND_REVISION: &str = "f92504b6c9c194c37c4262e685b38945865f80c2";
+pub const GREYHOUND_REVISION: &str = "672e74100496f6ef698ba35e241cf7593e3d57af";
 
 /// Euclidean SIS policy used by the Greyhound lattice-eval worker.
 pub const GREYHOUND_SIS_POLICY: &str = "l2-quantum128-adps16";
@@ -405,7 +405,7 @@ mod tests {
         );
         assert_eq!(
             SchemeId::Greyhound.commit_url(),
-            "https://github.com/LayerZero-Labs/greyhound-reference/commit/f92504b6c9c194c37c4262e685b38945865f80c2"
+            "https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af"
         );
     }
 }
