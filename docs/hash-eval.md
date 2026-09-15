@@ -25,8 +25,10 @@ Schemes do **not** share one coefficient width:
 | WHIR (WorldFnd) | Goldilocks coeffs, deg-3 challenges | payload \(- 6\) |
 | BaseFold (SP1) | KoalaBear | payload \(- 5\) |
 
-Each row keeps the measured implementation configuration. Upstream presets and
-benchmark-specific retunes are identified below.
+The harness now prefers the pinned implementation's product or PCS-benchmark
+profile whenever one exists. The checked-in dataset predates five profile
+repairs; [its rerun notice](../results/hash-x86_64/REMEASURE.md) identifies the
+provisional rows and the enforced replacement profiles.
 
 - **Akita:** generated planner schedules at the native 32-, 64-, and 128-bit
   primes, with uniform full-field coefficients and uniform extension-field
@@ -56,13 +58,15 @@ benchmark-specific retunes are identified below.
   soundness. The LDE has
   length \(2^{n+3}\). Payload \(2^{33}\) (\(\log_2 N=27\)) and \(2^{35}\)
   (\(\log_2 N=29\)) OOM under the 90% RAM cap.
-- **Plonky3 FRI:** univariate KoalaBear, rate \(1/2\), 80 queries, 20-bit
-  grind, and Poseidon2. This is the legacy 100-bit tuple; the pinned
-  random-words estimate is approximately 98.2 bits. KoalaBear
+- **Plonky3 FRI:** univariate KoalaBear with the pinned upstream
+  `FriParameters::new_benchmark` profile: rate \(1/2\), 100 queries, 16-bit
+  query-phase grind, binary folding, and Poseidon2. Its pinned random-words
+  estimate is approximately 113.744 bits. KoalaBear
   two-adicity 24: a rate-\(1/2\) univariate of \(\log_2 N>23\) is packed
   into height \(2^{23}\) and width \(2^{n-23}\) (footnote).
-- **Plonky3 STIR:** same pin and packing as FRI, rate \(1/2\), fold 4 first
-  and fold 16 thereafter, with at most 20 work bits per phase and Poseidon2.
+- **Plonky3 STIR:** same pin and packing as FRI, using the upstream PCS
+  benchmark profile: rate \(1/2\), fold 4 throughout, with at most 20 work
+  bits per phase and Poseidon2.
   The implementation validates an aggregate 100-bit target, conditional on
   capacity list decoding and mutual correlated agreement at capacity.
 - **WHIR (Plonky3):** `p3-whir`, 128-bit round-by-round target, rate \(1/2\), folding
@@ -75,8 +79,7 @@ benchmark-specific retunes are identified below.
   unique decoding, and then rate \(1/4\). This is a first-valid
   decoding-priority objective, not a measured minimum-latency search.
 - **Binius64 BaseFold:** \(\mathbb F_{2^{128}}\), rate \(1/2\), SHA-256,
-  and a benchmark-retuned 100-bit unique-decoding query target (the product
-  default is 96 bits). The
+  and the product-default 96-bit unique-decoding query target. The
   worker uses `OptimalPackedB128` and the upstream multithreaded,
   pre-expanded NTT with the requested thread count. The
   commitment is the SHA-256 Merkle root (32 bytes) written at commit time;
@@ -87,17 +90,15 @@ benchmark-specific retunes are identified below.
   \((m-7)\)-variable packed \(\mathbb F_{2^{128}}\) MLE. The worker generates
   packed data directly and constructs the factored `EqPoint` basis inside
   opening time, without a byte-per-bit fixture or dense equality table.
-- **WHIR (WorldFnd):** `worldfnd/whir` Goldilocks3 (`Basefield<Field64_3>`),
-  Johnson bound, rate \(1/4\), fold 8, SHA-256, and a benchmark-specific
-  133-bit round-by-round target. The pinned executable defaults are 128 bits,
+- **WHIR (WorldFnd):** `worldfnd/whir` Goldilocks3 (`Basefield<Field64_3>`)
+  with the pinned CLI defaults: Johnson bound, 128-bit round-by-round target,
   rate \(1/2\), fold 4, and BLAKE3.
-  The commit-phase narg is a SHA-256 Merkle root (32 bytes) plus one
+  The commit-phase narg is a BLAKE3 Merkle root (32 bytes) plus one
   Goldilocks3 OOD evaluation (24 bytes). Proof bytes are the remaining
   narg string plus Merkle-path hints.
-- **BaseFold (SP1):** SLOP stacked BaseFold in a benchmark-specific tuple:
-  FRI `log_blowup=1`, 112 queries, 16 bits of grinding (conjectured
-  \(1\cdot 112+16=128\)), and stacking height 20. SP1 product parameters
-  target 100 bits with `log_blowup=2`, 124 queries, and stacking height 21.
+- **BaseFold (SP1):** SLOP stacked BaseFold with SP1's product parameters:
+  a 100-bit target, FRI `log_blowup=2`, 124 queries, 16 bits of grinding, and
+  stacking height 21.
 
 Timing rows are collected at **1 and 8 threads**. A dash denotes an
 unsupported parallel mode. Communication columns are independent of thread

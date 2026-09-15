@@ -64,7 +64,7 @@ pub const BINIUS64_REVISION: &str = "6e75a2d1d2e716578ae3ccb62806413fb1615176";
 pub const FLOCK_REVISION: &str = "43f0eee06d887d87ad25d72614cbc2b17fe91430";
 
 /// Pinned [WorldFnd WHIR](https://github.com/worldfnd/whir) revision.
-pub const WHIR_PROVEKIT_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
+pub const WORLDFND_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
 
 // Security labels in this benchmark use round-by-round (RBR) soundness:
 // eps_rbr = max_i eps_i, hence lambda_rbr = min_i(-log2(eps_i)). Do not sum
@@ -78,32 +78,54 @@ pub const WHIR_PROVEKIT_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564a
 /// Common 128-bit configuration target used by several adapters.
 pub const HASH_SECURITY_BITS: u32 = 128;
 
-/// 100-bit target used by Plonky2 FRI, Plonky3 FRI/STIR, and Binius64.
+/// 100-bit target used by Plonky2 FRI, Plonky3 STIR, and SP1 BaseFold.
 pub const HASH_SECURITY_BITS_100: u32 = 100;
 
-/// WorldFnd WHIR round-by-round target (Johnson bound).
-pub const PROVEKIT_SECURITY_BITS: u32 = 133;
+/// Binius64's product-default FRI query-phase target.
+const BINIUS64_SECURITY_BITS: u32 = 96;
 
-/// BaseFold interleaved height. Domain `2^{height+1}` fits KoalaBear two-adicity 24.
-pub const BASEFOLD_LOG_STACKING_HEIGHT: u32 = 20;
+/// WorldFnd WHIR CLI-default round-by-round target (Johnson bound).
+pub const WORLDFND_SECURITY_BITS: u32 = 128;
 
-/// FRI log-inverse rate for BaseFold (`rho = 1/2`).
-pub const BASEFOLD_FRI_LOG_BLOWUP: usize = 1;
+/// SP1 core's product-default BaseFold stacking height.
+pub const BASEFOLD_LOG_STACKING_HEIGHT: u32 = 21;
 
-/// FRI queries for 128-bit conjectured soundness: `log_blowup * queries + pow = 128`.
-pub const BASEFOLD_FRI_QUERIES: usize = 112;
+/// SP1 core's product-default BaseFold FRI log-inverse rate (`rho = 1/4`).
+pub const BASEFOLD_FRI_LOG_BLOWUP: usize = 2;
 
-/// FRI query proof-of-work bits for BaseFold.
+/// SP1 core's product-default unique-decoding query count at its 100-bit target.
+pub const BASEFOLD_FRI_QUERIES: usize = 124;
+
+/// SP1 core's product-default FRI query proof-of-work bits.
 pub const BASEFOLD_FRI_POW_BITS: usize = 16;
+
+/// Canonical result identity for Binius64's product-default BaseFold profile.
+const BINIUS64_NATIVE_PARAM: &str = "binius64-basefold-udr-96";
+
+/// Canonical result identity for SP1's product-default core BaseFold profile.
+const BASEFOLD_NATIVE_PARAM: &str = "sp1-core-basefold-udr-100";
 
 /// Plonky3 FRI/STIR log-inverse rate (`rho = 1/2`).
 pub const PLONKY3_UNI_LOG_BLOWUP: u32 = 1;
 
-/// Plonky3 FRI grinding budget.
-pub const PLONKY3_FRI_POW_BITS: usize = 20;
+/// Plonky3 FRI queries in the pinned upstream `FriParameters::new_benchmark` preset.
+pub const PLONKY3_FRI_QUERIES: usize = 100;
 
-/// Plonky3 FRI query count: `(100 - 20) / 1 = 80`.
-pub const PLONKY3_FRI_QUERIES: usize = 80;
+/// Plonky3 FRI query-phase grinding in the pinned upstream benchmark preset.
+pub const PLONKY3_FRI_POW_BITS: usize = 16;
+
+/// Random-words estimate for the pinned Plonky3 FRI benchmark preset over the
+/// 155-bit KoalaBear quintic challenge field.
+///
+/// This is `100 * -log2(rho + eta) + 16`, where `rho = 1/2` and
+/// `eta = log2(e / rho) * rho / 155`.
+const PLONKY3_FRI_RANDOM_WORDS_BITS: f64 = 113.744_139_402_344_4;
+
+/// Canonical result identity for the pinned upstream Plonky3 FRI benchmark preset.
+const PLONKY3_FRI_NATIVE_PARAM: &str = "plonky3-fri-new-benchmark-r1-f2-q100-qp16-rw113744";
+
+/// Canonical result identity for the fold-4 Plonky3 STIR benchmark profile.
+const PLONKY3_STIR_NATIVE_PARAM: &str = "plonky3-stir-cap100-r1-f4-maxpow20";
 
 /// Plonky2 FRI log-inverse rate (`rho = 1/8`).
 pub const PLONKY2_FRI_RATE_BITS: usize = 3;
@@ -133,11 +155,11 @@ pub const WHIR_MAX_POW_BITS: usize = 30;
 /// WHIR direct-send threshold (matches `p3-whir` `MAX_NUM_VARIABLES_TO_SEND_COEFFS`).
 pub const WHIR_DIRECT_SEND_VARS: usize = 6;
 
-/// WorldFnd WHIR starting log-inverse rate (`rho = 1/4`).
-pub const PROVEKIT_WHIR_LOG_INV_RATE: usize = 2;
+/// WorldFnd WHIR CLI-default starting log-inverse rate (`rho = 1/2`).
+pub const WORLDFND_WHIR_LOG_INV_RATE: usize = 1;
 
-/// WorldFnd WHIR folding factor.
-pub const PROVEKIT_WHIR_FOLD: usize = 8;
+/// WorldFnd WHIR CLI-default folding factor.
+pub const WORLDFND_WHIR_FOLD: usize = 4;
 
 /// Flock packing: `m` bit-variables become `m - 7` packed \(\mathbb F_{2^{128}}\) variables.
 pub const FLOCK_LOG_PACKING: u32 = 7;
@@ -219,7 +241,9 @@ impl HashSchemeId {
             "whir" => Some(Self::Whir),
             "binius64" | "binius" => Some(Self::Binius64),
             "flock" | "ligerito" | "flock-ligerito" => Some(Self::FlockLigerito),
-            "whir-provekit" | "provekit" | "whir-goldilocks" => Some(Self::WhirProvekit),
+            "worldfnd" | "worldfnd-whir" | "whir-provekit" | "provekit" | "whir-goldilocks" => {
+                Some(Self::WhirProvekit)
+            }
             "basefold" | "base-fold" => Some(Self::Basefold),
             _ => None,
         }
@@ -241,7 +265,7 @@ impl HashSchemeId {
             Self::Whir => "whir",
             Self::Binius64 => "binius64",
             Self::FlockLigerito => "flock",
-            Self::WhirProvekit => "whir-provekit",
+            Self::WhirProvekit => "worldfnd",
             Self::Basefold => "basefold",
         }
     }
@@ -303,7 +327,7 @@ impl HashSchemeId {
             Self::Whir => PLONKY3_REVISION,
             Self::Binius64 => BINIUS64_REVISION,
             Self::FlockLigerito => FLOCK_REVISION,
-            Self::WhirProvekit => WHIR_PROVEKIT_WHIR_REVISION,
+            Self::WhirProvekit => WORLDFND_WHIR_REVISION,
             Self::Basefold => SP1_REVISION,
         }
     }
@@ -336,10 +360,10 @@ impl HashSchemeId {
     #[must_use]
     pub const fn security_bits(self) -> u32 {
         match self {
-            Self::Plonky2Fri | Self::Plonky3Fri | Self::Plonky3Stir | Self::Binius64 => {
-                HASH_SECURITY_BITS_100
-            }
-            Self::WhirProvekit => PROVEKIT_SECURITY_BITS,
+            Self::Binius64 => BINIUS64_SECURITY_BITS,
+            Self::Plonky3Fri => PLONKY3_FRI_RANDOM_WORDS_BITS as u32,
+            Self::Plonky2Fri | Self::Plonky3Stir | Self::Basefold => HASH_SECURITY_BITS_100,
+            Self::WhirProvekit => WORLDFND_SECURITY_BITS,
             Self::Akita
             | Self::AkitaOffload
             | Self::AkitaFp64
@@ -347,8 +371,7 @@ impl HashSchemeId {
             | Self::AkitaFp128
             | Self::AkitaFp128Offload
             | Self::Whir
-            | Self::FlockLigerito
-            | Self::Basefold => HASH_SECURITY_BITS,
+            | Self::FlockLigerito => HASH_SECURITY_BITS,
         }
     }
 
@@ -363,12 +386,11 @@ impl HashSchemeId {
             | Self::AkitaFp128
             | Self::AkitaFp128Offload => "128-bit Module-SIS/ROM",
             Self::Plonky2Fri => "approx. 100-bit conjectural",
-            Self::Plonky3Fri => "98.2-bit conjectural",
+            Self::Plonky3Fri => "113.744-bit random-words conjectural",
             Self::Plonky3Stir => "100-bit capacity",
-            Self::Whir | Self::FlockLigerito => "128-bit RBR",
-            Self::Binius64 => "100-bit UDR query",
-            Self::WhirProvekit => "133-bit RBR",
-            Self::Basefold => "128-bit conjectural",
+            Self::Whir | Self::FlockLigerito | Self::WhirProvekit => "128-bit RBR",
+            Self::Binius64 => "96-bit UDR query",
+            Self::Basefold => "100-bit UDR query",
         }
     }
 
@@ -595,7 +617,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: KOALA_BEAR,
             log2_n: log2_n_32,
             threads,
-            native_param: "plonky3-fri-100",
+            native_param: PLONKY3_FRI_NATIVE_PARAM,
         },
         HashSchemeId::Plonky3Stir => HashCase {
             payload_log2,
@@ -603,7 +625,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: KOALA_BEAR,
             log2_n: log2_n_32,
             threads,
-            native_param: "plonky3-stir-100",
+            native_param: PLONKY3_STIR_NATIVE_PARAM,
         },
         HashSchemeId::Whir => HashCase {
             payload_log2,
@@ -619,7 +641,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: BINARY_128,
             log2_n: log2_n_for_payload_bits(payload_log2, 128),
             threads,
-            native_param: "binius64-basefold-100",
+            native_param: BINIUS64_NATIVE_PARAM,
         },
         HashSchemeId::FlockLigerito => HashCase {
             payload_log2,
@@ -635,7 +657,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: GOLDILOCKS,
             log2_n: log2_n_for_payload_bits(payload_log2, 64),
             threads,
-            native_param: "whir-provekit-goldilocks3-133",
+            native_param: "worldfnd-whir-cli-default-128",
         },
         HashSchemeId::Basefold => HashCase {
             payload_log2,
@@ -643,7 +665,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: KOALA_BEAR,
             log2_n: log2_n_32,
             threads,
-            native_param: "basefold-fri-128",
+            native_param: BASEFOLD_NATIVE_PARAM,
         },
     }
 }
@@ -653,20 +675,90 @@ mod tests {
     use super::{
         hash_matrix, log2_n_for_payload_bits, plonky3_is_packed, plonky3_log_height,
         plonky3_log_width, whir_first_fold, HashSchemeId, BASEFOLD_FRI_LOG_BLOWUP,
-        BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES, HASH_CELL_COUNT, HASH_SCHEME_COUNT,
-        HASH_SECURITY_BITS, HASH_THREADS, KOALA_BEAR, KOALA_BEAR_TWO_ADICITY, PLONKY3_FRI_QUERIES,
-        PLONKY3_UNI_LOG_BLOWUP,
+        BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES, BASEFOLD_LOG_STACKING_HEIGHT,
+        BASEFOLD_NATIVE_PARAM, BINIUS64_NATIVE_PARAM, BINIUS64_SECURITY_BITS, HASH_CELL_COUNT,
+        HASH_SCHEME_COUNT, HASH_SECURITY_BITS, HASH_SECURITY_BITS_100, HASH_THREADS, KOALA_BEAR,
+        KOALA_BEAR_TWO_ADICITY, PLONKY3_FRI_NATIVE_PARAM, PLONKY3_FRI_POW_BITS,
+        PLONKY3_FRI_QUERIES, PLONKY3_FRI_RANDOM_WORDS_BITS, PLONKY3_STIR_NATIVE_PARAM,
+        PLONKY3_UNI_LOG_BLOWUP, WORLDFND_SECURITY_BITS, WORLDFND_WHIR_FOLD,
+        WORLDFND_WHIR_LOG_INV_RATE,
     };
     use crate::lattice::{log2_n_for_32bit_payload, PAYLOAD_LOG2};
 
     #[test]
     fn security_targets_match_the_roster() {
         assert_eq!(HASH_SECURITY_BITS, 128);
+        assert_eq!(BINIUS64_SECURITY_BITS, 96);
+        assert_eq!(HashSchemeId::Binius64.security_bits(), 96);
+        assert_eq!(HashSchemeId::Binius64.security_label(), "96-bit UDR query");
         assert_eq!(
-            BASEFOLD_FRI_LOG_BLOWUP * BASEFOLD_FRI_QUERIES + BASEFOLD_FRI_POW_BITS,
-            HASH_SECURITY_BITS as usize
+            HashSchemeId::Basefold.security_bits(),
+            HASH_SECURITY_BITS_100
         );
-        assert_eq!(PLONKY3_FRI_QUERIES, 80);
+        assert_eq!(HashSchemeId::Basefold.security_label(), "100-bit UDR query");
+        assert_eq!(BASEFOLD_FRI_LOG_BLOWUP, 2);
+        assert_eq!(BASEFOLD_FRI_QUERIES, 124);
+        assert_eq!(BASEFOLD_FRI_POW_BITS, 16);
+        assert_eq!(BASEFOLD_LOG_STACKING_HEIGHT, 21);
+        assert_eq!(PLONKY3_FRI_QUERIES, 100);
+        assert_eq!(PLONKY3_FRI_POW_BITS, 16);
+        assert!((PLONKY3_FRI_RANDOM_WORDS_BITS - 113.744).abs() < 0.001);
+        assert_eq!(HashSchemeId::Plonky3Fri.security_bits(), 113);
+        assert_eq!(WORLDFND_SECURITY_BITS, 128);
+        assert_eq!(WORLDFND_WHIR_LOG_INV_RATE, 1);
+        assert_eq!(WORLDFND_WHIR_FOLD, 4);
+        assert_eq!(HashSchemeId::WhirProvekit.security_bits(), 128);
+    }
+
+    #[test]
+    fn worldfnd_uses_cli_default_identity_and_public_token() {
+        let case = hash_matrix()
+            .into_iter()
+            .find(|case| case.scheme == HashSchemeId::WhirProvekit)
+            .expect("WorldFnd case");
+        assert_eq!(case.native_param, "worldfnd-whir-cli-default-128");
+        assert_eq!(HashSchemeId::WhirProvekit.token(), "worldfnd");
+        assert_eq!(
+            HashSchemeId::parse_token("whir-provekit"),
+            Some(HashSchemeId::WhirProvekit)
+        );
+        assert_ne!(case.native_param, "whir-provekit-goldilocks3-133");
+    }
+
+    #[test]
+    fn product_default_profiles_have_distinct_record_identities() {
+        let matrix = hash_matrix();
+        let binius = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Binius64)
+            .expect("Binius64 case");
+        let basefold = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Basefold)
+            .expect("SP1 BaseFold case");
+
+        assert_eq!(binius.native_param, BINIUS64_NATIVE_PARAM);
+        assert_eq!(basefold.native_param, BASEFOLD_NATIVE_PARAM);
+        assert_ne!(BINIUS64_NATIVE_PARAM, "binius64-basefold-100");
+        assert_ne!(BASEFOLD_NATIVE_PARAM, "basefold-fri-128");
+    }
+
+    #[test]
+    fn plonky3_profiles_have_parameter_complete_record_identities() {
+        let matrix = hash_matrix();
+        let fri = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Plonky3Fri)
+            .expect("Plonky3 FRI case");
+        let stir = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Plonky3Stir)
+            .expect("Plonky3 STIR case");
+
+        assert_eq!(fri.native_param, PLONKY3_FRI_NATIVE_PARAM);
+        assert_eq!(stir.native_param, PLONKY3_STIR_NATIVE_PARAM);
+        assert_ne!(PLONKY3_FRI_NATIVE_PARAM, "plonky3-fri-100");
+        assert_ne!(PLONKY3_STIR_NATIVE_PARAM, "plonky3-stir-100");
     }
 
     #[test]

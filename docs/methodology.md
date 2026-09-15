@@ -118,13 +118,15 @@ rules that apply only to that table:
    decoding at rate 1/2 is used when list-decoding bounds cannot close 128
    bits (`log2 N` 28 and 30 in this matrix). Generated tables footnote those
    WHIR rows. Plonky2 uses its approximately 100-bit standard-recursion FRI
-   tuple. Plonky3 FRI uses a legacy 100-bit tuple that gives approximately
-   98.2 bits under the pinned random-words estimate; STIR validates an
-   aggregate 100-bit capacity-regime target. Binius64 uses a custom 100-bit
-   unique-decoding query target (product default: 96). Flock uses its default
-   Fast profile at 128-bit round-by-round soundness. WorldFnd WHIR uses a
-   custom 133-bit round-by-round Johnson configuration. SP1 BaseFold uses a
-   custom conjectural 128-bit tuple (product target: 100).
+   tuple. Plonky3 FRI uses the pinned upstream benchmark tuple, approximately
+   113.744 bits under the pinned random-words estimate; STIR uses the upstream
+   fold-4 PCS benchmark schedule and validates an aggregate 100-bit
+   capacity-regime target. Binius64 uses its product-default 96-bit
+   unique-decoding query target. Flock uses its default Fast profile at
+   128-bit round-by-round soundness. WorldFnd WHIR uses its 128-bit CLI-default
+   Johnson configuration. SP1 BaseFold uses its 100-bit product parameters.
+   The checked-in hash dataset predates these repairs and is guarded by
+   parameter-complete record identities; see `results/hash-x86_64/REMEASURE.md`.
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
    table, plus `fp64-dense` and `fp128-dense` rows on the hash matrix (CLI
    `akita-fp64` / `akita-fp128`). Cells are not \(\lambda\)-comparable.

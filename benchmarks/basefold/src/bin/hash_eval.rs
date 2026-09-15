@@ -28,6 +28,7 @@ type PcsProver = BasefoldProver<GC, Poseidon2KoalaBear16Prover>;
 
 const INPUT_SEED: u64 = 0xDEAD_BEEF;
 const POINT_SEED: u64 = 0xCAFE_BABE;
+const PROFILE_ID: &str = "sp1-core-basefold-udr-100";
 
 fn main() -> ExitCode {
     let threads = parse_u32_flag("--threads").unwrap_or(1).max(1);
@@ -155,10 +156,9 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
 
     Ok(WorkerOutput {
         status: RunStatus::Ok,
-        status_detail: Some(
-            "statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform"
-                .into(),
-        ),
+        status_detail: Some(format!(
+            "profile={PROFILE_ID},statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform,rate=1/4,queries={BASEFOLD_FRI_QUERIES},pow_bits={BASEFOLD_FRI_POW_BITS},log_stacking_height={BASEFOLD_LOG_STACKING_HEIGHT}"
+        )),
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof_bytes),
@@ -235,4 +235,21 @@ fn peak_rss_bytes() -> Option<u64> {
         return Some(kb.saturating_mul(1024));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        BASEFOLD_FRI_LOG_BLOWUP, BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES,
+        BASEFOLD_LOG_STACKING_HEIGHT, PROFILE_ID,
+    };
+
+    #[test]
+    fn product_default_core_profile_is_pinned() {
+        assert_eq!(BASEFOLD_FRI_LOG_BLOWUP, 2);
+        assert_eq!(BASEFOLD_FRI_QUERIES, 124);
+        assert_eq!(BASEFOLD_FRI_POW_BITS, 16);
+        assert_eq!(BASEFOLD_LOG_STACKING_HEIGHT, 21);
+        assert_eq!(PROFILE_ID, "sp1-core-basefold-udr-100");
+    }
 }

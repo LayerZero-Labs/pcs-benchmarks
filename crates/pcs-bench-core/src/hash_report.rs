@@ -16,8 +16,9 @@ pub fn render_markdown_hash_eval_report(records: &[HashRecord]) -> String {
     let timing = aggregate_hash_timing_rows(records);
     let resources = aggregate_hash_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         markdown_prose(&provenance, homogeneous_machine),
+        markdown_security_table(),
         render_markdown_hash_timing_table(&timing),
         render_markdown_hash_resource_table(&resources),
         markdown_pins(records),
@@ -33,8 +34,9 @@ pub fn render_latex_hash_eval_report(records: &[HashRecord]) -> String {
     let timing = aggregate_hash_timing_rows(records);
     let resources = aggregate_hash_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         latex_prose(&provenance, homogeneous_machine),
+        latex_security_table(),
         render_latex_hash_timing_table(&timing),
         render_latex_hash_resource_table(&resources),
         latex_pins(records),
@@ -123,23 +125,7 @@ fn markdown_prose(provenance: &Provenance, homogeneous_machine: bool) -> String 
          on the same nominal dense payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
          This is a measured-configuration survey, not an equivalent-security PCS ranking.\n\
          Nominal payload is field-capacity accounting, not a claim about sampled input entropy.\n\
-         Every row states its configured target or pinned security estimate; benchmark-specific retunes are\n\
-         identified below.\n\
-         Akita is measured with uniform full-field coefficients and uniform extension-field\n\
-         opening points at its native 32-, 64-, and 128-bit primes. Plonky2 FRI uses its\n\
-         standard-recursion tuple for approximately 100-bit conjectural FRI soundness.\n\
-         Plonky3 FRI uses the legacy 100-bit tuple; the pinned random-words estimate is 98.2 bits.\n\
-         Plonky3 STIR validates an aggregate 100-bit capacity-regime target, conditional on\n\
-         capacity list decoding and mutual correlated agreement at capacity. Plonky3 WHIR\n\
-         uses a 128-bit round-by-round target. Capacity at rate $1/2$ is used\n\
-         when that instance fits a 30-bit KoalaBear grind ($\\log_2 N \\le 26$);\n\
-         unique decoding at rate $1/2$ is used at $\\log_2 N=28$ and $30$, where list-decoding\n\
-         bounds on KoalaBear cannot close 128 bits within that grind limit. Binius64 uses a\n\
-         benchmark-retuned 100-bit unique-decoding query target (product default: 96 bits).\n\
-         Flock uses its default Fast profile at 128-bit round-by-round soundness.\n\
-         WorldFnd WHIR uses a benchmark-specific 133-bit round-by-round Johnson configuration.\n\
-         SP1 BaseFold uses a benchmark-specific conjectural 128-bit tuple (log_blowup=1,\n\
-         112 queries, and 16 bits of grinding; product target: 100 bits).\n\
+         The table below records the accepted native profile and security accounting for every scheme.\n\
          KoalaBear univariate FRI/STIR pack into a\n\
          $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$ (two-adicity 24 at rate $1/2$).\n\
          Timing cells report the median and, when supported by the sample count, a\n\
@@ -162,25 +148,8 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
          on the same nominal dense payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
          This is a measured-configuration survey, not an equivalent-security PCS ranking.\n\
          Nominal payload is field-capacity accounting, not a claim about sampled input entropy.\n\
-         Every row states its configured target or pinned security estimate; benchmark-specific retunes are\n\
-         identified below.\n\
-         Akita is measured with uniform full-field coefficients and uniform extension-field\n\
-         opening points at its native 32-, 64-, and 128-bit primes. Plonky2 FRI uses its\n\
-         standard-recursion tuple for approximately 100-bit conjectural FRI soundness.\n\
-         Plonky3 FRI uses the legacy 100-bit tuple; the pinned random-words estimate is\n\
-         98.2 bits. Plonky3 STIR validates an aggregate 100-bit capacity-regime target,\n\
-         conditional on capacity list decoding and mutual correlated agreement at capacity.\n\
-         Plonky3 WHIR uses a 128-bit round-by-round target. Capacity at\n\
-         rate $1/2$ is used when that instance fits a 30-bit KoalaBear grind\n\
-         ($\\log_2 N \\le 26$); unique decoding at rate $1/2$ is used at $\\log_2 N=28$\n\
-         and $30$, where list-decoding bounds on KoalaBear cannot close 128 bits within\n\
-         that grind limit. Binius64 uses a benchmark-retuned 100-bit unique-decoding query\n\
-         target (product default: 96 bits). Flock uses its default \\texttt{{Fast}} profile\n\
-         at 128-bit round-by-round soundness. WorldFnd WHIR uses a benchmark-specific\n\
-         133-bit round-by-round Johnson configuration. SP1 BaseFold uses a benchmark-specific\n\
-         conjectural 128-bit tuple ($\\log_2(1/\\rho)=1$, 112 queries, and 16 bits of grinding;\n\
-         product target: 100 bits). KoalaBear univariate\n\
-         FRI/STIR pack into a $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$. Timing cells\n\
+         The table below records the accepted native profile and security accounting for every scheme.\n\
+         KoalaBear univariate FRI/STIR pack into a $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$. Timing cells\n\
          report the median and, when supported by the sample count, a conservative distribution-free 95\\% confidence interval,\n\
          at 1 and 8 threads. Scheme names are hyperlinks to the exact git commit that was\n\
          measured. Unmeasured roster cells are \\evalpending{{}}.\n\n\
@@ -192,6 +161,43 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
         machine_sentence(provenance, true, homogeneous_machine),
         oom = oom_clause(provenance, true),
     )
+}
+
+fn markdown_security_table() -> &'static str {
+    "### Security and accepted profiles\n\n\
+| Scheme | Accepted profile | Security accounting |\n\
+| --- | --- | --- |\n\
+| Akita | Planner-selected direct/offloaded schedules at each native prime | 128-bit Module-SIS and 128-bit classical-ROM transcript target |\n\
+| Plonky2 FRI | Standard recursion: rate 1/8, 28 queries, 16 work bits | Approximately 100-bit conjectural FRI estimate |\n\
+| Plonky3 FRI | Upstream new_benchmark: rate 1/2, 100 queries, 16 query-PoW bits | 113.744-bit conjectural random-words estimate |\n\
+| Plonky3 STIR | Upstream PCS benchmark: rate 1/2, fold 4 throughout, at most 20 work bits per phase | 100-bit aggregate capacity/MCA target |\n\
+| Plonky3 WHIR | Closest feasible upstream PCS benchmark profile; capacity through $\\log_2N=26$, unique decoding after | 128-bit round-by-round target under the pinned model |\n\
+| Binius64 BaseFold | Product default: rate 1/2, 232 queries, SHA-256 | 96-bit unique-decoding query target |\n\
+| Flock Ligerito | Default Fast: rate 1/2, Johnson, two OOD checks, SHA-256 | 128-bit round-by-round target |\n\
+| WorldFnd WHIR | CLI defaults: rate 1/2, fold 4, Johnson, BLAKE3 | 128-bit round-by-round target |\n\
+| SP1 BaseFold | Product default: rate 1/4, 124 queries, 16 work bits, stacking height 21 | 100-bit unique-decoding query target |"
+}
+
+fn latex_security_table() -> &'static str {
+    "\\begin{table}[t]\n\
+\\centering\n\
+\\caption{Security accounting and accepted native profiles. RBR denotes round-by-round soundness; UDR denotes unique decoding.}\n\
+\\begin{tabularx}{\\linewidth}{@{}lXX@{}}\n\
+\\toprule\n\
+Scheme & Accepted profile & Security accounting \\\\\n\
+\\midrule\n\
+Akita & Planner-selected schedules at each native prime & 128-bit Module-SIS and classical-ROM target \\\\\n\
+Plonky2 FRI & Rate $1/8$, 28 queries, 16 work bits & $\\sim$100-bit conjectural FRI \\\\\n\
+Plonky3 FRI & Rate $1/2$, 100 queries, 16 query-PoW bits & 113.744-bit conjectural random-words \\\\\n\
+Plonky3 STIR & Rate $1/2$, fold 4 throughout, at most 20 work bits per phase & 100-bit aggregate capacity/MCA \\\\\n\
+Plonky3 WHIR & Capacity through $\\log_2N=26$, then unique decoding & 128-bit RBR under pinned model \\\\\n\
+Binius64 & Rate $1/2$, 232 queries, SHA-256 & 96-bit UDR query target \\\\\n\
+Flock & Default \\texttt{Fast}, SHA-256 & 128-bit RBR \\\\\n\
+WorldFnd & Rate $1/2$, fold 4, Johnson, BLAKE3 & 128-bit RBR \\\\\n\
+SP1 & Rate $1/4$, 124 queries, 16 work bits, height 21 & 100-bit UDR query target \\\\\n\
+\\bottomrule\n\
+\\end{tabularx}\n\
+\\end{table}"
 }
 
 fn markdown_pins(records: &[HashRecord]) -> String {
@@ -437,6 +443,10 @@ mod tests {
         assert!(report.contains("unique decoding"));
         assert!(report.contains("WHIR"));
         assert!(report.contains("BaseFold"));
+        assert!(report.contains("113.744-bit conjectural random-words"));
+        assert!(report.contains("96-bit unique-decoding query target"));
+        assert!(report.contains("WorldFnd WHIR | CLI defaults: rate 1/2"));
+        assert!(!report.contains("133-bit round-by-round"));
         assert!(report.contains("140-cell"));
         assert!(report.contains("results/hash-x86_64"));
         assert!(report.contains("Linux x86_64"));

@@ -1,3 +1,8 @@
+> **Provisional dataset.** Plonky3 FRI/STIR, Binius64, WorldFnd, and SP1 were
+> measured with profiles the repaired harness no longer accepts. See
+> [REMEASURE.md](REMEASURE.md); the security labels below describe the old
+> measurements and must not be transferred to new-profile claims.
+
 Measurements were collected on a single AMD Ryzen 9 9950X 16-Core Processor (Linux x86_64, 32 logical CPUs, 121~GiB RAM). The CPU advertised AVX-512F, but the executed instruction stream was not independently traced. CPU policy: driver amd-pstate-epp, governor powersave, preference balance_performance.
 
 Our second experiment compares Akita with other high-performance hash-based PCSs
@@ -352,4 +357,3 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 ./scripts/hash-eval.sh run --scheme plonky3-fri --payload 27 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme flock --payload 27 --threads 1 --runs 1 --warmups 0
 ```
-

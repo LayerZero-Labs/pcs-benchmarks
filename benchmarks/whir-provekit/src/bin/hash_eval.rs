@@ -1,7 +1,8 @@
-//! Single-shot ProveKit WHIR worker (Goldilocks base-field coeffs, deg-3 challenges).
+//! Single-shot WorldFnd WHIR worker (Goldilocks base-field coeffs, deg-3 challenges).
 
 use pcs_bench_core::{
-    RunStatus, WorkerOutput, PROVEKIT_SECURITY_BITS, PROVEKIT_WHIR_FOLD, PROVEKIT_WHIR_LOG_INV_RATE,
+    RunStatus, WorkerOutput, WORLDFND_SECURITY_BITS, WORLDFND_WHIR_FOLD,
+    WORLDFND_WHIR_LOG_INV_RATE,
 };
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -55,19 +56,19 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let num_coeffs = 1usize << num_variables;
     let t0 = Instant::now();
     let whir_params = ProtocolParameters {
-        security_level: PROVEKIT_SECURITY_BITS as usize,
+        security_level: WORLDFND_SECURITY_BITS as usize,
         pow_bits: 20,
-        initial_folding_factor: PROVEKIT_WHIR_FOLD,
-        folding_factor: PROVEKIT_WHIR_FOLD,
+        initial_folding_factor: WORLDFND_WHIR_FOLD,
+        folding_factor: WORLDFND_WHIR_FOLD,
         decoding_regime: DecodingRegime::Johnson,
-        starting_log_inv_rate: PROVEKIT_WHIR_LOG_INV_RATE,
+        starting_log_inv_rate: WORLDFND_WHIR_LOG_INV_RATE,
         batch_size: 1,
-        hash_id: hash::SHA2,
+        hash_id: hash::BLAKE3,
     };
     let params = Config::<M>::new(num_coeffs, &whir_params);
 
     let ds = DomainSeparator::protocol(&params)
-        .session(&"akita-benchmark whir-provekit".to_owned())
+        .session(&"akita-benchmark worldfnd-whir".to_owned())
         .instance(&Empty);
     let mut prover_state = ProverState::new_std(&ds);
     let setup_ns = elapsed_ns(t0);
@@ -149,7 +150,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
                 ))
                 .is_ok()
             {
-                return Err("ProveKit WHIR verifier accepted an altered opening claim".into());
+                return Err("WorldFnd WHIR verifier accepted an altered opening claim".into());
             }
         }
     }
@@ -163,7 +164,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     Ok(WorkerOutput {
         status: RunStatus::Ok,
         status_detail: Some(format!(
-            "statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform,evaluation=separate,goldilocks3,johnson,rate=1/{},fold={},pow_bits={},security={}",
+            "statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform,evaluation=separate,goldilocks3,johnson,hash=blake3,rate=1/{},fold={},pow_bits={},security={}",
             1usize << whir_params.starting_log_inv_rate,
             whir_params.folding_factor,
             whir_params.pow_bits,

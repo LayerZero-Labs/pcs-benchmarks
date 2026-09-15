@@ -157,10 +157,10 @@ impl ProvenanceExt for Provenance {
              plonky3_fri_stir={}\n\
              binius64={}\n\
              flock={}\n\
-             whir_provekit={}\n\
+             worldfnd_whir={}\n\
              security_bits_128={}\n\
              security_bits_100={}\n\
-             provekit_security_bits={}\n",
+             worldfnd_security_bits={}\n",
             self.harness_revision,
             self.timestamp_utc.as_deref().unwrap_or("unknown"),
             self.run_command.as_deref().unwrap_or("unknown"),
@@ -191,7 +191,7 @@ impl ProvenanceExt for Provenance {
             pcs_bench_core::HashSchemeId::WhirProvekit.commit_url(),
             pcs_bench_core::HASH_SECURITY_BITS,
             pcs_bench_core::HASH_SECURITY_BITS_100,
-            pcs_bench_core::PROVEKIT_SECURITY_BITS,
+            pcs_bench_core::WORLDFND_SECURITY_BITS,
         );
         fs::write(path, body).with_context(|| format!("write {}", path.display()))
     }

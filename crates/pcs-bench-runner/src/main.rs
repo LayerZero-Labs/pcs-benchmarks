@@ -111,7 +111,7 @@ struct RunArgs {
 
 #[derive(clap::Args)]
 struct HashRunArgs {
-    /// Comma-separated schemes: akita,akita-offload,akita-fp64,akita-fp64-offload,akita-fp128,akita-fp128-offload,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,whir-provekit,basefold (default: all).
+    /// Comma-separated schemes: akita,akita-offload,akita-fp64,akita-fp64-offload,akita-fp128,akita-fp128-offload,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,worldfnd,basefold (default: all).
     #[arg(long, value_delimiter = ',')]
     scheme: Vec<String>,
     /// Comma-separated payload exponents (default: 27,29,31,33,35).
