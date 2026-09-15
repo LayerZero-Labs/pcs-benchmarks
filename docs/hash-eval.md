@@ -1,6 +1,6 @@
 # Hash PCS evaluation
 
-This native-configuration survey compares Akita with the hash-based PCS roster
+This measured-configuration survey compares Akita with the hash-based PCS roster
 on **dense nominal payloads** \(2^{27}\) through \(2^{35}\) bits. It is not an
 equivalent-security or equivalent-statement ranking. It is the source of
 `tab:eval-hash-time` and `tab:eval-hash-resources`. Generated reports also
@@ -22,11 +22,11 @@ Schemes do **not** share one coefficient width:
 | Plonky3 FRI / STIR / WHIR | KoalaBear | payload \(- 5\) |
 | Binius64 BaseFold | \(\mathbb F_{2^{128}}\) | payload \(- 7\) |
 | Flock Ligerito | bits packed in \(\mathbb F_{2^{128}}\) | payload (\(m\)) |
-| WHIR (ProveKit) | Goldilocks coeffs, deg-3 challenges | payload \(- 6\) |
+| WHIR (WorldFnd) | Goldilocks coeffs, deg-3 challenges | payload \(- 6\) |
 | BaseFold (SP1) | KoalaBear | payload \(- 5\) |
 
-Each scheme keeps its **native** security target, hash, and rate. Cells are
-not \(\lambda\)-comparable.
+Each row keeps the measured implementation configuration. Upstream presets and
+benchmark-specific retunes are identified below.
 
 - **Akita:** generated planner schedules at the native 32-, 64-, and 128-bit
   primes, with uniform full-field coefficients and uniform extension-field
@@ -52,16 +52,20 @@ not \(\lambda\)-comparable.
   | \(2^{33}\) | offload | offload | offload |
   | \(2^{35}\) | offload | offload | offload |
 - **Plonky2 FRI:** `elliottech/plonky2`, univariate Goldilocks, rate \(1/8\),
-  28 queries, 16-bit PoW, Poseidon2, native 100-bit target. The LDE has
+  28 queries, 16-bit PoW, Poseidon2, and approximately 100-bit conjectural
+  soundness. The LDE has
   length \(2^{n+3}\). Payload \(2^{33}\) (\(\log_2 N=27\)) and \(2^{35}\)
   (\(\log_2 N=29\)) OOM under the 90% RAM cap.
 - **Plonky3 FRI:** univariate KoalaBear, rate \(1/2\), 80 queries, 20-bit
-  grind, Poseidon2, native 100-bit conjectural/capacity. KoalaBear
+  grind, and Poseidon2. This is the legacy 100-bit tuple; the pinned
+  random-words estimate is approximately 98.2 bits. KoalaBear
   two-adicity 24: a rate-\(1/2\) univariate of \(\log_2 N>23\) is packed
   into height \(2^{23}\) and width \(2^{n-23}\) (footnote).
-- **Plonky3 STIR:** same pin and packing as FRI, rate \(1/2\), \(\le 20\)
-  work bits, Poseidon2.
-- **WHIR (Plonky3):** `p3-whir`, `security_level=128`, rate \(1/2\), folding
+- **Plonky3 STIR:** same pin and packing as FRI, rate \(1/2\), fold 4 first
+  and fold 16 thereafter, with at most 20 work bits per phase and Poseidon2.
+  The implementation validates an aggregate 100-bit target, conditional on
+  capacity list decoding and mutual correlated agreement at capacity.
+- **WHIR (Plonky3):** `p3-whir`, 128-bit round-by-round target, rate \(1/2\), folding
   factor 4 after a first-round fold large enough that the FFT stays inside
   KoalaBear two-adicity 24. Later-round log-inverse rates are lowered just
   enough that `two_adic_generator` also stays inside that two-adicity.
@@ -71,24 +75,29 @@ not \(\lambda\)-comparable.
   unique decoding, and then rate \(1/4\). This is a first-valid
   decoding-priority objective, not a measured minimum-latency search.
 - **Binius64 BaseFold:** \(\mathbb F_{2^{128}}\), rate \(1/2\), SHA-256,
-  unique decoding at 100 bits (not the 96-bit product default). The
+  and a benchmark-retuned 100-bit unique-decoding query target (the product
+  default is 96 bits). The
   worker uses `OptimalPackedB128` and the upstream multithreaded,
   pre-expanded NTT with the requested thread count. The
   commitment is the SHA-256 Merkle root (32 bytes) written at commit time;
   proof bytes are the rest of the Fiat–Shamir transcript.
-- **Flock Ligerito:** native Fast profile (`mXX_fast.toml`), SHA-256,
-  Johnson+OOD. `m` is the input bit exponent; the measured statement is an
+- **Flock Ligerito:** default Fast profile (`mXX_fast.toml`), SHA-256,
+  Johnson plus two-point OOD, and a 128-bit round-by-round target. `m` is the
+  input bit exponent; the measured statement is an
   \((m-7)\)-variable packed \(\mathbb F_{2^{128}}\) MLE. The worker generates
   packed data directly and constructs the factored `EqPoint` basis inside
   opening time, without a byte-per-bit fixture or dense equality table.
-- **WHIR (ProveKit):** `worldfnd/whir` Goldilocks3 (`Basefield<Field64_3>`),
-  Johnson bound, rate \(1/4\), fold 8, SHA-256, 133-bit internal target.
+- **WHIR (WorldFnd):** `worldfnd/whir` Goldilocks3 (`Basefield<Field64_3>`),
+  Johnson bound, rate \(1/4\), fold 8, SHA-256, and a benchmark-specific
+  133-bit round-by-round target. The pinned executable defaults are 128 bits,
+  rate \(1/2\), fold 4, and BLAKE3.
   The commit-phase narg is a SHA-256 Merkle root (32 bytes) plus one
   Goldilocks3 OOD evaluation (24 bytes). Proof bytes are the remaining
   narg string plus Merkle-path hints.
-- **BaseFold (SP1):** SLOP stacked BaseFold, FRI `log_blowup=1`, 112 queries,
-  16 bits of grinding (conjectured soundness \(1\cdot 112+16=128\)),
-  stacking height 20.
+- **BaseFold (SP1):** SLOP stacked BaseFold in a benchmark-specific tuple:
+  FRI `log_blowup=1`, 112 queries, 16 bits of grinding (conjectured
+  \(1\cdot 112+16=128\)), and stacking height 20. SP1 product parameters
+  target 100 bits with `log_blowup=2`, 124 queries, and stacking height 21.
 
 Timing rows are collected at **1 and 8 threads**. A dash denotes an
 unsupported parallel mode. Communication columns are independent of thread
@@ -113,7 +122,7 @@ Do not mix machines, ISAs, or silently remap sizes.
 | WHIR (`p3-whir`) | https://github.com/Plonky3/Plonky3 | [`9d496524`](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) |
 | Binius64 BaseFold | https://github.com/binius-zk/binius64 | [`6e75a2d1`](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) |
 | Flock Ligerito | https://github.com/succinctlabs/flock | [`43f0eee0`](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) |
-| WHIR (ProveKit adapter) | https://github.com/worldfnd/whir | [`8804e80e`](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) |
+| WHIR (WorldFnd) | https://github.com/worldfnd/whir | [`8804e80e`](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) |
 | BaseFold (SLOP) | https://github.com/succinctlabs/sp1 | [`0f2a1e13`](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) |
 
 Hash-eval adapters are isolated Cargo trees under `benchmarks/` so they do

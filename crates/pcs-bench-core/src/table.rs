@@ -520,7 +520,7 @@ impl GapNote {
                 "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the `l2-quantum128-adps16` policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
             }
             Self::WhirUniqueDecoding => {
-                "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
+                "WHIR uses unique decoding at this size so its 128-bit round-by-round target remains feasible on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
             }
             Self::PackedUnivariate => {
                 "KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.".into()
@@ -547,7 +547,7 @@ impl GapNote {
                 "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the \\texttt{l2-quantum128-adps16} policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
             }
             Self::WhirUniqueDecoding => {
-                "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
+                "WHIR uses unique decoding at this size so its 128-bit round-by-round target remains feasible on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
             }
             Self::PackedUnivariate => {
                 "KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.".into()

@@ -658,7 +658,7 @@ pub fn render_markdown_hash_timing_table(rows: &[HashTimingTableRow]) -> String 
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         let _ = writeln!(
             out,
-            "| 2^{{{}}} | {} | {} bits | {} | ${}$ | {} | {} | {} | {} | {} | {} |",
+            "| 2^{{{}}} | {} | {} | {} | ${}$ | {} | {} | {} | {} | {} | {} |",
             row.payload_log2,
             scheme_cell(
                 row.scheme,
@@ -666,7 +666,7 @@ pub fn render_markdown_hash_timing_table(rows: &[HashTimingTableRow]) -> String 
                 false,
                 mark
             ),
-            row.scheme.security_bits(),
+            row.scheme.security_label(),
             statement_label(row),
             row.field,
             log2_n_cell(row, false, mark),
@@ -818,7 +818,7 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
         |row| {
             let mark = footnote_index(&notes, row.gap_note.as_ref());
             format!(
-                "$2^{{{}}}$ & {} & {} bits & {} & ${}$ & {} & {} & {} & {} & {} & {} \\\\",
+                "$2^{{{}}}$ & {} & {} & {} & ${}$ & {} & {} & {} & {} & {} & {} \\\\",
                 row.payload_log2,
                 scheme_cell(
                     row.scheme,
@@ -826,7 +826,7 @@ pub fn render_latex_hash_timing_table(rows: &[HashTimingTableRow]) -> String {
                     true,
                     mark
                 ),
-                row.scheme.security_bits(),
+                row.scheme.security_label(),
                 statement_label(row),
                 row.field,
                 log2_n_cell(row, true, mark),

@@ -63,16 +63,25 @@ pub const BINIUS64_REVISION: &str = "6e75a2d1d2e716578ae3ccb62806413fb1615176";
 /// Pinned [Flock](https://github.com/succinctlabs/flock) revision.
 pub const FLOCK_REVISION: &str = "43f0eee06d887d87ad25d72614cbc2b17fe91430";
 
-/// Pinned [worldfnd/whir](https://github.com/worldfnd/whir) revision used by ProveKit WHIR.
+/// Pinned [WorldFnd WHIR](https://github.com/worldfnd/whir) revision.
 pub const WHIR_PROVEKIT_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
 
-/// Common transcript-error target for Akita, Plonky3 WHIR, and SP1 BaseFold, in bits.
+// Security labels in this benchmark use round-by-round (RBR) soundness:
+// eps_rbr = max_i eps_i, hence lambda_rbr = min_i(-log2(eps_i)). Do not sum
+// rounds when computing this RBR parameter. For one state-restoration move,
+// the active-round cases form a partition, so their weighted error is bounded
+// by max_i eps_i; the later union bound is over state-restoration moves.
+// Ordinary interactive soundness is a separate sum over rounds. See
+// Chiesa--Yogev v1.2, Def. 31.1.2, Claim 31.1.3, and Thm. 31.2.1:
+// https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L23560-L23587
+//
+/// Common 128-bit configuration target used by several adapters.
 pub const HASH_SECURITY_BITS: u32 = 128;
 
-/// Native 100-bit target used by Plonky2 FRI, Plonky3 FRI/STIR, and Binius64.
+/// 100-bit target used by Plonky2 FRI, Plonky3 FRI/STIR, and Binius64.
 pub const HASH_SECURITY_BITS_100: u32 = 100;
 
-/// ProveKit WHIR internal target (Johnson bound).
+/// WorldFnd WHIR round-by-round target (Johnson bound).
 pub const PROVEKIT_SECURITY_BITS: u32 = 133;
 
 /// BaseFold interleaved height. Domain `2^{height+1}` fits KoalaBear two-adicity 24.
@@ -99,7 +108,7 @@ pub const PLONKY3_FRI_QUERIES: usize = 80;
 /// Plonky2 FRI log-inverse rate (`rho = 1/8`).
 pub const PLONKY2_FRI_RATE_BITS: usize = 3;
 
-/// Plonky2 FRI queries at the native 100-bit conjectural target.
+/// Plonky2 FRI queries at its standard approximately 100-bit conjectural target.
 pub const PLONKY2_FRI_QUERIES: usize = 28;
 
 /// Plonky2 FRI grinding bits.
@@ -124,10 +133,10 @@ pub const WHIR_MAX_POW_BITS: usize = 30;
 /// WHIR direct-send threshold (matches `p3-whir` `MAX_NUM_VARIABLES_TO_SEND_COEFFS`).
 pub const WHIR_DIRECT_SEND_VARS: usize = 6;
 
-/// ProveKit WHIR starting log-inverse rate (`rho = 1/4`).
+/// WorldFnd WHIR starting log-inverse rate (`rho = 1/4`).
 pub const PROVEKIT_WHIR_LOG_INV_RATE: usize = 2;
 
-/// ProveKit WHIR folding factor.
+/// WorldFnd WHIR folding factor.
 pub const PROVEKIT_WHIR_FOLD: usize = 8;
 
 /// Flock packing: `m` bit-variables become `m - 7` packed \(\mathbb F_{2^{128}}\) variables.
@@ -162,7 +171,7 @@ pub enum HashSchemeId {
     Binius64,
     /// Flock Ligerito bit-multilinear PCS (Fast profile).
     FlockLigerito,
-    /// worldfnd/whir via ProveKit, Goldilocks degree-3 challenges, base-field coeffs.
+    /// WorldFnd WHIR, with Goldilocks degree-3 challenges and base-field coefficients.
     WhirProvekit,
     /// SP1 SLOP stacked BaseFold (`slop-basefold`).
     Basefold,
@@ -183,7 +192,7 @@ impl HashSchemeId {
             Self::Whir => "WHIR (Plonky3)",
             Self::Binius64 => "Binius64 BaseFold",
             Self::FlockLigerito => "Flock Ligerito",
-            Self::WhirProvekit => "WHIR (ProveKit)",
+            Self::WhirProvekit => "WHIR (WorldFnd)",
             Self::Basefold => "BaseFold (SP1)",
         }
     }
@@ -323,15 +332,13 @@ impl HashSchemeId {
         sha.get(..8).unwrap_or(sha)
     }
 
-    /// Native transcript-error target used by the benchmark configuration.
+    /// Round-by-round or implementation-specific soundness target used by the benchmark configuration.
     #[must_use]
     pub const fn security_bits(self) -> u32 {
         match self {
-            Self::Plonky2Fri
-            | Self::Plonky3Fri
-            | Self::Plonky3Stir
-            | Self::Binius64
-            | Self::FlockLigerito => HASH_SECURITY_BITS_100,
+            Self::Plonky2Fri | Self::Plonky3Fri | Self::Plonky3Stir | Self::Binius64 => {
+                HASH_SECURITY_BITS_100
+            }
             Self::WhirProvekit => PROVEKIT_SECURITY_BITS,
             Self::Akita
             | Self::AkitaOffload
@@ -340,7 +347,28 @@ impl HashSchemeId {
             | Self::AkitaFp128
             | Self::AkitaFp128Offload
             | Self::Whir
+            | Self::FlockLigerito
             | Self::Basefold => HASH_SECURITY_BITS,
+        }
+    }
+
+    /// Concise security notion shown beside each measured timing row.
+    #[must_use]
+    pub const fn security_label(self) -> &'static str {
+        match self {
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload => "128-bit Module-SIS/ROM",
+            Self::Plonky2Fri => "approx. 100-bit conjectural",
+            Self::Plonky3Fri => "98.2-bit conjectural",
+            Self::Plonky3Stir => "100-bit capacity",
+            Self::Whir | Self::FlockLigerito => "128-bit RBR",
+            Self::Binius64 => "100-bit UDR query",
+            Self::WhirProvekit => "133-bit RBR",
+            Self::Basefold => "128-bit conjectural",
         }
     }
 

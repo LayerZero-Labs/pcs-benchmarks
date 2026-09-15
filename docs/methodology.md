@@ -109,16 +109,22 @@ Additional rules that apply only to that table:
 The second experiment is documented in [hash-eval.md](hash-eval.md). Additional
 rules that apply only to that table:
 
-1. **Native security targets.** Do not retune every scheme to 128 bits.
-   Akita, Plonky3 WHIR, and SP1 BaseFold stay at 128-bit transcript error.
+1. **Recorded security targets.** State the soundness notion as well as the bit
+   target, and identify benchmark retunes. Akita uses its validated 128-bit
+   Module-SIS and classical-ROM schedule targets. Plonky3 WHIR uses a 128-bit
+   round-by-round target.
    WHIR uses Plonky3 `p3-whir` with `security_level=128`. Capacity bound at
    rate 1/2 is used when the derived grind fits 30 bits (KoalaBear); unique
    decoding at rate 1/2 is used when list-decoding bounds cannot close 128
    bits (`log2 N` 28 and 30 in this matrix). Generated tables footnote those
-   WHIR rows. BaseFold uses SP1 SLOP FRI parameters whose conjectured
-   soundness is `log_blowup * queries + pow = 128`. Plonky2 FRI, Plonky3
-   FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native 100-bit
-   targets. ProveKit WHIR uses a 133-bit Johnson-bound Goldilocks instance.
+   WHIR rows. Plonky2 uses its approximately 100-bit standard-recursion FRI
+   tuple. Plonky3 FRI uses a legacy 100-bit tuple that gives approximately
+   98.2 bits under the pinned random-words estimate; STIR validates an
+   aggregate 100-bit capacity-regime target. Binius64 uses a custom 100-bit
+   unique-decoding query target (product default: 96). Flock uses its default
+   Fast profile at 128-bit round-by-round soundness. WorldFnd WHIR uses a
+   custom 133-bit round-by-round Johnson configuration. SP1 BaseFold uses a
+   custom conjectural 128-bit tuple (product target: 100).
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
    table, plus `fp64-dense` and `fp128-dense` rows on the hash matrix (CLI
    `akita-fp64` / `akita-fp128`). Cells are not \(\lambda\)-comparable.

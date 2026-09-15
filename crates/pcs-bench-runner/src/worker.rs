@@ -213,7 +213,7 @@ pub(crate) fn prepare_hash_case(case: &HashCase) -> Result<()> {
             "benchmarks/whir-provekit",
             "hash-eval",
             &[],
-            "WHIR (ProveKit)",
+            "WHIR (WorldFnd)",
         ),
     }
 }
@@ -653,7 +653,7 @@ fn spawn_hash_worker(case: &HashCase, mem_limit: u64, seed: u64) -> Result<Worke
             &[],
             &[],
             seed,
-            "WHIR (ProveKit)",
+            "WHIR (WorldFnd)",
         ),
     }
 }

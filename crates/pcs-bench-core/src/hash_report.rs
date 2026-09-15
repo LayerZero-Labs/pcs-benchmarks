@@ -121,25 +121,30 @@ fn markdown_prose(provenance: &Provenance, homogeneous_machine: bool) -> String 
         "{}\n\n\
          Our second experiment compares Akita with other high-performance hash-based PCSs\n\
          on the same nominal dense payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
-         This is a native-configuration survey, not an equivalent-security PCS ranking.\n\
+         This is a measured-configuration survey, not an equivalent-security PCS ranking.\n\
          Nominal payload is field-capacity accounting, not a claim about sampled input entropy.\n\
-         Each scheme uses its **native** security target, hash, field, and rate rather than a\n\
-         common 128-bit retune, so cells are **not** $\\lambda$-comparable.\n\
+         Every row states its configured target or pinned security estimate; benchmark-specific retunes are\n\
+         identified below.\n\
          Akita is measured with uniform full-field coefficients and uniform extension-field\n\
-         opening points at its native 32-, 64-, and 128-bit primes. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
-         WHIR is Plonky3 `p3-whir` at `security_level=128`. Capacity bound at rate $1/2$ is used\n\
+         opening points at its native 32-, 64-, and 128-bit primes. Plonky2 FRI uses its\n\
+         standard-recursion tuple for approximately 100-bit conjectural FRI soundness.\n\
+         Plonky3 FRI uses the legacy 100-bit tuple; the pinned random-words estimate is 98.2 bits.\n\
+         Plonky3 STIR validates an aggregate 100-bit capacity-regime target, conditional on\n\
+         capacity list decoding and mutual correlated agreement at capacity. Plonky3 WHIR\n\
+         uses a 128-bit round-by-round target. Capacity at rate $1/2$ is used\n\
          when that instance fits a 30-bit KoalaBear grind ($\\log_2 N \\le 26$);\n\
          unique decoding at rate $1/2$ is used at $\\log_2 N=28$ and $30$, where list-decoding\n\
-         bounds on KoalaBear cannot close 128 bits within that grind limit. BaseFold (SP1) is\n\
-         SLOP stacked BaseFold with FRI parameters `log_blowup=1`, 112 queries, and\n\
-         16 bits of grinding (conjectured soundness $1\\cdot 112+16=128$).\n\
-         Plonky2 FRI, Plonky3 FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native\n\
-         **100-bit** targets. ProveKit WHIR uses Johnson-bound **133-bit** Goldilocks degree-3\n\
-         challenges with base-field coefficients. KoalaBear univariate FRI/STIR pack into a\n\
+         bounds on KoalaBear cannot close 128 bits within that grind limit. Binius64 uses a\n\
+         benchmark-retuned 100-bit unique-decoding query target (product default: 96 bits).\n\
+         Flock uses its default Fast profile at 128-bit round-by-round soundness.\n\
+         WorldFnd WHIR uses a benchmark-specific 133-bit round-by-round Johnson configuration.\n\
+         SP1 BaseFold uses a benchmark-specific conjectural 128-bit tuple (log_blowup=1,\n\
+         112 queries, and 16 bits of grinding; product target: 100 bits).\n\
+         KoalaBear univariate FRI/STIR pack into a\n\
          $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$ (two-adicity 24 at rate $1/2$).\n\
          Timing cells report the median and, when supported by the sample count, a\n\
          conservative distribution-free 95% confidence interval at **1 and 8 threads**. Scheme names link to the exact git commit\n\
-         that was measured. Unmeasured roster cells are `pending`.\n\n\
+         that was measured. Unmeasured roster cells are pending.\n\n\
          The timing comparison separates commitment, opening, and verification, while the\n\
          cold total includes setup plus commitment and opening. Point-dependent claim and\n\
          transcript work supplied to proving is included in opening.\n\
@@ -155,21 +160,26 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
         "{}\n\n\
          Our second experiment compares Akita with other high-performance hash-based PCSs\n\
          on the same nominal dense payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
-         This is a native-configuration survey, not an equivalent-security PCS ranking.\n\
+         This is a measured-configuration survey, not an equivalent-security PCS ranking.\n\
          Nominal payload is field-capacity accounting, not a claim about sampled input entropy.\n\
-         Each scheme uses its native security target, hash, field, and rate rather than a\n\
-         common 128-bit retune, so cells are not $\\lambda$-comparable.\n\
+         Every row states its configured target or pinned security estimate; benchmark-specific retunes are\n\
+         identified below.\n\
          Akita is measured with uniform full-field coefficients and uniform extension-field\n\
-         opening points at its native 32-, 64-, and 128-bit primes. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
-         WHIR is Plonky3 \\texttt{{p3-whir}} at \\texttt{{security\\_level=128}}. Capacity bound at\n\
+         opening points at its native 32-, 64-, and 128-bit primes. Plonky2 FRI uses its\n\
+         standard-recursion tuple for approximately 100-bit conjectural FRI soundness.\n\
+         Plonky3 FRI uses the legacy 100-bit tuple; the pinned random-words estimate is\n\
+         98.2 bits. Plonky3 STIR validates an aggregate 100-bit capacity-regime target,\n\
+         conditional on capacity list decoding and mutual correlated agreement at capacity.\n\
+         Plonky3 WHIR uses a 128-bit round-by-round target. Capacity at\n\
          rate $1/2$ is used when that instance fits a 30-bit KoalaBear grind\n\
          ($\\log_2 N \\le 26$); unique decoding at rate $1/2$ is used at $\\log_2 N=28$\n\
          and $30$, where list-decoding bounds on KoalaBear cannot close 128 bits within\n\
-         that grind limit. BaseFold (SP1) is SLOP stacked BaseFold with FRI parameters\n\
-         $\\log_2(1/\\rho)=1$, 112 queries, and 16 bits of grinding (conjectured soundness\n\
-         $1\\cdot 112+16=128$). Plonky2 FRI, Plonky3 FRI/STIR, Binius64 BaseFold, and Flock\n\
-         Ligerito Fast use native 100-bit targets. ProveKit WHIR uses Johnson-bound 133-bit\n\
-         Goldilocks degree-3 challenges with base-field coefficients. KoalaBear univariate\n\
+         that grind limit. Binius64 uses a benchmark-retuned 100-bit unique-decoding query\n\
+         target (product default: 96 bits). Flock uses its default \\texttt{{Fast}} profile\n\
+         at 128-bit round-by-round soundness. WorldFnd WHIR uses a benchmark-specific\n\
+         133-bit round-by-round Johnson configuration. SP1 BaseFold uses a benchmark-specific\n\
+         conjectural 128-bit tuple ($\\log_2(1/\\rho)=1$, 112 queries, and 16 bits of grinding;\n\
+         product target: 100 bits). KoalaBear univariate\n\
          FRI/STIR pack into a $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$. Timing cells\n\
          report the median and, when supported by the sample count, a conservative distribution-free 95\\% confidence interval,\n\
          at 1 and 8 threads. Scheme names are hyperlinks to the exact git commit that was\n\
@@ -178,7 +188,7 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
          opening, and verification; cold total includes setup, commitment, and opening.\n\
          Point-dependent claim and transcript work supplied to proving is included in opening.\n\
          \\Cref{{tab:eval-hash-resources}} reports\n\
-         communication, memory, and preprocessing.  An \\evaloom{{}} entry {oom}.",
+         communication, memory, and preprocessing. An \\evaloom{{}} entry {oom}.",
         machine_sentence(provenance, true, homogeneous_machine),
         oom = oom_clause(provenance, true),
     )
@@ -297,7 +307,7 @@ warmup and measured processes separately; warmup rows are stored with
 `vary`/`fixed` seed mode are recorded per observation. Recorded worker flags
 for this dataset: `{RUSTFLAGS}`. Isolated Cargo trees under `benchmarks/`
 fetch the pinned git revisions (Plonky3, SP1, plonky2, Binius64, Flock,
-ProveKit/whir) so they do not unify with the lattice workspace. Cargo fetches
+WorldFnd/WHIR) so they do not unify with the lattice workspace. Cargo fetches
 those revisions on first build.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`

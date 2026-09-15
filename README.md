@@ -17,9 +17,9 @@ configuration are rejected rather than silently combined.
 
 The lattice survey covers Akita, Greyhound, and RoKoKo. The hash survey covers
 Akita, Plonky2 FRI, Plonky3 FRI/STIR/WHIR, Binius64 BaseFold, Flock Ligerito,
-WHIR through the ProveKit adapter, and SP1 BaseFold.
+WorldFnd WHIR, and SP1 BaseFold.
 
-These are native-configuration surveys, not unconditional scheme rankings.
+These are measured-configuration surveys, not unconditional scheme rankings.
 Reports expose security targets, statement types, input distributions, packing,
 thread counts, setup models, and excluded verifier context.
 
