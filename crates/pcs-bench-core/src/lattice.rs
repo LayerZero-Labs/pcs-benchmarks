@@ -111,6 +111,16 @@ impl SchemeId {
         }
     }
 
+    /// Reported security category; the report specifies each accounting scope.
+    #[must_use]
+    pub const fn security_label(self) -> &'static str {
+        match self {
+            Self::Akita | Self::AkitaOffload => "128-bit target",
+            Self::Greyhound => "128-bit SIS target",
+            Self::Rokoko => "< 100 bits",
+        }
+    }
+
     /// Table label (same as [`Self::display_name`]; kept for report renderers).
     #[must_use]
     pub const fn latex_name(self) -> &'static str {

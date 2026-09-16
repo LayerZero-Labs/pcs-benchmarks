@@ -871,16 +871,17 @@ pub(crate) fn timing_millis_cell(
 pub fn render_markdown_timing_table(rows: &[TimingTableRow]) -> String {
     let notes = unique_gap_notes_timing(rows);
     let mut out = String::from(
-        "| Nominal payload | Scheme | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |\n",
+        "| Nominal payload | Scheme | Security | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |\n",
     );
-    out.push_str("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |\n");
+    out.push_str("| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         let _ = writeln!(
             out,
-            "| 2^{{{}}} | {} | ${}$ | {} | {} | {} | {} | {} |",
+            "| 2^{{{}}} | {} | {} | ${}$ | {} | {} | {} | {} | {} |",
             row.payload_log2,
             scheme_cell(row.scheme, row.implementation_revision.as_deref(), false),
+            row.scheme.security_label(),
             row.field,
             log2_n_cell(row, false, mark),
             cell(
@@ -979,18 +980,19 @@ pub fn render_latex_timing_table(rows: &[TimingTableRow]) -> String {
          \\label{tab:eval-lattice-time}\n\
          \\scriptsize\n\
          \\setlength{\\tabcolsep}{4pt}\n\
-         \\begin{tabular}{@{}llccrrrr@{}}\n\
+         \\begin{tabular}{@{}lllccrrrr@{}}\n\
          \\toprule\n\
-         Nominal payload & Scheme & Field & $\\log_2 N$\n\
+         Nominal payload & Scheme & Security & Field & $\\log_2 N$\n\
          & Commit (s) & Open (s) & Cold total (s) & Verify (ms) \\\\\n\
          \\midrule\n",
     );
     append_payload_groups(&mut out, rows, |row| {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         format!(
-            "$2^{{{}}}$ & {} & ${}$ & {} & {} & {} & {} & {} \\\\",
+            "$2^{{{}}}$ & {} & {} & ${}$ & {} & {} & {} & {} & {} \\\\",
             row.payload_log2,
             scheme_cell(row.scheme, row.implementation_revision.as_deref(), true),
+            row.scheme.security_label().replace("<", r"$<$"),
             row.field,
             log2_n_cell(row, true, mark),
             cell(

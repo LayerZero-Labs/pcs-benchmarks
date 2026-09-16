@@ -131,3 +131,23 @@ above.
 
 Warmup processes are stored with `warmup: true` and are excluded from the
 median.
+
+## Security targets and accounting
+
+Generated Markdown and LaTeX reports include the following security accounting:
+
+| Scheme | Security bits | Scope |
+| --- | --- | --- |
+| Akita (direct and offload) | 128-bit target | Planner-validated Module-SIS and classical-ROM transcript targets |
+| Greyhound | 128-bit SIS target | Euclidean SIS under ADPS16 quantum core-SVP, using `l2-quantum128-adps16`; not a validated end-to-end transcript bound |
+| RoKoKo | < 100 bits | Fixed native profiles; heuristic soundness accounting |
+
+These scopes are not equivalent security guarantees. RoKoKo's `< 100 bits`
+label is a reporting category, not a precise validated estimate. The detailed
+[security analysis](rokoko-security/README.md) records the component calculations
+and remaining assumptions.
+
+Sources: Akita's pinned planner catalogs; the Greyhound policy in
+`crates/pcs-bench-core/src/lattice.rs` and the worker configuration; RoKoKo's
+`src/common/config.rs`, `src/common/short_challenge.rs`, and
+`src/protocol/params.rs` at the pinned revision listed above.

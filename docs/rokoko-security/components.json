@@ -1,0 +1,324 @@
+{
+  "revision": "26d07c73c54872b9e8d2b3200117a6a0a21b10ee",
+  "scope": "Component calculations only; no overall security estimate or attack claim",
+  "field_bits": 49.999999999996554,
+  "quadratic_field_bits": 99.99999999999311,
+  "paper_noninvertibility_heuristic_bits": 93.99999999999311,
+  "raw_fixed_weight_support_bits": 103.30785278896298,
+  "empirical_accepted_support_bits": 102.397043390003,
+  "sampler_trials": 10000,
+  "sampler_mean_attempts": 1.8801,
+  "profiles": {
+    "p-22": {
+      "overall_security_bits": null,
+      "rounds": [
+        {
+          "round": 1,
+          "height": 1024,
+          "width": 64,
+          "projection": "skip",
+          "rank": 10
+        },
+        {
+          "round": 2,
+          "height": 512,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 3,
+          "height": 256,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 4,
+          "height": 512,
+          "width": 8,
+          "projection": "fine",
+          "rank": 5,
+          "batching_layers": 14,
+          "two_batch_component_bound_bits": 92.38511405102454
+        },
+        {
+          "round": 5,
+          "height": 256,
+          "width": 8,
+          "projection": "fine",
+          "rank": 4,
+          "batching_layers": 12,
+          "two_batch_component_bound_bits": 92.82989889369745
+        },
+        {
+          "round": 6,
+          "height": 256,
+          "width": 4,
+          "projection": "simple",
+          "rank": 4,
+          "batching_layers": 8,
+          "two_batch_component_bound_bits": 93.99982389513976
+        }
+      ],
+      "worst_two_batch_component_bound_bits": 92.18604270392272
+    },
+    "p-24": {
+      "overall_security_bits": null,
+      "rounds": [
+        {
+          "round": 1,
+          "height": 2048,
+          "width": 128,
+          "projection": "skip",
+          "rank": 10
+        },
+        {
+          "round": 2,
+          "height": 1024,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 16,
+          "two_batch_component_bound_bits": 91.99982389513976
+        },
+        {
+          "round": 3,
+          "height": 256,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 4,
+          "height": 512,
+          "width": 8,
+          "projection": "fine",
+          "rank": 5,
+          "batching_layers": 14,
+          "two_batch_component_bound_bits": 92.38511405102454
+        },
+        {
+          "round": 5,
+          "height": 256,
+          "width": 8,
+          "projection": "fine",
+          "rank": 4,
+          "batching_layers": 12,
+          "two_batch_component_bound_bits": 92.82989889369745
+        },
+        {
+          "round": 6,
+          "height": 256,
+          "width": 4,
+          "projection": "simple",
+          "rank": 4,
+          "batching_layers": 8,
+          "two_batch_component_bound_bits": 93.99982389513976
+        }
+      ],
+      "worst_two_batch_component_bound_bits": 91.99982389513976
+    },
+    "p-26": {
+      "overall_security_bits": null,
+      "rounds": [
+        {
+          "round": 1,
+          "height": 8192,
+          "width": 128,
+          "projection": "skip",
+          "rank": 10
+        },
+        {
+          "round": 2,
+          "height": 8192,
+          "width": 8,
+          "projection": "coarse",
+          "rank": 6
+        },
+        {
+          "round": 3,
+          "height": 1024,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 16,
+          "two_batch_component_bound_bits": 91.99982389513976
+        },
+        {
+          "round": 4,
+          "height": 256,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 5,
+          "height": 512,
+          "width": 8,
+          "projection": "fine",
+          "rank": 5,
+          "batching_layers": 14,
+          "two_batch_component_bound_bits": 92.38511405102454
+        },
+        {
+          "round": 6,
+          "height": 256,
+          "width": 8,
+          "projection": "fine",
+          "rank": 4,
+          "batching_layers": 12,
+          "two_batch_component_bound_bits": 92.82989889369745
+        },
+        {
+          "round": 7,
+          "height": 256,
+          "width": 4,
+          "projection": "simple",
+          "rank": 4,
+          "batching_layers": 8,
+          "two_batch_component_bound_bits": 93.99982389513976
+        }
+      ],
+      "worst_two_batch_component_bound_bits": 91.99982389513976
+    },
+    "p-28": {
+      "overall_security_bits": null,
+      "rounds": [
+        {
+          "round": 1,
+          "height": 16384,
+          "width": 256,
+          "projection": "skip",
+          "rank": 10
+        },
+        {
+          "round": 2,
+          "height": 8192,
+          "width": 16,
+          "projection": "coarse",
+          "rank": 6
+        },
+        {
+          "round": 3,
+          "height": 1024,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 17,
+          "two_batch_component_bound_bits": 91.82489821263907
+        },
+        {
+          "round": 4,
+          "height": 256,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 5,
+          "height": 512,
+          "width": 8,
+          "projection": "fine",
+          "rank": 5,
+          "batching_layers": 14,
+          "two_batch_component_bound_bits": 92.38511405102454
+        },
+        {
+          "round": 6,
+          "height": 256,
+          "width": 8,
+          "projection": "fine",
+          "rank": 4,
+          "batching_layers": 12,
+          "two_batch_component_bound_bits": 92.82989889369745
+        },
+        {
+          "round": 7,
+          "height": 256,
+          "width": 4,
+          "projection": "simple",
+          "rank": 4,
+          "batching_layers": 8,
+          "two_batch_component_bound_bits": 93.99982389513976
+        }
+      ],
+      "worst_two_batch_component_bound_bits": 91.82489821263907
+    },
+    "p-30": {
+      "overall_security_bits": null,
+      "rounds": [
+        {
+          "round": 1,
+          "height": 32768,
+          "width": 512,
+          "projection": "skip",
+          "rank": 12
+        },
+        {
+          "round": 2,
+          "height": 16384,
+          "width": 16,
+          "projection": "coarse",
+          "rank": 6
+        },
+        {
+          "round": 3,
+          "height": 2048,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 4,
+          "height": 256,
+          "width": 32,
+          "projection": "fine",
+          "rank": 6,
+          "batching_layers": 15,
+          "two_batch_component_bound_bits": 92.18604270392272
+        },
+        {
+          "round": 5,
+          "height": 512,
+          "width": 8,
+          "projection": "fine",
+          "rank": 5,
+          "batching_layers": 14,
+          "two_batch_component_bound_bits": 92.38511405102454
+        },
+        {
+          "round": 6,
+          "height": 256,
+          "width": 8,
+          "projection": "fine",
+          "rank": 4,
+          "batching_layers": 12,
+          "two_batch_component_bound_bits": 92.82989889369745
+        },
+        {
+          "round": 7,
+          "height": 256,
+          "width": 4,
+          "projection": "simple",
+          "rank": 4,
+          "batching_layers": 8,
+          "two_batch_component_bound_bits": 93.99982389513976
+        }
+      ],
+      "worst_two_batch_component_bound_bits": 92.18604270392272
+    }
+  }
+}

@@ -16,8 +16,9 @@ pub fn render_markdown_eval_report(records: &[LatticeRecord]) -> String {
     let timing = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         markdown_prose(&provenance, homogeneous_machine),
+        security_table(false),
         render_markdown_timing_table(&timing),
         render_markdown_resource_table(&resources),
         markdown_pins(records),
@@ -33,13 +34,46 @@ pub fn render_latex_eval_report(records: &[LatticeRecord]) -> String {
     let timing = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         latex_prose(&provenance, homogeneous_machine),
+        security_table(true),
         render_latex_timing_table(&timing),
         render_latex_resource_table(&resources),
         latex_pins(records),
         latex_reproduction(&provenance)
     )
+}
+
+/// Describe configured targets without equating them with end-to-end security.
+fn security_table(latex: bool) -> String {
+    let rows = [
+        ("Akita (direct and offload)", "128-bit target", "Planner-validated Module-SIS and classical-ROM transcript targets."),
+        ("Greyhound", "128-bit SIS target", "Euclidean SIS under ADPS16 quantum core-SVP (l2-quantum128-adps16). This is a lattice-hardness policy, not a validated end-to-end transcript bound."),
+        ("RoKoKo", "< 100 bits", "Fixed native profiles; heuristic soundness accounting."),
+    ];
+    let note = "These are reported security categories with different accounting scopes, not equivalent end-to-end security guarantees. RoKoKo is reported as a below-100-bit category, not a precise validated estimate.";
+    if latex {
+        let mut out = String::from("\\begin{table}[t]\n\\centering\n\\caption{Lattice PCS security targets and accounting.}\n\\begin{tabularx}{\\linewidth}{@{}llX@{}}\n\\toprule\nScheme & Security bits & Accounting \\\\\n\\midrule\n");
+        for (scheme, bits, accounting) in rows {
+            let _ = writeln!(
+                out,
+                "{} & {} & {} \\\\",
+                escape_tex(scheme),
+                escape_tex(bits).replace("<", r"$<$"),
+                escape_tex(accounting)
+            );
+        }
+        out.push_str("\\bottomrule\n\\end{tabularx}\n\\end{table}\n\n");
+        out.push_str(&escape_tex(note));
+        out
+    } else {
+        let mut out = String::from("### Security targets and accounting\n\n| Scheme | Security bits | Accounting |\n| --- | --- | --- |\n");
+        for (scheme, bits, accounting) in rows {
+            let _ = writeln!(out, "| {scheme} | {bits} | {accounting} |");
+        }
+        let _ = write!(out, "\n{note}");
+        out
+    }
 }
 
 fn first_provenance(records: &[LatticeRecord]) -> Provenance {
