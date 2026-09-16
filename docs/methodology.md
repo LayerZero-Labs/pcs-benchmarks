@@ -18,7 +18,10 @@ build, and machine provenance are explicit.
 3. **Deterministic workloads.** Inputs use documented seeds. Fixture generation
    and independent correctness oracles occur outside timed regions; any
    point-dependent claim or preprocessing supplied to the prover is included
-   in opening time. Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
+   in opening time. SP1's pinned prover ignores its claim argument, so its
+   independent witness evaluation is an untimed correctness oracle; opening
+   includes interpolation of the batch evaluations returned in the proof.
+   Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
    the dense witness. End-to-end runs default to `--seed-mode vary`, which
    records a deterministic seed per payload and process. Use
    `--seed-mode fixed` in a separate run to estimate machine/runtime noise for

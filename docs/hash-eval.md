@@ -98,7 +98,12 @@ the replacements and the original measurements retained for unchanged schemes.
   narg string plus Merkle-path hints.
 - **BaseFold (SP1):** SLOP stacked BaseFold with SP1's product parameters:
   a 100-bit target, FRI `log_blowup=2`, 124 queries, 16 bits of grinding, and
-  stacking height 21.
+  stacking height 21. The pinned prover ignores the supplied evaluation claim
+  and computes its own batch evaluations. Opening includes proving and the small
+  interpolation of those proof values into the output evaluation. An independent
+  witness evaluation runs before ownership transfer, outside the timed phases,
+  and must match that output. It uses two factored equality tables with
+  O(sqrt(N)) auxiliary storage; the adapter retains no extra witness copy.
 
 Timing rows are collected at **1 and 8 threads**. A dash denotes an
 unsupported parallel mode. Communication columns are independent of thread

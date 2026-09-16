@@ -1,5 +1,11 @@
 # Hash-PCS profile refresh completed
 
+**SP1 timing and memory correction pending:** the current SP1 observations still
+include a redundant full-witness evaluation in opening and retain an extra
+witness copy through commitment. Its timings and peak RSS are provisional until
+the corrected adapter's complete SP1 matrix replaces them. The security profile
+is unchanged.
+
 The five changed profiles were remeasured on the x86 benchmark machine on
 2026-09-16 using harness commit `37a528a43333cd54d9b8a9a6fa0382676c636d98`.
 The detached run completed successfully from 00:56:26 to 06:40:11 UTC,
