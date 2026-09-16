@@ -26,9 +26,9 @@ Schemes do **not** share one coefficient width:
 | BaseFold (SP1) | KoalaBear | payload \(- 5\) |
 
 The harness now prefers the pinned implementation's product or PCS-benchmark
-profile whenever one exists. The checked-in dataset predates five profile
-repairs; [its rerun notice](../results/hash-x86_64/REMEASURE.md) identifies the
-provisional rows and the enforced replacement profiles.
+profile whenever one exists. The five repaired profiles were remeasured on
+2026-09-16; [the refresh record](../results/hash-x86_64/REMEASURE.md) documents
+the replacements and the original measurements retained for unchanged schemes.
 
 - **Akita:** generated planner schedules at the native 32-, 64-, and 128-bit
   primes, with uniform full-field coefficients and uniform extension-field
