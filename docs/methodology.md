@@ -15,6 +15,12 @@ build, and machine provenance are explicit.
    directory and are not imported as performance samples.
 2. **Immutable dependencies.** PCS implementations and non-registry
    dependencies use commit hashes, never moving branches or tags.
+   Harness revision fingerprints exclude `results/`, so archiving or regenerating
+   output does not mark the source revision dirty. Other non-ignored changes,
+   including adapters, scripts, and vendor catalogs, still produce a `+dirty`
+   suffix. Historical records retain the fingerprints captured by their original
+   harness; this rule does not rewrite their provenance or attest ignored
+   third-party checkout contents.
 3. **Deterministic workloads.** Inputs use documented seeds. Fixture generation
    and independent correctness oracles occur outside timed regions; any
    point-dependent claim or preprocessing supplied to the prover is included
