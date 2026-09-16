@@ -992,7 +992,7 @@ pub fn render_latex_timing_table(rows: &[TimingTableRow]) -> String {
             "$2^{{{}}}$ & {} & {} & ${}$ & {} & {} & {} & {} & {} \\\\",
             row.payload_log2,
             scheme_cell(row.scheme, row.implementation_revision.as_deref(), true),
-            row.scheme.security_label().replace("<", r"$<$"),
+            row.scheme.security_label().replace('<', r"$<$"),
             row.field,
             log2_n_cell(row, true, mark),
             cell(

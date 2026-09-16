@@ -59,7 +59,7 @@ fn security_table(latex: bool) -> String {
                 out,
                 "{} & {} & {} \\\\",
                 escape_tex(scheme),
-                escape_tex(bits).replace("<", r"$<$"),
+                escape_tex(bits).replace('<', r"$<$"),
                 escape_tex(accounting)
             );
         }
