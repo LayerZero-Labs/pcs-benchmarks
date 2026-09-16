@@ -1,10 +1,32 @@
 # Hash-PCS profile refresh completed
 
-**SP1 timing and memory correction pending:** the current SP1 observations still
-include a redundant full-witness evaluation in opening and retain an extra
-witness copy through commitment. Its timings and peak RSS are provisional until
-the corrected adapter's complete SP1 matrix replaces them. The security profile
-is unchanged.
+## SP1 timing and memory correction completed
+
+SP1 was remeasured using adapter commit `946c0a7` on 2026-09-16,
+from 16:23:43 to 17:08:16 UTC (44 minutes 33 seconds), with exit code 0.
+All 110 samples succeeded: 100 measured samples and 10 warmups across five
+payload sizes at 1 and 8 threads. Separate correctness smoke tests passed at
+both thread counts, including rejection of an altered evaluation claim.
+
+The adapter no longer retains a witness clone or charges a redundant full-witness
+evaluation to opening. It checks an independent, factored correctness oracle
+before ownership transfer; opening includes interpolation of the proof's batch
+evaluations. The security profile is unchanged. All 110 prior SP1 records were
+replaced, and the other 1,430 records were retained verbatim. Combined reports
+passed the harness environment, seed, profile, and build-identity checks.
+
+The completed run used:
+
+```bash
+./scripts/hash-eval.sh run --scheme basefold \
+  --payload 27,29,31,33,35 --threads 1,8 \
+  --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
+```
+
+Raw remote artifacts and the previous local dataset are archived under
+`results/hash-run-archive/20260916T162343Z-sp1/` (git-ignored).
+
+## Earlier security-profile refresh
 
 The five changed profiles were remeasured on the x86 benchmark machine on
 2026-09-16 using harness commit `37a528a43333cd54d9b8a9a6fa0382676c636d98`.

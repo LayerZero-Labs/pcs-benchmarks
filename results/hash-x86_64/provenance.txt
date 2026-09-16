@@ -1,18 +1,18 @@
 Combined hash PCS dataset
 records.jsonl is the authoritative per-observation provenance.
-Five changed profiles refreshed on 2026-09-16; unchanged schemes retain their original measurements.
+Five changed profiles refreshed on 2026-09-16; SP1 remeasured again after its opening-time and witness-copy correction.
 All cohorts passed the harness environment, seed, profile, and build-identity checks.
 No claim of contemporaneous measurement across cohorts.
 
 records=1540
-records_sha256=247140a893778279f51b67d6541ffe29a3453f9e4e186e406d2900760f3e9125
+records_sha256=9ed6ae7e069ad565cb4f72dd833d298eb822cb8f764b80076a9bc6d54e911e1d
 
 [cohort 1]
 harness_revision=37a528a43333cd54d9b8a9a6fa0382676c636d98+dirty.1d0750363ab2
 timestamp_utc=2026-09-16T00:57:01Z
 run_command=target/release/pcs-bench hash-eval run --scheme plonky3-fri,plonky3-stir,binius64,worldfnd,basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
-schemes=basefold,binius64,plonky3_fri,plonky3_stir,whir_provekit
-records=550
+schemes=binius64,plonky3_fri,plonky3_stir,whir_provekit
+records=440
 
 [cohort 2]
 harness_revision=50ddf4db992358a2cf394b3d5c99e964d13e5c90
@@ -34,3 +34,10 @@ timestamp_utc=2026-09-14T17:34:59Z
 run_command=target/release/pcs-bench hash-eval run --scheme akita,akita-fp64,akita-fp128 --out /home/taghi/pcs-benchmarks-refresh.8wETs2/results-hash-akita-direct
 schemes=akita,akita_fp128,akita_fp64
 records=330
+
+[cohort 5]
+harness_revision=946c0a78c50ba9800a1c452ce0c27b73d0cce24a+dirty.e6c3243c86f9
+timestamp_utc=2026-09-16T16:23:58Z
+run_command=target/release/pcs-bench hash-eval run --scheme basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
+schemes=basefold
+records=110

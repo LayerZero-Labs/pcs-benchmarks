@@ -13,7 +13,7 @@
 | 2^{27} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 308640 | 308688 | 0 | 0.0917 | 0.0913 | 0.0041 | unknown |
 | 2^{27} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 408856 | 413008 | 0 | 0.0912 | 0.0912 | 0.0001 | 0.0000 |
 | 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 196640 | 196720 | 0 | 0.190 | 0.197 | 0.0002 | 0.0000 |
-| 2^{27} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1179448 | 1179496 | 0 | 1.33 | 1.33 | 0.0000 | unknown |
+| 2^{27} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1179448 | 1179496 | 0 | 1.33 | 1.33 | 0.0001 | unknown |
 | 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 61787 | 61931 | 214 | 0.253 | 0.261 | 0.0081 | 0.0020 |
 | 2^{29} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66157 | 66301 | 214 | 0.246 | 0.255 | 0.0297 | 0.0020 |
 | 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66204 | 66348 | 214 | 0.219 | 0.230 | 0.0156 | 0.0044 |
@@ -27,7 +27,7 @@
 | 2^{29} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 390368 | 390416 | 0 | 0.357 | 0.357 | 0.0161 | unknown |
 | 2^{29} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 340832 | 344984 | 0 | 0.373 | 0.372 | 0.0002 | 0.0000 |
 | 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 221568 | 221648 | 0 | 0.748 | 0.780 | 0.0002 | 0.0000 |
-| 2^{29} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1182520 | 1182568 | 0 | 1.56 | 1.56 | 0.0000 | unknown |
+| 2^{29} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1182520 | 1182568 | 0 | 1.56 | 1.56 | 0.0001 | unknown |
 | 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 63055 | 63199 | 214 | 0.694 | 0.703 | 0.0196 | 0.0049 |
 | 2^{31} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66318 | 66462 | 214 | 0.717 | 0.724 | 0.0734 | 0.0039 |
 | 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66662 | 66806 | 214 | 0.484 | 0.500 | 0.0209 | 0.0059 |
@@ -41,7 +41,7 @@
 | 2^{31} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 472832 | 472880 | 0 | 1.42 | 1.42 | 0.0670 | unknown |
 | 2^{31} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 494632 | 498784 | 0 | 1.37 | 1.37 | 0.0002 | 0.0000 |
 | 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 256856 | 256936 | 0 | 2.98 | 3.12 | 0.0002 | 0.0000 |
-| 2^{31} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1194808 | 1194856 | 0 | 3.50 | 3.50 | 0.0000 | unknown |
+| 2^{31} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1194808 | 1194856 | 0 | 2.50 | 2.50 | 0.0001 | unknown |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 64475 | 64619 | 214 | 1.37 | 1.38 | 0.0383 | 0.0098 |
 | 2^{33} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66872 | 67016 | 214 | 1.39 | 1.40 | 0.228 | 0.0156 |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 67628 | 67772 | 214 | 1.49 | 1.53 | 0.0538 | 0.0156 |
@@ -55,7 +55,7 @@
 | 2^{33} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 569408 | 569456 | 0 | 5.67 | 5.67 | 0.272 | unknown |
 | 2^{33} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 524840 | 528992 | 0 | 5.41 | 5.42 | 0.0002 | 0.0000 |
 | 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 281464 | 281544 | 0 | 11.9 | 11.9 | 0.0002 | 0.0000 |
-| 2^{33} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1243960 | 1244008 | 0 | 12.5 | 12.5 | 0.0000 | unknown |
+| 2^{33} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1243960 | 1244008 | 0 | 6.25 | 6.25 | 0.0001 | unknown |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 64601 | 64745 | 214 | 4.69 | 4.71 | 0.0753 | 0.0195 |
 | 2^{35} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 67307 | 67451 | 214 | 4.74 | 4.77 | 0.463 | 0.0313 |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 68506 | 68650 | 214 | 4.83 | 4.90 | 0.107 | 0.0313 |
@@ -69,7 +69,7 @@
 | 2^{35} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 666720 | 666768 | 0 | 22.7 | 22.7 | 1.03 | unknown |
 | 2^{35} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 570464 | 574616 | 0 | 21.6 | 21.7 | 0.0002 | 0.0000 |
 | 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 317408 | 317488 | 0 | 47.4 | 47.4 | 0.0002 | 0.0000 |
-| 2^{35} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1440568 | 1440616 | 0 | 48.5 | 48.5 | 0.0000 | unknown |
+| 2^{35} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1440568 | 1440616 | 0 | 21.3 | 21.3 | 0.0001 | unknown |
 
 **(1)** pinned Akita fp32-dense-recursive catalog row for nv=22 has no setup-prefix edges
 **(2)** pinned Akita fp64-dense-recursive catalog row for nv=21 has no setup-prefix edges
