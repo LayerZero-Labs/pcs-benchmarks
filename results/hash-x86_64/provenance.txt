@@ -1,18 +1,18 @@
 Combined hash PCS dataset
 records.jsonl is the authoritative per-observation provenance.
-Five changed profiles refreshed on 2026-09-16; SP1 remeasured again after its opening-time and witness-copy correction.
+Five changed profiles refreshed on 2026-09-16; SP1 and WorldFnd remeasured again after their adapter corrections.
 All cohorts passed the harness environment, seed, profile, and build-identity checks.
 No claim of contemporaneous measurement across cohorts.
 
 records=1540
-records_sha256=9ed6ae7e069ad565cb4f72dd833d298eb822cb8f764b80076a9bc6d54e911e1d
+records_sha256=33edaf8dfc8e54f7c2b1a73facde7aca8328b0609836a9a99361ed1b29105ab8
 
 [cohort 1]
 harness_revision=37a528a43333cd54d9b8a9a6fa0382676c636d98+dirty.1d0750363ab2
 timestamp_utc=2026-09-16T00:57:01Z
 run_command=target/release/pcs-bench hash-eval run --scheme plonky3-fri,plonky3-stir,binius64,worldfnd,basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
-schemes=binius64,plonky3_fri,plonky3_stir,whir_provekit
-records=440
+schemes=binius64,plonky3_fri,plonky3_stir
+records=330
 
 [cohort 2]
 harness_revision=50ddf4db992358a2cf394b3d5c99e964d13e5c90
@@ -40,4 +40,11 @@ harness_revision=946c0a78c50ba9800a1c452ce0c27b73d0cce24a+dirty.e6c3243c86f9
 timestamp_utc=2026-09-16T16:23:58Z
 run_command=target/release/pcs-bench hash-eval run --scheme basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
 schemes=basefold
+records=110
+
+[cohort 6]
+harness_revision=a5a6962520e7e174a0bd5cb93795c33ead2934cf+dirty.2fe6b7a25d43
+timestamp_utc=2026-09-16T18:26:52Z
+run_command=target/release/pcs-bench hash-eval run --scheme worldfnd --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
+schemes=whir_provekit
 records=110

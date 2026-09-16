@@ -1,11 +1,34 @@
 # Hash-PCS profile refresh completed
 
-**WorldFnd memory correction pending:** the current WorldFnd observations retain
-a redundant input vector alongside the prover buffer. Its measurements are
-provisional until the ownership-transfer adapter rerun replaces them. The copy
-was outside the timers, so removing it does not directly subtract copying time
-from any reported phase. The security profile and proof-size accounting are
-unchanged; the actual peak-RSS reduction must be measured.
+## WorldFnd memory correction completed
+
+WorldFnd was remeasured using adapter commit `a5a6962` on 2026-09-16,
+from 18:26:48 to 22:39:44 UTC (4 hours 12 minutes 56 seconds), with exit code 0.
+All 110 samples succeeded: 100 measured samples and 10 warmups across five
+payload sizes at 1 and 8 threads. Separate correctness smoke tests passed at
+both thread counts, including rejection of an altered evaluation claim.
+
+The input vector now moves into the prover buffer without retaining a duplicate.
+At payload 2^35, median process peak RSS was 43.350 GiB at 1 thread and
+43.376 GiB at 8 threads; the previous run recorded 47.351 and 47.375 GiB,
+respectively. The separate runs show approximately 4 GiB less peak RSS at both
+thread counts. They were not interleaved performance trials. The removed copy
+was outside the timers, so no copying time is subtracted from the measured
+phases. Security parameters and proof-size accounting remain unchanged.
+
+All 110 prior WorldFnd records were replaced; the other 1,430 records were
+retained verbatim. Combined reports passed the harness environment, seed,
+profile, and build-identity checks. Original revision strings, including their
+historical dirty suffixes, are preserved.
+
+```bash
+./scripts/hash-eval.sh run --scheme worldfnd \
+  --payload 27,29,31,33,35 --threads 1,8 \
+  --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
+```
+
+Raw remote artifacts and the previous local dataset are archived under
+`results/hash-run-archive/20260916T182648Z-worldfnd/` (git-ignored).
 
 ## SP1 timing and memory correction completed
 

@@ -57,8 +57,8 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{27} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 96-bit UDR query | multilinear | $F_{2^{128}}$ | 20 | 8 | 0.007 [0.007, 0.007] | 0.007 [0.007, 0.008] | 0.019 [0.018, 0.019] | 0.5 [0.5, 0.5] |
 | 2^{27} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 27 | 1 | 0.034 [0.033, 0.035] | 0.101 [0.098, 0.103] | 0.135 [0.131, 0.138] | 1.3 [1.3, 1.5] |
 | 2^{27} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 27 | 8 | 0.006 [0.006, 0.007] | 0.023 [0.023, 0.025] | 0.030 [0.029, 0.032] | 1.3 [1.3, 1.4] |
-| 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 21 | 1 | 0.382 [0.376, 0.386] | 2.17 [2.16, 2.19] | 2.56 [2.54, 2.57] | 0.9 [0.9, 1.3] |
-| 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 21 | 8 | 0.066 [0.065, 0.068] | 0.339 [0.336, 0.342] | 0.406 [0.402, 0.409] | 1.0 [1.0, 1.0] |
+| 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 21 | 1 | 0.386 [0.378, 0.390] | 2.18 [2.17, 2.20] | 2.56 [2.56, 2.59] | 1.0 [0.9, 1.3] |
+| 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 21 | 8 | 0.067 [0.066, 0.068] | 0.343 [0.338, 0.351] | 0.411 [0.406, 0.417] | 1.0 [1.0, 1.0] |
 | 2^{27} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 22 | 1 | 2.18 [2.10, 2.25] | 3.34 [3.25, 3.45] | 5.52 [5.44, 5.60] | 25.6 [25.6, 26.0] |
 | 2^{27} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 22 | 8 | 2.13 [2.11, 2.25] | 3.30 [3.23, 3.35] | 5.45 [5.40, 5.48] | 25.9 [25.7, 26.0] |
 | 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit Module-SIS/ROM | multilinear | $2^{32}-99$ | 24 | 1 | 0.343 [0.341, 0.346] | 1.51 [1.51, 1.52] | 1.86 [1.86, 1.87] | 9.3 [9.2, 9.3] |
@@ -85,8 +85,8 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{29} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 96-bit UDR query | multilinear | $F_{2^{128}}$ | 22 | 8 | 0.039 [0.038, 0.040] | 0.026 [0.024, 0.029] | 0.080 [0.078, 0.083] | 0.7 [0.7, 0.7] |
 | 2^{29} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 29 | 1 | 0.116 [0.115, 0.116] | 0.416 [0.410, 0.422] | 0.533 [0.527, 0.538] | 1.4 [1.4, 1.4] |
 | 2^{29} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 29 | 8 | 0.032 [0.031, 0.033] | 0.092 [0.091, 0.095] | 0.125 [0.123, 0.127] | 1.4 [1.4, 1.5] |
-| 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 23 | 1 | 1.73 [1.72, 1.74] | 9.21 [9.18, 9.27] | 10.9 [10.9, 11.0] | 1.0 [1.0, 1.0] |
-| 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 23 | 8 | 0.298 [0.295, 0.304] | 1.43 [1.43, 1.44] | 1.73 [1.72, 1.74] | 1.1 [1.1, 1.1] |
+| 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 23 | 1 | 1.73 [1.72, 1.74] | 9.30 [9.25, 9.33] | 11.0 [11.0, 11.1] | 1.0 [1.0, 1.0] |
+| 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 23 | 8 | 0.302 [0.298, 0.305] | 1.45 [1.45, 1.46] | 1.75 [1.75, 1.76] | 1.1 [1.1, 1.1] |
 | 2^{29} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 24 | 1 | 2.98 [2.89, 3.05] | 3.37 [3.33, 3.53] | 6.36 [6.32, 6.47] | 25.6 [25.5, 26.0] |
 | 2^{29} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 24 | 8 | 2.96 [2.89, 3.03] | 3.35 [3.25, 3.47] | 6.30 [6.23, 6.40] | 26.3 [25.9, 27.0] |
 | 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit Module-SIS/ROM | multilinear | $2^{32}-99$ | 26 | 1 | 1.28 [1.27, 1.28] | 2.63 [2.60, 2.64] | 3.93 [3.89, 3.94] | 12.8 [12.2, 13.1] |
@@ -113,8 +113,8 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{31} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 96-bit UDR query | multilinear | $F_{2^{128}}$ | 24 | 8 | 0.205 [0.201, 0.212] | 0.104 [0.099, 0.110] | 0.377 [0.372, 0.389] | 0.8 [0.8, 0.8] |
 | 2^{31} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 31 | 1 | 0.574 [0.570, 0.576] | 1.42 [1.42, 1.43] | 1.99 [1.99, 2.01] | 1.1 [1.1, 1.1] |
 | 2^{31} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 31 | 8 | 0.124 [0.123, 0.128] | 0.300 [0.299, 0.306] | 0.427 [0.422, 0.434] | 1.1 [1.1, 1.1] |
-| 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 25 | 1 | 7.58 [7.52, 7.63] | 39.8 [39.7, 40.0] | 47.4 [47.2, 47.5] | 1.2 [1.1, 1.2] |
-| 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 25 | 8 | 1.31 [1.30, 1.32] | 6.26 [6.24, 6.28] | 7.56 [7.55, 7.59] | 1.2 [1.2, 1.2] |
+| 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 25 | 1 | 7.58 [7.53, 7.63] | 39.9 [39.8, 40.0] | 47.5 [47.3, 47.6] | 1.2 [1.1, 1.2] |
+| 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 25 | 8 | 1.32 [1.29, 1.33] | 6.28 [6.27, 6.30] | 7.59 [7.58, 7.61] | 1.2 [1.2, 1.2] |
 | 2^{31} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 26 | 1 | 5.34 [5.23, 5.43] | 3.52 [3.49, 3.56] | 8.86 [8.82, 8.96] | 26.2 [25.8, 26.3] |
 | 2^{31} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 26 | 8 | 5.34 [5.22, 5.38] | 3.41 [3.32, 3.49] | 8.74 [8.68, 8.79] | 26.2 [26.0, 26.8] |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit Module-SIS/ROM | multilinear | $2^{32}-99$ | 28 | 1 | 5.99 [5.95, 6.01] | 6.66 [6.64, 6.68] | 12.7 [12.6, 12.7] | 22.1 [21.5, 22.2] |
@@ -141,8 +141,8 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{33} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 96-bit UDR query | multilinear | $F_{2^{128}}$ | 26 | 8 | 1.08 [1.06, 1.08] | 0.393 [0.390, 0.399] | 1.74 [1.73, 1.75] | 1.0 [1.0, 1.0] |
 | 2^{33} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 33 | 1 | 1.86 [1.85, 1.87] | 5.70 [5.67, 5.72] | 7.55 [7.53, 7.58] | 1.7 [1.7, 2.0] |
 | 2^{33} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 33 | 8 | 0.583 [0.577, 0.588] | 1.21 [1.20, 1.22] | 1.79 [1.78, 1.80] | 1.8 [1.7, 1.8] |
-| 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 27 | 1 | 33.7 [33.6, 34.0] | 172.7 [172.4, 172.8] | 206.4 [206.1, 206.7] | 1.2 [1.2, 1.3] |
-| 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 27 | 8 | 5.74 [5.72, 5.75] | 26.8 [26.7, 26.9] | 32.6 [32.5, 32.7] | 1.3 [1.2, 1.3] |
+| 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 27 | 1 | 33.8 [33.7, 34.1] | 173.8 [172.8, 174.6] | 207.4 [206.7, 208.7] | 1.2 [1.2, 1.3] |
+| 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 27 | 8 | 5.76 [5.74, 5.80] | 27.1 [27.0, 27.1] | 32.8 [32.8, 32.9] | 1.3 [1.3, 1.3] |
 | 2^{33} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 28 | 1 | 18.7 [18.3, 18.9] | 4.05 [4.01, 4.16] | 22.7 [22.4, 22.9] | 27.5 [26.9, 27.6] |
 | 2^{33} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 28 | 8 | 18.7 [18.3, 18.8] | 3.89 [3.82, 3.97] | 22.5 [22.2, 22.7] | 27.3 [27.0, 28.1] |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit Module-SIS/ROM | multilinear | $2^{32}-99$ | 30 | 1 | 24.2 [24.1, 24.2] | 16.1 [16.1, 16.1] | 40.4 [40.3, 40.4] | 33.3 [33.2, 33.4] |
@@ -169,8 +169,8 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{35} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 96-bit UDR query | multilinear | $F_{2^{128}}$ | 28 | 8 | 5.02 [5.01, 5.03] | 1.45 [1.44, 1.46] | 7.50 [7.49, 7.51] | 1.1 [1.1, 1.1] |
 | 2^{35} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 35 | 1 | 9.73 [9.69, 9.79] | 23.6 [23.5, 23.9] | 33.3 [33.3, 33.6] | 1.7 [1.7, 1.7] |
 | 2^{35} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 128-bit RBR | packed F128 MLE | $F_2$ | 35 | 8 | 2.38 [2.37, 2.39] | 5.21 [5.19, 5.22] | 7.59 [7.57, 7.60] | 1.6 [1.6, 1.8] |
-| 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 29 | 1 | 145.4 [143.1, 147.1] | 764.7 [758.4, 766.4] | 910.0 [902.6, 912.8] | 1.4 [1.4, 1.4] |
-| 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 29 | 8 | 24.7 [24.4, 25.0] | 115.9 [115.6, 116.4] | 140.8 [140.2, 141.0] | 1.4 [1.4, 1.4] |
+| 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 29 | 1 | 145.7 [143.3, 147.7] | 767.4 [764.7, 771.0] | 914.2 [907.7, 917.7] | 1.4 [1.3, 1.4] |
+| 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 128-bit RBR | multilinear | $2^{64}-2^{32}+1$ | 29 | 8 | 24.9 [24.6, 25.1] | 116.6 [116.5, 117.1] | 141.5 [141.2, 142.2] | 1.4 [1.4, 1.4] |
 | 2^{35} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 30 | 1 | 67.6 [66.1, 68.0] | 6.01 [5.93, 6.11] | 73.6 [72.3, 74.1] | 31.9 [31.5, 32.1] |
 | 2^{35} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 100-bit UDR query | multilinear | $2^{31}-2^{24}+1$ | 30 | 8 | 67.6 [67.4, 68.0] | 5.55 [5.40, 5.60] | 73.1 [72.8, 73.4] | 31.8 [31.5, 32.3] |
 
@@ -198,7 +198,7 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{27} | [WHIR (Plonky3)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 32 | 0 | 91354 | 91386 | 0 | 0.179 | 0.178 | 0.0013 | unknown |
 | 2^{27} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 308640 | 308688 | 0 | 0.0917 | 0.0913 | 0.0041 | unknown |
 | 2^{27} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 408856 | 413008 | 0 | 0.0912 | 0.0912 | 0.0001 | 0.0000 |
-| 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 196640 | 196720 | 0 | 0.190 | 0.197 | 0.0002 | 0.0000 |
+| 2^{27} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 196640 | 196720 | 0 | 0.175 | 0.182 | 0.0002 | 0.0000 |
 | 2^{27} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1179448 | 1179496 | 0 | 1.33 | 1.33 | 0.0001 | unknown |
 | 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 61787 | 61931 | 214 | 0.253 | 0.261 | 0.0081 | 0.0020 |
 | 2^{29} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66157 | 66301 | 214 | 0.246 | 0.255 | 0.0297 | 0.0020 |
@@ -212,7 +212,7 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{29} | [WHIR (Plonky3)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 32 | 0 | 103390 | 103422 | 0 | 0.703 | 0.703 | 0.0054 | unknown |
 | 2^{29} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 390368 | 390416 | 0 | 0.357 | 0.357 | 0.0161 | unknown |
 | 2^{29} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 340832 | 344984 | 0 | 0.373 | 0.372 | 0.0002 | 0.0000 |
-| 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 221568 | 221648 | 0 | 0.748 | 0.780 | 0.0002 | 0.0000 |
+| 2^{29} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 221568 | 221648 | 0 | 0.685 | 0.722 | 0.0002 | 0.0000 |
 | 2^{29} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1182520 | 1182568 | 0 | 1.56 | 1.56 | 0.0001 | unknown |
 | 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 63055 | 63199 | 214 | 0.694 | 0.703 | 0.0196 | 0.0049 |
 | 2^{31} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66318 | 66462 | 214 | 0.717 | 0.724 | 0.0734 | 0.0039 |
@@ -226,7 +226,7 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{31} | [WHIR (Plonky3)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 32 | 0 | 113580 | 113612 | 0 | 2.80 | 2.80 | 0.0277 | unknown |
 | 2^{31} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 472832 | 472880 | 0 | 1.42 | 1.42 | 0.0670 | unknown |
 | 2^{31} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 494632 | 498784 | 0 | 1.37 | 1.37 | 0.0002 | 0.0000 |
-| 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 256856 | 256936 | 0 | 2.98 | 3.12 | 0.0002 | 0.0000 |
+| 2^{31} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 256856 | 256936 | 0 | 2.73 | 2.86 | 0.0002 | 0.0000 |
 | 2^{31} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1194808 | 1194856 | 0 | 2.50 | 2.50 | 0.0001 | unknown |
 | 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 64475 | 64619 | 214 | 1.37 | 1.38 | 0.0383 | 0.0098 |
 | 2^{33} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66872 | 67016 | 214 | 1.39 | 1.40 | 0.228 | 0.0156 |
@@ -240,7 +240,7 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{33} | [WHIR (Plonky3)(8)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 32 | 0 | 590648 | 590680 | 0 | 9.60 | 9.60 | 0.0633 | unknown |
 | 2^{33} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 569408 | 569456 | 0 | 5.67 | 5.67 | 0.272 | unknown |
 | 2^{33} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 524840 | 528992 | 0 | 5.41 | 5.42 | 0.0002 | 0.0000 |
-| 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 281464 | 281544 | 0 | 11.9 | 11.9 | 0.0002 | 0.0000 |
+| 2^{33} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 281464 | 281544 | 0 | 10.9 | 10.9 | 0.0002 | 0.0000 |
 | 2^{33} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1243960 | 1244008 | 0 | 6.25 | 6.25 | 0.0001 | unknown |
 | 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 64601 | 64745 | 214 | 4.69 | 4.71 | 0.0753 | 0.0195 |
 | 2^{35} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 67307 | 67451 | 214 | 4.74 | 4.77 | 0.463 | 0.0313 |
@@ -254,7 +254,7 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 | 2^{35} | [WHIR (Plonky3)(8)](https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730) | 32 | 0 | 690886 | 690918 | 0 | 17.1 | 17.1 | 0.0628 | unknown |
 | 2^{35} | [Binius64 BaseFold](https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176) | 32 | 16 | 666720 | 666768 | 0 | 22.7 | 22.7 | 1.03 | unknown |
 | 2^{35} | [Flock Ligerito](https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430) | 4136 | 16 | 570464 | 574616 | 0 | 21.6 | 21.7 | 0.0002 | 0.0000 |
-| 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 317408 | 317488 | 0 | 47.4 | 47.4 | 0.0002 | 0.0000 |
+| 2^{35} | [WHIR (WorldFnd)](https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d) | 56 | 24 | 317408 | 317488 | 0 | 43.4 | 43.4 | 0.0002 | 0.0000 |
 | 2^{35} | [BaseFold (SP1)](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86) | 32 | 16 | 1440568 | 1440616 | 0 | 21.3 | 21.3 | 0.0001 | unknown |
 
 **(1)** pinned Akita fp32-dense-recursive catalog row for nv=22 has no setup-prefix edges
@@ -290,7 +290,7 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 Machine, ISA, compiler, executable, lockfile, command, and timestamp provenance
 for this dataset are recorded with each observation. The infrastructure
 toolchain pin is Rust **1.95** (`rust-toolchain.toml`).
-Recorded runner command: `target/release/pcs-bench hash-eval run --scheme basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64`. The commands below are a template,
+Recorded runner command: `target/release/pcs-bench hash-eval run --scheme worldfnd --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64`. The commands below are a template,
 not reconstructed provenance.
 Workers are built from checked-in lockfiles before sampling. Every timed
 execution is a fresh process wrapped in `scripts/with-memlimit.sh` with
