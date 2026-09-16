@@ -104,3 +104,11 @@ Per-observation provenance is preserved in `records.jsonl`; `provenance.txt`
 indexes the cohorts. The complete remote artifacts, log, launch script, exit
 status, and previous results are archived locally under
 `results/hash-run-archive/20260916T005626Z/` (git-ignored).
+
+## Akita upstream-pin refresh pending
+
+The harness now pins Akita `c0cb822f28b7b9efe85b1924b029d36e13cdf516`
+and loads its upstream schedule artifacts without vendor patches. Existing
+Akita records still identify the previous implementation and remain historical;
+they must be replaced by the new run before regenerating combined reports with
+this harness. The raw records have not been relabeled.
