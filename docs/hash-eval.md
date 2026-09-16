@@ -27,8 +27,7 @@ Schemes do **not** share one coefficient width:
 
 The harness now prefers the pinned implementation's product or PCS-benchmark
 profile whenever one exists. The five repaired profiles were remeasured on
-2026-09-16; [the refresh record](../results/hash-x86_64/REMEASURE.md) documents
-the replacements and the original measurements retained for unchanged schemes.
+2026-09-16. Unchanged schemes retain their original measurements.
 
 - **Akita:** generated planner schedules at the native 32-, 64-, and 128-bit
   primes, with uniform full-field coefficients and uniform extension-field

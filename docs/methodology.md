@@ -136,7 +136,7 @@ rules that apply only to that table:
    Johnson configuration. SP1 BaseFold uses its 100-bit product parameters.
    The five changed profiles were remeasured on 2026-09-16 and are guarded by
    distinct record identities. Unchanged schemes retain earlier measurements
-   from the matching environment; see `results/hash-x86_64/REMEASURE.md`.
+   from the matching environment.
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
    table, plus `fp64-dense` and `fp128-dense` rows on the hash matrix (CLI
    `akita-fp64` / `akita-fp128`). Cells are not \(\lambda\)-comparable.
