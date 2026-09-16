@@ -1,5 +1,12 @@
 # Hash-PCS profile refresh completed
 
+**WorldFnd memory correction pending:** the current WorldFnd observations retain
+a redundant input vector alongside the prover buffer. Its measurements are
+provisional until the ownership-transfer adapter rerun replaces them. The copy
+was outside the timers, so removing it does not directly subtract copying time
+from any reported phase. The security profile and proof-size accounting are
+unchanged; the actual peak-RSS reduction must be measured.
+
 ## SP1 timing and memory correction completed
 
 SP1 was remeasured using adapter commit `946c0a7` on 2026-09-16,

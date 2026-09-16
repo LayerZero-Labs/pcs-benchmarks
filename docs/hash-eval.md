@@ -96,6 +96,9 @@ the replacements and the original measurements retained for unchanged schemes.
   The commit-phase narg is a BLAKE3 Merkle root (32 bytes) plus one
   Goldilocks3 OOD evaluation (24 bytes). Proof bytes are the remaining
   narg string plus Merkle-path hints.
+  The input vector is moved into the CPU prover buffer without a duplicate;
+  opening evaluates the claim from a borrowed slice of that buffer. Ownership
+  transfer occurs outside the timers and does not change proof-size accounting.
 - **BaseFold (SP1):** SLOP stacked BaseFold with SP1's product parameters:
   a 100-bit target, FRI `log_blowup=2`, 124 queries, 16 bits of grinding, and
   stacking height 21. The pinned prover ignores the supplied evaluation claim

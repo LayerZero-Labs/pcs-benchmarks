@@ -1,8 +1,7 @@
 //! Single-shot WorldFnd WHIR worker (Goldilocks base-field coeffs, deg-3 challenges).
 
 use pcs_bench_core::{
-    RunStatus, WorkerOutput, WORLDFND_SECURITY_BITS, WORLDFND_WHIR_FOLD,
-    WORLDFND_WHIR_LOG_INV_RATE,
+    RunStatus, WorkerOutput, WORLDFND_SECURITY_BITS, WORLDFND_WHIR_FOLD, WORLDFND_WHIR_LOG_INV_RATE,
 };
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -13,7 +12,7 @@ use std::time::Instant;
 use whir::algebra::embedding::Basefield;
 use whir::algebra::fields::{Field64, Field64_3};
 use whir::algebra::linear_form::{Evaluate, LinearForm, MultilinearExtension};
-use whir::buffer::Buffer;
+use whir::buffer::{Buffer, BufferOps};
 use whir::hash;
 use whir::parameters::ProtocolParameters;
 use whir::protocols::params::DecodingRegime;
@@ -77,7 +76,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let vector: Vec<Field64> = (0..num_coeffs)
         .map(|_| random_goldilocks(&mut rng))
         .collect();
-    let vector_buffer = Buffer::from(vector.as_slice());
+    let vector_buffer = Buffer::from(vector);
 
     let point: Vec<<M as whir::algebra::embedding::Embedding>::Target> = (0..num_variables)
         .map(|_| {
@@ -95,7 +94,7 @@ fn timed_whir(log2_n: u32) -> Result<WorkerOutput, String> {
     let commit_ns = elapsed_ns(t0);
 
     let t0 = Instant::now();
-    let evaluation = linear_form.evaluate(params.embedding(), &vector);
+    let evaluation = linear_form.evaluate(params.embedding(), vector_buffer.to_slice());
     let _ = params.prove(
         &mut prover_state,
         &[&vector_buffer],
