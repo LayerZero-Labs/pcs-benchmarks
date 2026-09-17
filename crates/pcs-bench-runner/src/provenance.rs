@@ -157,10 +157,10 @@ impl ProvenanceExt for Provenance {
              plonky3_fri_stir={}\n\
              binius64={}\n\
              flock={}\n\
-             whir_provekit={}\n\
+             worldfnd_whir={}\n\
              security_bits_128={}\n\
              security_bits_100={}\n\
-             provekit_security_bits={}\n",
+             worldfnd_security_bits={}\n",
             self.harness_revision,
             self.timestamp_utc.as_deref().unwrap_or("unknown"),
             self.run_command.as_deref().unwrap_or("unknown"),
@@ -191,14 +191,23 @@ impl ProvenanceExt for Provenance {
             pcs_bench_core::HashSchemeId::WhirProvekit.commit_url(),
             pcs_bench_core::HASH_SECURITY_BITS,
             pcs_bench_core::HASH_SECURITY_BITS_100,
-            pcs_bench_core::PROVEKIT_SECURITY_BITS,
+            pcs_bench_core::WORLDFND_SECURITY_BITS,
         );
         fs::write(path, body).with_context(|| format!("write {}", path.display()))
     }
 }
 
 fn git_revision() -> Option<String> {
+    git_revision_at(&std::env::current_dir().ok()?)
+}
+
+// Result artifacts do not affect the executable. Keep all other tracked and
+// untracked changes in the fingerprint, including scripts and vendor catalogs.
+const SOURCE_PATHS: [&str; 3] = ["--", ":(top)**", ":(top,exclude)results/**"];
+
+fn git_revision_at(directory: &Path) -> Option<String> {
     let output = Command::new("git")
+        .current_dir(directory)
         .args(["rev-parse", "HEAD"])
         .output()
         .ok()?;
@@ -209,14 +218,18 @@ fn git_revision() -> Option<String> {
         .ok()
         .map(|value| value.trim().to_owned())?;
     let status = Command::new("git")
+        .current_dir(directory)
         .args(["status", "--porcelain", "--untracked-files=all"])
+        .args(SOURCE_PATHS)
         .output()
         .ok()?;
     if !status.status.success() || status.stdout.is_empty() {
         return Some(revision);
     }
     let diff = Command::new("git")
+        .current_dir(directory)
         .args(["diff", "--binary", "HEAD"])
+        .args(SOURCE_PATHS)
         .output()
         .ok()?;
     let mut hasher = Sha256::new();
@@ -225,6 +238,7 @@ fn git_revision() -> Option<String> {
         hasher.update(&diff.stdout);
     }
     let root = Command::new("git")
+        .current_dir(directory)
         .args(["rev-parse", "--show-toplevel"])
         .output()
         .ok()
@@ -232,6 +246,7 @@ fn git_revision() -> Option<String> {
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .map(|path| std::path::PathBuf::from(path.trim()));
     let untracked = Command::new("git")
+        .current_dir(directory)
         .args([
             "ls-files",
             "--others",
@@ -239,6 +254,7 @@ fn git_revision() -> Option<String> {
             "--full-name",
             "-z",
         ])
+        .args(SOURCE_PATHS)
         .output()
         .ok();
     if let (Some(root), Some(untracked)) =
@@ -333,4 +349,71 @@ fn memory_bytes() -> Option<u64> {
         return Some(kb.saturating_mul(1024));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::git_revision_at;
+    use std::{fs, process::Command, time::SystemTime};
+
+    #[test]
+    fn revision_ignores_results_but_fingerprints_source_changes() {
+        let nonce = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir =
+            std::env::temp_dir().join(format!("pcs-provenance-{}-{nonce}", std::process::id()));
+        fs::create_dir_all(dir.join("results")).unwrap();
+        fs::create_dir_all(dir.join("src")).unwrap();
+        let git = |args: &[&str]| {
+            let output = Command::new("git")
+                .current_dir(&dir)
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        };
+        git(&["init", "-q"]);
+        fs::write(dir.join("src/main.rs"), "original").unwrap();
+        fs::write(dir.join("results/records.jsonl"), "old results").unwrap();
+        git(&["add", "."]);
+        git(&[
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-qm",
+            "fixture",
+        ]);
+        let clean = git_revision_at(&dir).unwrap();
+        fs::remove_file(dir.join("results/records.jsonl")).unwrap();
+        fs::write(dir.join("results/new.jsonl"), "new results").unwrap();
+        assert_eq!(git_revision_at(&dir).unwrap(), clean);
+        git(&["add", "results"]);
+        assert_eq!(git_revision_at(&dir.join("src")).unwrap(), clean);
+
+        fs::write(dir.join("src/main.rs"), "modified").unwrap();
+        let modified = git_revision_at(&dir).unwrap();
+        assert!(modified.starts_with(&format!("{clean}+dirty.")));
+        fs::write(dir.join("results/new.jsonl"), "more results").unwrap();
+        assert_eq!(git_revision_at(&dir).unwrap(), modified);
+        git(&["add", "src/main.rs"]);
+        assert!(git_revision_at(&dir).unwrap().contains("+dirty."));
+        git(&["reset", "-q", "HEAD", "--", "src/main.rs"]);
+        git(&["restore", "src/main.rs"]);
+        fs::write(dir.join("src/new.rs"), "new source").unwrap();
+        let untracked = git_revision_at(&dir).unwrap();
+        assert!(untracked.contains("+dirty."));
+        fs::write(dir.join("src/new.rs"), "changed source").unwrap();
+        assert_ne!(git_revision_at(&dir).unwrap(), untracked);
+        fs::remove_dir_all(dir).unwrap();
+    }
 }

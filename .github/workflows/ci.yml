@@ -62,6 +62,9 @@ jobs:
       - name: Check locked worker
         run: cargo check --locked --manifest-path benchmarks/akita/Cargo.toml --bins
 
+      - name: Validate Akita schedule artifacts
+        run: cargo test --locked --manifest-path benchmarks/akita/Cargo.toml --lib
+
   isolated-rust-adapters:
     name: Adapter · ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -135,4 +138,3 @@ jobs:
 
       - name: Explain hardware-only coverage
         run: echo "Linking and correctness execution require the controlled x86_64 AVX-512 benchmark host."
-

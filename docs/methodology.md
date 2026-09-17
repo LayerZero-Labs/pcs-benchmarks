@@ -15,10 +15,19 @@ build, and machine provenance are explicit.
    directory and are not imported as performance samples.
 2. **Immutable dependencies.** PCS implementations and non-registry
    dependencies use commit hashes, never moving branches or tags.
+   Harness revision fingerprints exclude `results/`, so archiving or regenerating
+   output does not mark the source revision dirty. Other non-ignored changes,
+   including adapters, scripts, and vendor catalogs, still produce a `+dirty`
+   suffix. Historical records retain the fingerprints captured by their original
+   harness; this rule does not rewrite their provenance or attest ignored
+   third-party checkout contents.
 3. **Deterministic workloads.** Inputs use documented seeds. Fixture generation
    and independent correctness oracles occur outside timed regions; any
    point-dependent claim or preprocessing supplied to the prover is included
-   in opening time. Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
+   in opening time. SP1's pinned prover ignores its claim argument, so its
+   independent witness evaluation is an untimed correctness oracle; opening
+   includes interpolation of the batch evaluations returned in the proof.
+   Peak RSS is `/proc/self/status` `VmHWM` of that worker process, including
    the dense witness. End-to-end runs default to `--seed-mode vary`, which
    records a deterministic seed per payload and process. Use
    `--seed-mode fixed` in a separate run to estimate machine/runtime noise for
@@ -87,9 +96,9 @@ Additional rules that apply only to that table:
    at nine-tenths of detected `MemTotal` / `hw.memsize`. This limits virtual
    address space, not resident memory. Explicit allocation failures are `oom`;
    SIGKILL/137 without corroborating evidence is an unknown worker error.
-4. **Do not bit-match RoKoKo.** Report the native `p-26`/`p-28`/`p-30`
-   instance next to the 32-bit payload it is closest to, and say that the
-   native field is ~50 bits.
+4. **Do not bit-match RoKoKo.** Report the native
+   `p-22`/`p-24`/`p-26`/`p-28`/`p-30` instance with the corresponding
+   coefficient count, and say that the native field is ~50 bits.
 5. **Catalog honesty.** If Akita has no generated schedule for a requested
    `nv`, record unsupported. Do not silently run a nearby size. For the
    lattice table, `nv=22` and `nv=24` are generated with the pinned revision's
@@ -109,16 +118,25 @@ Additional rules that apply only to that table:
 The second experiment is documented in [hash-eval.md](hash-eval.md). Additional
 rules that apply only to that table:
 
-1. **Native security targets.** Do not retune every scheme to 128 bits.
-   Akita, Plonky3 WHIR, and SP1 BaseFold stay at 128-bit transcript error.
+1. **Recorded security targets.** State the soundness notion as well as the bit
+   target, and identify benchmark retunes. Akita uses its validated 128-bit
+   Module-SIS and classical-ROM schedule targets. Plonky3 WHIR uses a 128-bit
+   round-by-round target.
    WHIR uses Plonky3 `p3-whir` with `security_level=128`. Capacity bound at
    rate 1/2 is used when the derived grind fits 30 bits (KoalaBear); unique
    decoding at rate 1/2 is used when list-decoding bounds cannot close 128
    bits (`log2 N` 28 and 30 in this matrix). Generated tables footnote those
-   WHIR rows. BaseFold uses SP1 SLOP FRI parameters whose conjectured
-   soundness is `log_blowup * queries + pow = 128`. Plonky2 FRI, Plonky3
-   FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native 100-bit
-   targets. ProveKit WHIR uses a 133-bit Johnson-bound Goldilocks instance.
+   WHIR rows. Plonky2 uses its approximately 100-bit standard-recursion FRI
+   tuple. Plonky3 FRI uses the pinned upstream benchmark tuple, approximately
+   113.744 bits under the pinned random-words estimate; STIR uses the upstream
+   fold-4 PCS benchmark schedule and validates an aggregate 100-bit
+   capacity-regime target. Binius64 uses its product-default 96-bit
+   unique-decoding query target. Flock uses its default Fast profile at
+   128-bit round-by-round soundness. WorldFnd WHIR uses its 128-bit CLI-default
+   Johnson configuration. SP1 BaseFold uses its 100-bit product parameters.
+   The five changed profiles were remeasured on 2026-09-16 and are guarded by
+   distinct record identities. Unchanged schemes retain earlier measurements
+   from the matching environment.
    Akita uses the same validated `fp32-dense` planner schedule as the lattice
    table, plus `fp64-dense` and `fp128-dense` rows on the hash matrix (CLI
    `akita-fp64` / `akita-fp128`). Cells are not \(\lambda\)-comparable.
@@ -162,4 +180,3 @@ Published results must include:
 
 Result records use one strict shape. Contract changes require replacing the
 canonical records and generated reports.
-

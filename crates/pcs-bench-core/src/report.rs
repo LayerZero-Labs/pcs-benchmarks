@@ -5,18 +5,20 @@ use crate::table::{
     aggregate_resource_rows, aggregate_timing_rows, render_latex_resource_table,
     render_latex_timing_table, render_markdown_resource_table, render_markdown_timing_table,
 };
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 /// Markdown report matching the paper's evaluation write-up.
 #[must_use]
 pub fn render_markdown_eval_report(records: &[LatticeRecord]) -> String {
-    let provenance = first_provenance(records);
+    let provenance = report_provenance(records);
     let homogeneous_machine = records_share_machine(records, &provenance);
     let timing = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         markdown_prose(&provenance, homogeneous_machine),
+        security_table(false),
         render_markdown_timing_table(&timing),
         render_markdown_resource_table(&resources),
         markdown_pins(records),
@@ -27,18 +29,51 @@ pub fn render_markdown_eval_report(records: &[LatticeRecord]) -> String {
 /// LaTeX report matching `tab:eval-lattice-time` and `tab:eval-lattice-resources`.
 #[must_use]
 pub fn render_latex_eval_report(records: &[LatticeRecord]) -> String {
-    let provenance = first_provenance(records);
+    let provenance = report_provenance(records);
     let homogeneous_machine = records_share_machine(records, &provenance);
     let timing = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         latex_prose(&provenance, homogeneous_machine),
+        security_table(true),
         render_latex_timing_table(&timing),
         render_latex_resource_table(&resources),
         latex_pins(records),
         latex_reproduction(&provenance)
     )
+}
+
+/// Describe configured targets without equating them with end-to-end security.
+fn security_table(latex: bool) -> String {
+    let rows = [
+        ("Akita (direct and offload)", "128-bit target", "Planner-validated Module-SIS and classical-ROM transcript targets."),
+        ("Greyhound", "128-bit SIS target", "Euclidean SIS under ADPS16 quantum core-SVP (l2-quantum128-adps16). This is a lattice-hardness policy, not a validated end-to-end transcript bound."),
+        ("RoKoKo", "< 100 bits", "Fixed native profiles; heuristic soundness accounting."),
+    ];
+    let note = "These are reported security categories with different accounting scopes, not equivalent end-to-end security guarantees. RoKoKo is reported as a below-100-bit category, not a precise validated estimate.";
+    if latex {
+        let mut out = String::from("\\begin{table}[t]\n\\centering\n\\caption{Lattice PCS security targets and accounting.}\n\\begin{tabularx}{\\linewidth}{@{}llX@{}}\n\\toprule\nScheme & Security bits & Accounting \\\\\n\\midrule\n");
+        for (scheme, bits, accounting) in rows {
+            let _ = writeln!(
+                out,
+                "{} & {} & {} \\\\",
+                escape_tex(scheme),
+                escape_tex(bits).replace('<', r"$<$"),
+                escape_tex(accounting)
+            );
+        }
+        out.push_str("\\bottomrule\n\\end{tabularx}\n\\end{table}\n\n");
+        out.push_str(&escape_tex(note));
+        out
+    } else {
+        let mut out = String::from("### Security targets and accounting\n\n| Scheme | Security bits | Accounting |\n| --- | --- | --- |\n");
+        for (scheme, bits, accounting) in rows {
+            let _ = writeln!(out, "| {scheme} | {bits} | {accounting} |");
+        }
+        let _ = write!(out, "\n{note}");
+        out
+    }
 }
 
 fn first_provenance(records: &[LatticeRecord]) -> Provenance {
@@ -53,6 +88,18 @@ fn first_provenance(records: &[LatticeRecord]) -> Provenance {
                 + u32::from(provenance.memory_limit_bytes.is_some())
         })
         .map_or_else(Provenance::test_fixture, |record| record.provenance.clone())
+}
+
+fn report_provenance(records: &[LatticeRecord]) -> Provenance {
+    let mut provenance = first_provenance(records);
+    let commands = records
+        .iter()
+        .filter_map(|record| record.provenance.run_command.as_deref())
+        .collect::<BTreeSet<_>>();
+    if !commands.is_empty() {
+        provenance.run_command = Some(commands.into_iter().collect::<Vec<_>>().join("; "));
+    }
+    provenance
 }
 
 fn records_share_machine(records: &[LatticeRecord], expected: &Provenance) -> bool {
@@ -141,7 +188,7 @@ fn markdown_prose(provenance: &Provenance, homogeneous_machine: bool) -> String 
          setup entry is reported as unknown; reusable state size is reported when measurable.\n\
          The resources table reports communication, memory, and preprocessing.\n\n\
          RoKoKo uses the field $\\mathbb{{F}}_{{2^{{50}}-2687}}$ and fixed native parameter\n\
-         sets, so we report its closest supported input at each target payload. An OOM entry\n\
+         sets corresponding to each target's coefficient count. An OOM entry\n\
          {oom}. RoKoKo's native field has about 50 bits, but its sampler is bounded to\n\
          31-bit coefficients. The displayed payload is nominal field capacity and must not\n\
          be interpreted as sampled information content or used to rescale throughput.",
@@ -174,7 +221,7 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
          Embedded reusable setup remains charged to commitment and is otherwise reported as unknown.\n\
          \\Cref{{tab:eval-lattice-resources}} reports communication, memory, and preprocessing.\n\n\
          RoKoKo uses the field $\\mathbb F_{{2^{{50}}-2687}}$ and fixed native parameter\n\
-         sets, so we report its closest supported input at each target payload.  An\n\
+         sets corresponding to each target's coefficient count.  An\n\
          \\evaloom{{}} entry {oom}.\n\
          RoKoKo's native field has about $50$ bits, but its sampler is bounded to\n\
          31-bit coefficients. The displayed payload is nominal field capacity and must not\n\
@@ -287,7 +334,7 @@ const REPRODUCTION_PROSE_MARKDOWN: &str = "\
 Machine, ISA, compiler, executable, lockfile, command, and timestamp provenance
 for this dataset are recorded with each observation. The infrastructure
 toolchain pin is Rust **1.95** (`rust-toolchain.toml`).
-Recorded runner command: `{RUN_COMMAND}`. The commands below are a template,
+Recorded runner command(s): `{RUN_COMMAND}`. The commands below are a template,
 not reconstructed provenance.
 RoKoKo uses `rustup` **nightly-2026-09-03**. Workers are built before sampling;
 every timed execution is then a fresh process wrapped
@@ -299,10 +346,10 @@ and the `vary`/`fixed` seed mode are recorded per observation. Greyhound is
 and run with `LATTICE_DOGS_THREADS=1` and `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`.
 Proof sizes are contextual wire bytes. Recorded worker flags for this dataset:
 `{RUSTFLAGS}`.
-`./scripts/fetch-vendors.sh` clones the pinned implementations,
-installs planner-generated `fp32-dense` rows for `nv=22` and `nv=24`, installs
-the recursive `fp32-dense` setup-offload catalog, and
-patches RoKoKo so the executor prints commitment, CRS, and peak RSS.
+`./scripts/fetch-vendors.sh` clones the pinned implementations and patches
+RoKoKo so the executor prints commitment, CRS, and peak RSS. Akita embeds
+the pinned upstream schedule artifacts and committed supplemental direct rows;
+no Akita patches or schedule generation are needed.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`
 is required in that case. `CARGO_NET_GIT_FETCH_WITH_CLI=true` avoids libgit2 auth
@@ -334,8 +381,7 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS=\"-C target-cpu=native\"
 export RAYON_NUM_THREADS=1
 
-./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
-./scripts/extend-akita-fp32-dense-offload.sh third_party/akita   # once; fills the offload catalog
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, and Akita pins
 ./scripts/build-greyhound.sh
 
 # Full 20-cell matrix (Akita, Akita offload, Greyhound, RoKoKo)
@@ -348,8 +394,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- lattice-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `lattice-eval matrix`
-prints the 20-cell plan (unsupported RoKoKo sizes, Akita/Greyhound `log2 N`,
-RoKoKo `p-26`/`p-28`/`p-30`, and the Akita setup-offload row). A single supported cell should verify and emit
+prints the 20-cell plan (Akita/Greyhound `log2 N`, RoKoKo
+`p-22`/`p-24`/`p-26`/`p-28`/`p-30`, and the Akita setup-offload row). A single supported cell should verify and emit
 JSON with `status: ok`. Unit tests cover the RoKoKo log parser, OOM
 classification, and table tokens. Each sample the runner launches is equivalent
 to the worker commands below (still under the 90%-of-RAM cap).";
@@ -447,7 +493,7 @@ mod tests {
         assert!(report.contains(&SchemeId::Akita.commit_url()));
         assert!(report.contains("Reproduction template"));
         assert!(report.contains("./scripts/fetch-vendors.sh"));
-        assert!(report.contains("./scripts/extend-akita-fp32-dense-offload.sh"));
+        assert!(!report.contains("./scripts/extend-akita-dense-offload.sh"));
         assert!(report.contains("./scripts/build-greyhound.sh"));
         assert!(report.contains("results/lattice-x86_64"));
         assert!(report.contains("Linux x86_64"));
@@ -459,6 +505,17 @@ mod tests {
         assert!(pinned_report.contains(
             "https://github.com/LayerZero-Labs/akita/commit/1111111111111111111111111111111111111111"
         ));
+
+        let mut initial_run = record.clone();
+        initial_run.provenance.run_command =
+            Some("pcs-bench lattice-eval run --out results/lattice-x86_64".into());
+        let mut refreshed_scheme = record.clone();
+        refreshed_scheme.sample = 1;
+        refreshed_scheme.provenance.run_command =
+            Some("pcs-bench lattice-eval run --scheme rokoko".into());
+        let refreshed_report = render_markdown_eval_report(&[initial_run, refreshed_scheme]);
+        assert!(refreshed_report.contains("run --out results/lattice-x86_64"));
+        assert!(refreshed_report.contains("run --scheme rokoko"));
 
         let mut other_machine = record.clone();
         other_machine.sample = 1;

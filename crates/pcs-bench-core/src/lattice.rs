@@ -74,16 +74,16 @@ pub const ROKOKO_Q50: FieldSpec = FieldSpec {
 };
 
 /// Pinned Akita revision on `main` (immutable git SHA).
-pub const AKITA_REVISION: &str = "d1b224d809c7edc357b0dbab0f607e19b475910b";
+pub const AKITA_REVISION: &str = "c0cb822f28b7b9efe85b1924b029d36e13cdf516";
 
 /// Pinned Greyhound reference revision (`LayerZero-Labs/greyhound-reference`).
-pub const GREYHOUND_REVISION: &str = "687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397";
+pub const GREYHOUND_REVISION: &str = "672e74100496f6ef698ba35e241cf7593e3d57af";
 
 /// Euclidean SIS policy used by the Greyhound lattice-eval worker.
 pub const GREYHOUND_SIS_POLICY: &str = "l2-quantum128-adps16";
 
 /// Pinned RoKoKo revision.
-pub const ROKOKO_REVISION: &str = "1baa91e901fc37b5fa59e65c26a630cb93849b3e";
+pub const ROKOKO_REVISION: &str = "26d07c73c54872b9e8d2b3200117a6a0a21b10ee";
 
 /// Identifies a lattice PCS implementation in the comparison harness.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -108,6 +108,16 @@ impl SchemeId {
             Self::AkitaOffload => "Akita (offload)",
             Self::Greyhound => "Greyhound",
             Self::Rokoko => "RoKoKo",
+        }
+    }
+
+    /// Reported security category; the report specifies each accounting scope.
+    #[must_use]
+    pub const fn security_label(self) -> &'static str {
+        match self {
+            Self::Akita | Self::AkitaOffload => "128-bit target",
+            Self::Greyhound => "128-bit SIS target",
+            Self::Rokoko => "< 100 bits",
         }
     }
 
@@ -208,10 +218,12 @@ pub const fn log2_n_for_32bit_payload(payload_log2: u32) -> Option<u32> {
     payload_log2.checked_sub(AKITA_FP32.log2_bits.trailing_zeros())
 }
 
-/// Closest RoKoKo native degree feature for a target payload, if any.
+/// RoKoKo native degree feature with the corresponding coefficient count.
 #[must_use]
 pub const fn rokoko_native_for_payload(payload_log2: u32) -> Option<(u32, &'static str)> {
     match payload_log2 {
+        27 => Some((22, "p-22")),
+        29 => Some((24, "p-24")),
         31 => Some((26, "p-26")),
         33 => Some((28, "p-28")),
         35 => Some((30, "p-30")),
@@ -304,7 +316,7 @@ fn rokoko_case(payload_log2: u32) -> LatticeCase {
             log2_n: None,
             native_param: None,
             unsupported_reason: Some(
-                "RoKoKo ships fixed native sets p-26, p-28, and p-30 only; no instance matches this payload",
+                "RoKoKo ships fixed native sets p-22, p-24, p-26, p-28, and p-30 only; no instance matches this payload",
             ),
         },
     }
@@ -342,9 +354,9 @@ mod tests {
     }
 
     #[test]
-    fn rokoko_native_sets_are_the_closest_supported_payloads() {
-        assert_eq!(rokoko_native_for_payload(27), None);
-        assert_eq!(rokoko_native_for_payload(29), None);
+    fn rokoko_native_sets_cover_the_headline_coefficient_counts() {
+        assert_eq!(rokoko_native_for_payload(27), Some((22, "p-22")));
+        assert_eq!(rokoko_native_for_payload(29), Some((24, "p-24")));
         assert_eq!(rokoko_native_for_payload(31), Some((26, "p-26")));
         assert_eq!(rokoko_native_for_payload(33), Some((28, "p-28")));
         assert_eq!(rokoko_native_for_payload(35), Some((30, "p-30")));
@@ -384,7 +396,7 @@ mod tests {
                 .all(|case| case.payload_log2 == *payload));
         }
         let unsupported = matrix.iter().filter(|case| case.log2_n.is_none()).count();
-        assert_eq!(unsupported, 2);
+        assert_eq!(unsupported, 0);
         assert_eq!(
             SchemeId::parse_token("akita-offload"),
             Some(SchemeId::AkitaOffload)
@@ -399,11 +411,11 @@ mod tests {
         );
         assert_eq!(
             SchemeId::Akita.commit_url(),
-            "https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b"
+            "https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516"
         );
         assert_eq!(
             SchemeId::Greyhound.commit_url(),
-            "https://github.com/LayerZero-Labs/greyhound-reference/commit/687a6f8be1dbc5bf1fa3927bb4a0a8d1e84d8397"
+            "https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af"
         );
     }
 }

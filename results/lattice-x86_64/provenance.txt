@@ -1,0 +1,21 @@
+Combined lattice-x86_64 dataset
+records.jsonl is the authoritative per-observation provenance.
+Akita refreshed with upstream c0cb822f on 2026-09-16/17; other schemes retain their existing measurements.
+No claim of contemporaneous measurement across cohorts.
+
+records=220
+records_sha256=7f966f4ccfed363b15ccd856589fd5308de8b45dedd4cf455437de71c4a7a8e4
+
+[cohort 1]
+harness_revision=73a2419125aa53e13acb962b7eb4c3d5fc716ccc
+timestamp_utc=2026-09-14T01:17:52Z
+run_command=target/release/pcs-bench lattice-eval run --out /home/taghi/pcs-benchmarks-refresh.8wETs2/results-lattice-x86_64-final
+schemes=greyhound,rokoko
+records=110
+
+[cohort 2]
+harness_revision=add6dc0eeee27d744ee72a78195d1eca5a7d1549
+timestamp_utc=2026-09-17T00:53:45Z
+run_command=target/release/pcs-bench lattice-eval run --scheme akita,akita-offload --payload 27,29,31,33,35 --runs 10 --warmups 1 --seed-mode vary --out results/lattice-x86_64
+schemes=akita,akita_offload
+records=110

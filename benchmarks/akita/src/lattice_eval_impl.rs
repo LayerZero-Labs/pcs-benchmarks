@@ -5,11 +5,11 @@ use akita_prover::{ComputeBackendSetup, CpuBackend, DensePoly, SelectedProverOpe
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Compress, Valid};
 use akita_transcript::AkitaTranscript;
 use akita_types::{
-    AkitaCommitmentHint, BasisMode, CommittedGroup, CommittedGroupBatchProfile, FpExtEncoding,
-    GroupBatchStatement, OpeningClaims, OpeningClaimsLayout, OpeningScheduleSelection,
-    PolynomialGroupClaims,
+    AkitaCommitmentHint, AkitaScheduleLookupKey, BasisMode, CommittedGroup,
+    CommittedGroupBatchProfile, FpExtEncoding, GroupBatchStatement, OpeningClaims,
+    OpeningScheduleSelection, PolynomialGroupClaims, PolynomialGroupLayout,
 };
-use jolt_field::{Field, Fold, One, PseudoMersenne, Ring, Unreduced};
+use jolt_field::{Field, Fold, One, PseudoMersenne, Ring, Unreduced, WithCommitAccumulator};
 use pcs_bench_core::{RunStatus, WorkerOutput};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -20,6 +20,8 @@ use std::time::Instant;
 
 type DirectCfg = fp32::Dense;
 type OffloadCfg = RecursiveCommitmentConfig<fp32::Dense>;
+type Fp64OffloadCfg = RecursiveCommitmentConfig<fp64::Dense>;
+type Fp128OffloadCfg = RecursiveCommitmentConfig<fp128::Dense>;
 type ProverOpeningData<'a, Cfg, P> = SelectedProverOpeningData<
     'a,
     <Cfg as CommitmentConfig>::ExtField,
@@ -62,11 +64,10 @@ fn run() -> Result<(), String> {
     match (field.as_str(), offload) {
         ("fp32", true) => run_cfg::<OffloadCfg>(log2_n, true, "fp32-dense-recursive"),
         ("fp32", false) => run_cfg::<DirectCfg>(log2_n, false, "fp32 dense"),
+        ("fp64", true) => run_cfg::<Fp64OffloadCfg>(log2_n, true, "fp64-dense-recursive"),
         ("fp64", false) => run_cfg::<fp64::Dense>(log2_n, false, "fp64 dense"),
+        ("fp128", true) => run_cfg::<Fp128OffloadCfg>(log2_n, true, "fp128-dense-recursive"),
         ("fp128", false) => run_cfg::<fp128::Dense>(log2_n, false, "fp128 dense"),
-        ("fp64" | "fp128", true) => {
-            Err(format!("--offload is only supported for fp32, not {field}"))
-        }
         (other, _) => Err(format!(
             "unknown --field {other} (expected fp32, fp64, or fp128)"
         )),
@@ -76,13 +77,20 @@ fn run() -> Result<(), String> {
 fn run_cfg<Cfg>(log2_n: u32, offload: bool, catalog: &'static str) -> Result<(), String>
 where
     Cfg: CommitmentConfig,
-    Cfg::Field:
-        Field + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
+    Cfg::Field: Field
+        + Unreduced
+        + PseudoMersenne
+        + Valid
+        + AkitaSerialize
+        + AkitaDeserialize<Context = ()>
+        + WithCommitAccumulator,
     Cfg::ExtField: Field + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
 {
-    let resolved = OpeningClaimsLayout::new(log2_n as usize, 1)
-        .ok()
-        .and_then(|layout| Cfg::resolve_catalog_row_for_opening(&layout).ok());
+    let t0 = Instant::now();
+    let schedules = pcs_bench_akita::schedule_catalog::<Cfg>(log2_n as usize)?;
+    let catalog_setup_ns = elapsed_ns(t0);
+    let key = AkitaScheduleLookupKey::single(PolynomialGroupLayout::singleton(log2_n as usize));
+    let resolved = schedules.resolve_key(&key).ok();
     let Some(resolved) = resolved else {
         emit(&WorkerOutput {
             status: RunStatus::Unsupported,
@@ -108,16 +116,28 @@ where
             .filter(|fold| fold.params.setup_prefix().is_some())
             .count();
         if offload_edges == 0 {
-            return Err(format!(
-                "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
-            ));
+            emit(&WorkerOutput {
+                status: RunStatus::Unsupported,
+                status_detail: Some(format!(
+                    "pinned Akita {catalog} catalog row for nv={log2_n} has no setup-prefix edges"
+                )),
+                log2_n: Some(log2_n),
+                timings_ns: BTreeMap::new(),
+                proof_bytes: None,
+                commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
+                state_bytes: None,
+                peak_rss_bytes: peak_rss_bytes(),
+            })?;
+            return Ok(());
         }
     }
 
     let output = std::thread::Builder::new()
         .name("akita-lattice-eval".into())
         .stack_size(256 * 1024 * 1024)
-        .spawn(move || timed_dense::<Cfg>(log2_n, catalog))
+        .spawn(move || timed_dense::<Cfg>(log2_n, catalog, schedules, catalog_setup_ns))
         .map_err(|error| error.to_string())?
         .join()
         .map_err(|_| "Akita worker thread panicked".to_owned())??;
@@ -126,11 +146,21 @@ where
 }
 
 #[allow(clippy::too_many_lines)]
-fn timed_dense<Cfg>(log2_n: u32, catalog: &'static str) -> Result<WorkerOutput, String>
+fn timed_dense<Cfg>(
+    log2_n: u32,
+    catalog: &'static str,
+    schedules: akita_config::TrustedScheduleCatalog<Cfg>,
+    catalog_setup_ns: u64,
+) -> Result<WorkerOutput, String>
 where
     Cfg: CommitmentConfig,
-    Cfg::Field:
-        Field + Unreduced + PseudoMersenne + Valid + AkitaSerialize + AkitaDeserialize<Context = ()>,
+    Cfg::Field: Field
+        + Unreduced
+        + PseudoMersenne
+        + Valid
+        + AkitaSerialize
+        + AkitaDeserialize<Context = ()>
+        + WithCommitAccumulator,
     Cfg::ExtField: Field + Unreduced + Fold + AkitaSerialize + FpExtEncoding<Cfg::Field>,
 {
     let num_vars = log2_n as usize;
@@ -150,7 +180,9 @@ where
     .0;
 
     let t0 = Instant::now();
-    let setup = AkitaCommitmentScheme::<Cfg>::setup_prover(num_vars, 1)
+    let scheme = AkitaCommitmentScheme::<Cfg>::new(schedules);
+    let setup = scheme
+        .setup_prover(num_vars, 1)
         .map_err(|error| error.to_string())?;
     let prepared = CpuBackend::DEFAULT
         .prepare_setup(&setup)
@@ -161,26 +193,30 @@ where
         setup.expanded.as_ref(),
     )
     .map_err(|error| error.to_string())?;
-    let verifier_setup =
-        AkitaCommitmentScheme::<Cfg>::setup_verifier(&setup).map_err(|error| error.to_string())?;
-    let setup_ns = elapsed_ns(t0);
+    let verifier_setup = scheme
+        .setup_verifier(&setup)
+        .map_err(|error| error.to_string())?;
+    let setup_ns = elapsed_ns(t0).saturating_add(catalog_setup_ns);
 
     let t0 = Instant::now();
-    let commit_output = AkitaCommitmentScheme::<Cfg>::commit::<_, _>(
-        &setup,
-        std::slice::from_ref(&polynomial),
-        &stack,
-        akita_prover::GroupContext::scheduler_without_precommitted_groups(),
-    )
-    .map_err(|error| error.to_string())?;
+    let commit_output = scheme
+        .commit::<_, _>(
+            &setup,
+            std::slice::from_ref(&polynomial),
+            stack.commitment(),
+            akita_prover::GroupContext::scheduler_without_precommitted_groups(),
+        )
+        .map_err(|error| error.to_string())?;
     let commit_ns = elapsed_ns(t0);
 
     let polynomial_refs = [&polynomial];
-    let resolved = Cfg::resolve_catalog_row_for_profiles(&CommittedGroupBatchProfile {
-        final_group: *commit_output.committed_group.profile(),
-        precommitteds: Vec::new(),
-    })
-    .map_err(|error| error.to_string())?;
+    let resolved = scheme
+        .schedules()
+        .resolve_profiles(&CommittedGroupBatchProfile {
+            final_group: *commit_output.committed_group.profile(),
+            precommitteds: Vec::new(),
+        })
+        .map_err(|error| error.to_string())?;
     let offload_edges = resolved
         .schedule()
         .recursive_folds
@@ -191,54 +227,58 @@ where
 
     let t0 = Instant::now();
     let mut prover_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
-    let proof = AkitaCommitmentScheme::<Cfg>::batched_prove::<_, _, _>(
-        &setup,
-        prover_claims::<Cfg, _>(
-            &point,
-            &polynomial_refs,
-            &commit_output.committed_group,
-            commit_output.hint.clone(),
-        )?,
-        &stack,
-        &mut prover_transcript,
-        BasisMode::Lagrange,
-    )
-    .map_err(|error| error.to_string())?;
+    let proof = scheme
+        .batched_prove::<_, _, _, _>(
+            &setup,
+            prover_claims::<Cfg, _>(
+                &point,
+                &polynomial_refs,
+                &commit_output.committed_group,
+                commit_output.prover_state.clone(),
+                scheme.schedules(),
+            )?,
+            &stack,
+            &mut prover_transcript,
+            BasisMode::Lagrange,
+        )
+        .map_err(|error| error.to_string())?;
     let open_ns = elapsed_ns(t0);
 
     let t0 = Instant::now();
     let mut verifier_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
-    AkitaCommitmentScheme::<Cfg>::batched_verify(
-        &proof,
-        &verifier_setup,
-        &mut verifier_transcript,
-        verifier_claims::<Cfg>(
-            selection,
-            &point,
-            &[opening],
-            &commit_output.committed_group,
-        )?,
-        BasisMode::Lagrange,
-    )
-    .map_err(|error| error.to_string())?;
+    scheme
+        .batched_verify(
+            &proof,
+            &verifier_setup,
+            &mut verifier_transcript,
+            verifier_claims::<Cfg>(
+                selection,
+                &point,
+                &[opening],
+                &commit_output.committed_group,
+            )?,
+            BasisMode::Lagrange,
+        )
+        .map_err(|error| error.to_string())?;
     let verify_ns = elapsed_ns(t0);
 
     if negative_check_enabled() {
         let altered_opening = opening + Cfg::ExtField::one();
         let mut negative_transcript = AkitaTranscript::<Cfg::Field>::new(TRANSCRIPT_DOMAIN);
-        if AkitaCommitmentScheme::<Cfg>::batched_verify(
-            &proof,
-            &verifier_setup,
-            &mut negative_transcript,
-            verifier_claims::<Cfg>(
-                selection,
-                &point,
-                &[altered_opening],
-                &commit_output.committed_group,
-            )?,
-            BasisMode::Lagrange,
-        )
-        .is_ok()
+        if scheme
+            .batched_verify(
+                &proof,
+                &verifier_setup,
+                &mut negative_transcript,
+                verifier_claims::<Cfg>(
+                    selection,
+                    &point,
+                    &[altered_opening],
+                    &commit_output.committed_group,
+                )?,
+                BasisMode::Lagrange,
+            )
+            .is_ok()
         {
             return Err("Akita verifier accepted an altered opening claim".into());
         }
@@ -262,9 +302,7 @@ where
             "unexpected Akita commitment payload size: {commitment_bytes} bytes"
         ));
     }
-    let public_context_bytes = (commit_output
-        .committed_group
-        .serialized_size(Compress::No) as u64)
+    let public_context_bytes = (commit_output.committed_group.serialized_size(Compress::No) as u64)
         .saturating_sub(commitment_bytes);
 
     Ok(WorkerOutput {
@@ -288,6 +326,7 @@ fn prover_claims<'a, Cfg, P>(
     polynomials: &'a [&'a P],
     commitment: &'a CommittedGroup<Cfg::Field>,
     hint: AkitaCommitmentHint<Cfg::Field>,
+    schedules: &akita_config::TrustedScheduleCatalog<Cfg>,
 ) -> Result<ProverOpeningData<'a, Cfg, P>, String>
 where
     Cfg: CommitmentConfig,
@@ -301,8 +340,13 @@ where
     )
     .map_err(|error| error.to_string())?;
     let claims = OpeningClaims::from_groups(vec![group]).map_err(|error| error.to_string())?;
-    SelectedProverOpeningData::from_committed_claims::<Cfg>(claims, vec![hint], vec![polynomials])
-        .map_err(|error| error.to_string())
+    SelectedProverOpeningData::from_committed_claims::<Cfg>(
+        claims,
+        vec![hint],
+        vec![polynomials],
+        schedules,
+    )
+    .map_err(|error| error.to_string())
 }
 
 fn verifier_claims<'a, Cfg>(

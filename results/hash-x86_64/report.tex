@@ -1,0 +1,393 @@
+Measurements were collected on a single AMD Ryzen 9 9950X 16-Core Processor (Linux x86\_64, 32 logical CPUs, 121~GiB RAM). The CPU advertised AVX-512F, but the executed instruction stream was not independently traced. CPU policy: driver amd-pstate-epp, governor powersave, preference balance\_performance.
+
+Our second experiment compares Akita with other high-performance hash-based PCSs
+on the same nominal dense payload ladder ($2^{27}$ through $2^{35}$ bits).
+This is a measured-configuration survey, not an equivalent-security PCS ranking.
+Nominal payload is field-capacity accounting, not a claim about sampled input entropy.
+The table below records the accepted native profile and security accounting for every scheme.
+KoalaBear univariate FRI/STIR pack into a $2^{23}\times 2^{n-23}$ matrix when $\log_2 N>23$. Timing cells
+report the median and, when supported by the sample count, a conservative distribution-free 95\% confidence interval,
+at 1 and 8 threads. Scheme names are hyperlinks to the exact git commit that was
+measured. Unmeasured roster cells are \evalpending{}.
+
+The timing comparison in \Cref{tab:eval-hash-time} separates commitment,
+opening, and verification; cold total includes setup, commitment, and opening.
+Point-dependent claim and transcript work supplied to proving is included in opening.
+\Cref{tab:eval-hash-resources} reports
+communication, memory, and preprocessing. An \evaloom{} entry is a confirmed allocation failure under the 109~GiB virtual-address-space ceiling.
+
+\begin{table}[t]
+\centering
+\caption{Security accounting and accepted native profiles. RBR denotes round-by-round soundness; UDR denotes unique decoding.}
+\begin{tabularx}{\linewidth}{@{}lXX@{}}
+\toprule
+Scheme & Accepted profile & Security accounting \\
+\midrule
+Akita & Planner-selected schedules at each native prime & 128-bit Module-SIS and classical-ROM target \\
+Plonky2 FRI & Rate $1/8$, 28 queries, 16 work bits & $\sim$100-bit conjectural FRI \\
+Plonky3 FRI & Rate $1/2$, 100 queries, 16 query-PoW bits & 113.744-bit conjectural random-words \\
+Plonky3 STIR & Rate $1/2$, fold 4 throughout, at most 20 work bits per phase & 100-bit aggregate capacity/MCA \\
+Plonky3 WHIR & Capacity through $\log_2N=26$, then unique decoding & 128-bit RBR under pinned model \\
+Binius64 & Rate $1/2$, 232 queries, SHA-256 & 96-bit UDR query target \\
+Flock & Default \texttt{Fast}, SHA-256 & 128-bit RBR \\
+WorldFnd & Rate $1/2$, fold 4, Johnson, BLAKE3 & 128-bit RBR \\
+SP1 & Rate $1/4$, 124 queries, 16 work bits, height 21 & 100-bit UDR query target \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption[Timing comparison with hash-based PCSs]{Commitment, opening, and
+verification time for the hash-based PCS roster on declared nominal payloads.
+Security and statement columns expose configurations that are not directly comparable.
+A dash denotes an unsupported parallel mode.
+Timing cells are the median of fresh processes after warmup, followed by
+a conservative distribution-free 95\% confidence interval when the sample count supports one.
+Scheme names link to the exact git commit that was measured.}
+\label{tab:eval-hash-time}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llclcccrrrr@{}}
+\toprule
+Nominal payload & Scheme & Security & Statement & Field & $\log_2 N$ & Threads
+& Commit (s) & Open (s) & Cold total (s) & Verify (ms) \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 22 & 1 & $0.096\;[0.095, 0.099]$ & $0.999\;[0.996, 1.00]$ & $1.10\;[1.10, 1.11]$ & $7.6\;[7.5, 7.7]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 22 & 8 & $0.020\;[0.020, 0.021]$ & $0.255\;[0.246, 0.269]$ & $0.278\;[0.269, 0.292]$ & $5.9\;[5.7, 6.0]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(1)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & \evalunsupported$^{(1)}$ & 1 & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(1)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & \evalunsupported$^{(1)}$ & 8 & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 21 & 1 & $0.072\;[0.071, 0.073]$ & $0.602\;[0.596, 0.604]$ & $0.683\;[0.679, 0.688]$ & $5.7\;[5.5, 5.9]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 21 & 8 & $0.019\;[0.018, 0.020]$ & $0.172\;[0.163, 0.179]$ & $0.192\;[0.185, 0.201]$ & $4.5\;[4.4, 4.9]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(2)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & \evalunsupported$^{(2)}$ & 1 & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(2)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & \evalunsupported$^{(2)}$ & 8 & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 20 & 1 & $0.126\;[0.125, 0.129]$ & $0.509\;[0.506, 0.514]$ & $0.654\;[0.648, 0.662]$ & $5.6\;[5.6, 5.7]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 20 & 8 & $0.026\;[0.026, 0.027]$ & $0.153\;[0.150, 0.156]$ & $0.183\;[0.180, 0.186]$ & $4.9\;[4.4, 5.5]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(3)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & \evalunsupported$^{(3)}$ & 1 & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(3)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & \evalunsupported$^{(3)}$ & 8 & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ \\
+$2^{27}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 21 & 1 & $14.3\;[14.3, 14.3]$ & $5.26\;[5.23, 5.29]$ & $19.6\;[19.5, 19.6]$ & $1.9\;[1.8, 1.9]$ \\
+$2^{27}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 21 & 8 & $2.25\;[2.24, 2.26]$ & $1.77\;[1.75, 1.77]$ & $4.02\;[4.00, 4.03]$ & $1.9\;[1.9, 1.9]$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI} & 113.744-bit random-words conjectural & univariate & $2^{31}-2^{24}+1$ & 22 & 1 & $1.09\;[1.08, 1.10]$ & $2.56\;[2.54, 2.57]$ & $3.68\;[3.66, 3.69]$ & $8.8\;[8.6, 8.9]$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI} & 113.744-bit random-words conjectural & univariate & $2^{31}-2^{24}+1$ & 22 & 8 & $0.216\;[0.213, 0.222]$ & $0.526\;[0.522, 0.533]$ & $0.766\;[0.761, 0.776]$ & $8.8\;[8.8, 9.0]$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR} & 100-bit capacity & univariate & $2^{31}-2^{24}+1$ & 22 & 1 & $1.09\;[1.09, 1.10]$ & $3.00\;[2.96, 3.11]$ & $4.12\;[4.07, 4.24]$ & $3.6\;[3.6, 4.0]$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR} & 100-bit capacity & univariate & $2^{31}-2^{24}+1$ & 22 & 8 & $0.217\;[0.213, 0.220]$ & $0.696\;[0.684, 0.699]$ & $0.935\;[0.927, 0.942]$ & $3.7\;[3.7, 3.8]$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 22 & 1 & $0.089\;[0.085, 0.090]$ & $0.494\;[0.472, 0.518]$ & $0.584\;[0.561, 0.608]$ & $1.7\;[1.7, 1.7]$ \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 22 & 8 & $0.024\;[0.022, 0.025]$ & $0.113\;[0.100, 0.120]$ & $0.138\;[0.126, 0.144]$ & $1.8\;[1.7, 1.8]$ \\
+$2^{27}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 20 & 1 & $0.038\;[0.037, 0.039]$ & $0.014\;[0.013, 0.014]$ & $0.056\;[0.053, 0.056]$ & $0.5\;[0.5, 0.5]$ \\
+$2^{27}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 20 & 8 & $0.007\;[0.007, 0.008]$ & $0.007\;[0.007, 0.008]$ & $0.018\;[0.018, 0.019]$ & $0.5\;[0.5, 0.5]$ \\
+$2^{27}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 27 & 1 & $0.034\;[0.033, 0.035]$ & $0.101\;[0.098, 0.103]$ & $0.135\;[0.131, 0.138]$ & $1.3\;[1.3, 1.5]$ \\
+$2^{27}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 27 & 8 & $0.006\;[0.006, 0.007]$ & $0.023\;[0.023, 0.025]$ & $0.030\;[0.029, 0.032]$ & $1.3\;[1.3, 1.4]$ \\
+$2^{27}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 21 & 1 & $0.382\;[0.378, 0.389]$ & $2.18\;[2.17, 2.20]$ & $2.56\;[2.55, 2.59]$ & $1.0\;[0.9, 1.4]$ \\
+$2^{27}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 21 & 8 & $0.066\;[0.065, 0.067]$ & $0.345\;[0.339, 0.347]$ & $0.411\;[0.405, 0.414]$ & $1.0\;[1.0, 1.0]$ \\
+$2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 22 & 1 & $2.24\;[2.10, 2.25]$ & $3.35\;[3.29, 3.50]$ & $5.58\;[5.53, 5.74]$ & $25.8\;[25.6, 26.1]$ \\
+$2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 22 & 8 & $2.09\;[2.09, 2.17]$ & $3.35\;[3.24, 3.41]$ & $5.45\;[5.41, 5.50]$ & $26.1\;[25.9, 26.4]$ \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 24 & 1 & $0.333\;[0.331, 0.334]$ & $1.53\;[1.53, 1.53]$ & $1.87\;[1.87, 1.88]$ & $9.2\;[9.1, 9.3]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 24 & 8 & $0.052\;[0.052, 0.053]$ & $0.359\;[0.354, 0.364]$ & $0.414\;[0.408, 0.418]$ & $6.6\;[6.5, 6.9]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 24 & 1 & $0.332\;[0.330, 0.333]$ & $2.04\;[2.04, 2.04]$ & $2.40\;[2.40, 2.41]$ & $8.2\;[8.0, 8.4]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 24 & 8 & $0.050\;[0.050, 0.051]$ & $0.425\;[0.420, 0.434]$ & $0.484\;[0.478, 0.493]$ & $6.5\;[6.3, 6.8]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 23 & 1 & $0.229\;[0.227, 0.230]$ & $1.03\;[1.03, 1.03]$ & $1.28\;[1.28, 1.28]$ & $8.2\;[8.0, 8.5]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 23 & 8 & $0.041\;[0.040, 0.043]$ & $0.261\;[0.257, 0.268]$ & $0.305\;[0.301, 0.313]$ & $5.4\;[5.3, 6.0]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(4)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & \evalunsupported$^{(4)}$ & 1 & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(4)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & \evalunsupported$^{(4)}$ & 8 & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 22 & 1 & $0.435\;[0.431, 0.437]$ & $0.860\;[0.857, 0.862]$ & $1.32\;[1.31, 1.32]$ & $6.5\;[6.4, 6.8]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 22 & 8 & $0.070\;[0.069, 0.072]$ & $0.198\;[0.196, 0.203]$ & $0.271\;[0.270, 0.282]$ & $4.6\;[4.5, 4.8]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(5)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & \evalunsupported$^{(5)}$ & 1 & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(5)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & \evalunsupported$^{(5)}$ & 8 & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ \\
+$2^{29}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 23 & 1 & $57.2\;[57.2, 57.3]$ & $21.0\;[21.0, 21.1]$ & $78.3\;[78.2, 78.3]$ & $2.3\;[2.2, 2.3]$ \\
+$2^{29}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 23 & 8 & $9.02\;[9.01, 9.05]$ & $7.21\;[7.21, 7.23]$ & $16.2\;[16.2, 16.3]$ & $2.3\;[2.3, 2.3]$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 24 & 1 & $2.38\;[2.36, 2.38]$ & $5.13\;[5.09, 5.14]$ & $7.57\;[7.52, 7.57]$ & $9.6\;[9.5, 9.8]$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 24 & 8 & $0.491\;[0.484, 0.492]$ & $1.04\;[1.03, 1.06]$ & $1.59\;[1.58, 1.60]$ & $9.7\;[9.6, 9.9]$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 24 & 1 & $2.37\;[2.36, 2.38]$ & $5.95\;[5.88, 6.11]$ & $8.39\;[8.32, 8.55]$ & $3.8\;[3.7, 4.2]$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 24 & 8 & $0.487\;[0.485, 0.493]$ & $1.42\;[1.39, 1.42]$ & $1.96\;[1.93, 1.97]$ & $3.9\;[3.9, 3.9]$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 24 & 1 & $0.368\;[0.366, 0.375]$ & $8.93\;[7.10, 15.1]$ & $9.32\;[7.47, 15.5]$ & $1.9\;[1.9, 1.9]$ \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 24 & 8 & $0.110\;[0.109, 0.111]$ & $1.51\;[1.20, 2.12]$ & $1.63\;[1.32, 2.23]$ & $2.0\;[2.0, 2.1]$ \\
+$2^{29}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 22 & 1 & $0.161\;[0.158, 0.164]$ & $0.052\;[0.050, 0.057]$ & $0.231\;[0.225, 0.234]$ & $0.7\;[0.7, 0.7]$ \\
+$2^{29}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 22 & 8 & $0.040\;[0.039, 0.041]$ & $0.025\;[0.024, 0.026]$ & $0.081\;[0.080, 0.083]$ & $0.7\;[0.7, 0.7]$ \\
+$2^{29}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 29 & 1 & $0.116\;[0.115, 0.116]$ & $0.416\;[0.410, 0.422]$ & $0.533\;[0.527, 0.538]$ & $1.4\;[1.4, 1.4]$ \\
+$2^{29}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 29 & 8 & $0.032\;[0.031, 0.033]$ & $0.092\;[0.091, 0.095]$ & $0.125\;[0.123, 0.127]$ & $1.4\;[1.4, 1.5]$ \\
+$2^{29}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 23 & 1 & $1.73\;[1.71, 1.74]$ & $9.30\;[9.25, 9.33]$ & $11.0\;[11.0, 11.1]$ & $1.0\;[1.0, 1.0]$ \\
+$2^{29}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 23 & 8 & $0.299\;[0.296, 0.302]$ & $1.45\;[1.44, 1.45]$ & $1.75\;[1.74, 1.76]$ & $1.1\;[1.1, 1.1]$ \\
+$2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 24 & 1 & $2.96\;[2.92, 3.04]$ & $3.42\;[3.35, 3.46]$ & $6.39\;[6.32, 6.47]$ & $25.8\;[25.5, 26.1]$ \\
+$2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 24 & 8 & $2.91\;[2.90, 3.06]$ & $3.36\;[3.27, 3.48]$ & $6.31\;[6.25, 6.41]$ & $26.0\;[25.6, 26.5]$ \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 26 & 1 & $1.24\;[1.24, 1.25]$ & $2.70\;[2.70, 2.71]$ & $3.97\;[3.96, 3.98]$ & $12.7\;[12.7, 12.8]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 26 & 8 & $0.172\;[0.170, 0.173]$ & $0.549\;[0.544, 0.554]$ & $0.725\;[0.721, 0.731]$ & $7.4\;[7.1, 7.6]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 26 & 1 & $1.24\;[1.24, 1.25]$ & $3.33\;[3.33, 3.34]$ & $4.65\;[4.64, 4.66]$ & $12.1\;[11.8, 12.2]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 26 & 8 & $0.172\;[0.169, 0.175]$ & $0.676\;[0.671, 0.683]$ & $0.863\;[0.860, 0.872]$ & $9.0\;[8.8, 9.4]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 25 & 1 & $0.816\;[0.811, 0.821]$ & $1.88\;[1.87, 1.88]$ & $2.72\;[2.71, 2.72]$ & $10.3\;[10.1, 10.8]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 25 & 8 & $0.125\;[0.124, 0.128]$ & $0.409\;[0.408, 0.418]$ & $0.539\;[0.537, 0.550]$ & $5.8\;[5.5, 6.2]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 25 & 1 & $0.807\;[0.806, 0.808]$ & $2.35\;[2.35, 2.35]$ & $3.23\;[3.22, 3.23]$ & $8.1\;[7.8, 8.7]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 25 & 8 & $0.123\;[0.122, 0.125]$ & $0.509\;[0.501, 0.513]$ & $0.650\;[0.641, 0.655]$ & $5.9\;[5.6, 6.1]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 24 & 1 & $2.26\;[2.24, 2.27]$ & $2.19\;[2.18, 2.20]$ & $4.50\;[4.48, 4.51]$ & $10.6\;[10.3, 10.7]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 24 & 8 & $0.328\;[0.326, 0.329]$ & $0.438\;[0.437, 0.440]$ & $0.776\;[0.775, 0.780]$ & $5.9\;[5.7, 6.2]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(7)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & \evalunsupported$^{(7)}$ & 1 & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(7)}$} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & \evalunsupported$^{(7)}$ & 8 & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ \\
+$2^{31}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 25 & 1 & $238.7\;[238.4, 238.9]$ & $84.7\;[84.6, 84.8]$ & $323.4\;[323.0, 323.7]$ & $2.5\;[2.5, 2.5]$ \\
+$2^{31}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 25 & 8 & $38.4\;[38.4, 38.6]$ & $29.6\;[29.5, 29.6]$ & $68.0\;[67.9, 68.2]$ & $2.5\;[2.5, 2.5]$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 26 & 1 & $2.70\;[2.69, 2.70]$ & $5.12\;[5.09, 5.14]$ & $7.88\;[7.84, 7.91]$ & $9.7\;[9.5, 9.9]$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 26 & 8 & $0.669\;[0.665, 0.675]$ & $1.04\;[1.03, 1.05]$ & $1.77\;[1.75, 1.77]$ & $9.8\;[9.7, 9.9]$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 26 & 1 & $2.70\;[2.68, 2.71]$ & $5.94\;[5.87, 6.05]$ & $8.70\;[8.63, 8.82]$ & $4.0\;[3.8, 4.2]$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 26 & 8 & $0.671\;[0.663, 0.676]$ & $1.40\;[1.39, 1.42]$ & $2.12\;[2.12, 2.15]$ & $3.9\;[3.9, 3.9]$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 26 & 1 & $1.50\;[1.49, 1.51]$ & $37.8\;[31.6, 49.3]$ & $39.3\;[33.2, 50.8]$ & $2.1\;[2.1, 2.1]$ \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 26 & 8 & $0.476\;[0.473, 0.482]$ & $6.25\;[5.10, 7.53]$ & $6.75\;[5.61, 8.03]$ & $2.2\;[2.2, 2.2]$ \\
+$2^{31}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 24 & 1 & $0.686\;[0.684, 0.687]$ & $0.209\;[0.203, 0.213]$ & $0.962\;[0.957, 0.966]$ & $0.8\;[0.8, 0.8]$ \\
+$2^{31}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 24 & 8 & $0.214\;[0.202, 0.228]$ & $0.100\;[0.097, 0.108]$ & $0.378\;[0.373, 0.399]$ & $0.8\;[0.8, 0.8]$ \\
+$2^{31}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 31 & 1 & $0.574\;[0.570, 0.576]$ & $1.42\;[1.42, 1.43]$ & $1.99\;[1.99, 2.01]$ & $1.1\;[1.1, 1.1]$ \\
+$2^{31}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 31 & 8 & $0.124\;[0.123, 0.128]$ & $0.300\;[0.299, 0.306]$ & $0.427\;[0.422, 0.434]$ & $1.1\;[1.1, 1.1]$ \\
+$2^{31}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 25 & 1 & $7.56\;[7.52, 7.62]$ & $39.8\;[39.7, 40.1]$ & $47.4\;[47.2, 47.6]$ & $1.2\;[1.1, 1.2]$ \\
+$2^{31}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 25 & 8 & $1.31\;[1.30, 1.32]$ & $6.26\;[6.24, 6.29]$ & $7.57\;[7.56, 7.60]$ & $1.2\;[1.2, 1.2]$ \\
+$2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 26 & 1 & $5.33\;[5.22, 5.46]$ & $3.54\;[3.46, 3.60]$ & $8.85\;[8.78, 8.93]$ & $26.3\;[25.8, 26.4]$ \\
+$2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 26 & 8 & $5.34\;[5.22, 5.44]$ & $3.42\;[3.36, 3.47]$ & $8.74\;[8.69, 8.80]$ & $26.2\;[25.9, 26.5]$ \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 28 & 1 & $6.00\;[5.99, 6.06]$ & $6.60\;[6.59, 6.60]$ & $12.6\;[12.6, 12.7]$ & $21.1\;[20.7, 21.5]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 28 & 8 & $0.800\;[0.799, 0.801]$ & $1.19\;[1.19, 1.20]$ & $2.00\;[2.00, 2.02]$ & $9.7\;[9.3, 10.5]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 28 & 1 & $6.04\;[5.99, 6.07]$ & $7.80\;[7.79, 7.81]$ & $14.1\;[14.0, 14.1]$ & $14.5\;[13.7, 14.6]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 28 & 8 & $0.798\;[0.797, 0.799]$ & $1.38\;[1.37, 1.39]$ & $2.22\;[2.22, 2.23]$ & $8.6\;[8.4, 9.0]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 27 & 1 & $6.70\;[6.64, 6.71]$ & $4.50\;[4.50, 4.50]$ & $11.3\;[11.2, 11.3]$ & $17.5\;[17.2, 17.6]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 27 & 8 & $0.942\;[0.934, 0.947]$ & $0.834\;[0.827, 0.839]$ & $1.78\;[1.78, 1.79]$ & $6.9\;[6.7, 7.5]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 27 & 1 & $6.68\;[6.63, 6.71]$ & $4.89\;[4.88, 4.90]$ & $11.8\;[11.8, 11.9]$ & $12.2\;[11.9, 12.7]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 27 & 8 & $0.941\;[0.935, 0.943]$ & $0.943\;[0.942, 0.956]$ & $1.94\;[1.93, 1.94]$ & $7.6\;[7.2, 7.9]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 26 & 1 & $4.80\;[4.79, 4.82]$ & $4.41\;[4.41, 4.42]$ & $9.32\;[9.30, 9.33]$ & $15.4\;[15.1, 15.7]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 26 & 8 & $0.736\;[0.732, 0.758]$ & $0.768\;[0.755, 0.777]$ & $1.52\;[1.51, 1.56]$ & $7.0\;[6.8, 7.4]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 26 & 1 & $4.78\;[4.78, 4.79]$ & $4.94\;[4.93, 4.96]$ & $10.1\;[10.1, 10.1]$ & $10.2\;[10.0, 10.6]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 26 & 8 & $0.738\;[0.735, 0.741]$ & $0.895\;[0.889, 0.908]$ & $1.71\;[1.71, 1.73]$ & $6.0\;[5.9, 6.2]$ \\
+$2^{33}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 27 & 1 & \evaloom & \evaloom & \evaloom & \evaloom \\
+$2^{33}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 27 & 8 & \evaloom & \evaloom & \evaloom & \evaloom \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 28 & 1 & $5.35\;[5.32, 5.36]$ & $5.26\;[5.23, 5.27]$ & $10.7\;[10.6, 10.7]$ & $9.8\;[9.6, 9.9]$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 28 & 8 & $1.56\;[1.55, 1.57]$ & $1.06\;[1.05, 1.06]$ & $2.67\;[2.67, 2.68]$ & $9.8\;[9.7, 10.0]$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 28 & 1 & $5.36\;[5.35, 5.38]$ & $6.10\;[6.07, 6.18]$ & $11.5\;[11.5, 11.6]$ & $3.9\;[3.8, 4.1]$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 28 & 8 & $1.56\;[1.56, 1.58]$ & $1.42\;[1.41, 1.43]$ & $3.04\;[3.03, 3.06]$ & $4.0\;[4.0, 4.0]$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)$^{(8)}$} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 28 & 1 & $4.96\;[4.95, 4.97]$ & $26.4\;[26.3, 26.5]$ & $31.4\;[31.3, 31.5]$ & $10.0\;[10.0, 10.2]$ \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)$^{(8)}$} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 28 & 8 & $1.63\;[1.63, 1.65]$ & $7.77\;[7.75, 7.80]$ & $9.46\;[9.45, 9.50]$ & $10.2\;[10.1, 10.2]$ \\
+$2^{33}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 26 & 1 & $2.88\;[2.87, 2.88]$ & $0.784\;[0.777, 0.789]$ & $3.93\;[3.92, 3.94]$ & $1.0\;[1.0, 1.0]$ \\
+$2^{33}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 26 & 8 & $1.08\;[1.06, 1.08]$ & $0.385\;[0.381, 0.387]$ & $1.73\;[1.71, 1.73]$ & $1.0\;[1.0, 1.0]$ \\
+$2^{33}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 33 & 1 & $1.86\;[1.85, 1.87]$ & $5.70\;[5.67, 5.72]$ & $7.55\;[7.53, 7.58]$ & $1.7\;[1.7, 2.0]$ \\
+$2^{33}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 33 & 8 & $0.583\;[0.577, 0.588]$ & $1.21\;[1.20, 1.22]$ & $1.79\;[1.78, 1.80]$ & $1.8\;[1.7, 1.8]$ \\
+$2^{33}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 27 & 1 & $33.7\;[33.6, 33.9]$ & $173.5\;[172.5, 173.9]$ & $207.1\;[206.3, 207.7]$ & $1.2\;[1.2, 1.3]$ \\
+$2^{33}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 27 & 8 & $5.73\;[5.70, 5.75]$ & $27.1\;[27.0, 27.2]$ & $32.8\;[32.7, 32.9]$ & $1.3\;[1.3, 1.5]$ \\
+$2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 28 & 1 & $18.7\;[18.3, 18.8]$ & $4.05\;[3.96, 4.12]$ & $22.7\;[22.4, 22.8]$ & $27.4\;[26.9, 27.5]$ \\
+$2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 28 & 8 & $18.7\;[18.3, 19.0]$ & $3.88\;[3.79, 3.95]$ & $22.6\;[22.4, 22.8]$ & $27.3\;[27.1, 27.8]$ \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 30 & 1 & $24.2\;[24.1, 24.4]$ & $16.1\;[16.1, 16.1]$ & $40.4\;[40.3, 40.6]$ & $32.6\;[32.5, 33.0]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 30 & 8 & $3.46\;[3.45, 3.46]$ & $2.71\;[2.69, 2.72]$ & $6.18\;[6.16, 6.19]$ & $11.6\;[11.0, 12.4]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 30 & 1 & $24.2\;[24.1, 24.4]$ & $18.4\;[18.4, 18.4]$ & $43.0\;[43.0, 43.3]$ & $15.9\;[15.6, 15.9]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{32}-99$ & 30 & 8 & $3.46\;[3.45, 3.46]$ & $3.01\;[3.00, 3.02]$ & $6.55\;[6.53, 6.56]$ & $9.8\;[9.7, 10.2]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 29 & 1 & $26.3\;[26.1, 26.4]$ & $10.4\;[10.4, 10.4]$ & $36.8\;[36.6, 36.9]$ & $21.1\;[20.5, 21.2]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 29 & 8 & $3.77\;[3.76, 3.78]$ & $1.78\;[1.77, 1.79]$ & $5.58\;[5.55, 5.58]$ & $7.6\;[7.5, 7.8]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 29 & 1 & $26.3\;[26.0, 26.3]$ & $11.8\;[11.7, 11.8]$ & $38.5\;[38.2, 38.5]$ & $14.7\;[14.5, 14.8]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{64}-59$ & 29 & 8 & $3.77\;[3.76, 3.78]$ & $2.03\;[2.02, 2.03]$ & $5.89\;[5.87, 5.90]$ & $8.8\;[8.6, 9.6]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 28 & 1 & $18.7\;[18.6, 18.7]$ & $12.2\;[12.2, 12.2]$ & $31.1\;[31.0, 31.1]$ & $24.1\;[23.8, 24.2]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 28 & 8 & $2.89\;[2.88, 2.89]$ & $1.87\;[1.86, 1.89]$ & $4.80\;[4.79, 4.81]$ & $8.5\;[8.3, 8.9]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 28 & 1 & $18.6\;[18.6, 18.7]$ & $12.1\;[12.1, 12.1]$ & $31.6\;[31.5, 31.6]$ & $12.2\;[12.1, 12.5]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit Module-SIS/ROM & multilinear & $2^{128}-2^{32}+22537$ & 28 & 8 & $2.88\;[2.88, 2.89]$ & $2.01\;[2.00, 2.03]$ & $5.06\;[5.06, 5.08]$ & $7.0\;[6.9, 7.1]$ \\
+$2^{35}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 29 & 1 & \evaloom & \evaloom & \evaloom & \evaloom \\
+$2^{35}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & approx. 100-bit conjectural & univariate & $2^{64}-2^{32}+1$ & 29 & 8 & \evaloom & \evaloom & \evaloom & \evaloom \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 30 & 1 & $18.2\;[18.2, 18.3]$ & $6.53\;[6.49, 6.59]$ & $24.8\;[24.8, 24.9]$ & $10.2\;[10.1, 10.4]$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 113.744-bit random-words conjectural & univariate batch & $2^{31}-2^{24}+1$ & 30 & 8 & $5.89\;[5.88, 5.91]$ & $1.24\;[1.23, 1.25]$ & $7.18\;[7.17, 7.20]$ & $10.3\;[10.2, 10.4]$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 30 & 1 & $18.2\;[18.1, 18.3]$ & $7.34\;[7.23, 7.40]$ & $25.7\;[25.4, 25.8]$ & $4.3\;[4.2, 4.7]$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 100-bit capacity & univariate batch & $2^{31}-2^{24}+1$ & 30 & 8 & $5.89\;[5.87, 5.90]$ & $1.60\;[1.59, 1.62]$ & $7.54\;[7.52, 7.56]$ & $4.4\;[4.4, 4.4]$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)$^{(8)}$} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 30 & 1 & $16.6\;[16.4, 16.6]$ & $28.8\;[28.6, 29.0]$ & $45.4\;[45.2, 45.7]$ & $11.4\;[11.3, 11.5]$ \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)$^{(8)}$} & 128-bit RBR & multilinear & $2^{31}-2^{24}+1$ & 30 & 8 & $5.53\;[5.51, 5.55]$ & $8.38\;[8.35, 8.44]$ & $14.0\;[14.0, 14.0]$ & $11.6\;[11.5, 11.8]$ \\
+$2^{35}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 28 & 1 & $12.1\;[12.1, 12.1]$ & $2.93\;[2.93, 2.95]$ & $16.1\;[16.1, 16.1]$ & $1.1\;[1.1, 1.1]$ \\
+$2^{35}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 96-bit UDR query & multilinear & $F_{2^{128}}$ & 28 & 8 & $5.01\;[5.00, 5.02]$ & $1.41\;[1.41, 1.43]$ & $7.46\;[7.43, 7.46]$ & $1.1\;[1.1, 1.1]$ \\
+$2^{35}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 35 & 1 & $9.73\;[9.69, 9.79]$ & $23.6\;[23.5, 23.9]$ & $33.3\;[33.3, 33.6]$ & $1.7\;[1.7, 1.7]$ \\
+$2^{35}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 128-bit RBR & packed F128 MLE & $F_2$ & 35 & 8 & $2.38\;[2.37, 2.39]$ & $5.21\;[5.19, 5.22]$ & $7.59\;[7.57, 7.60]$ & $1.6\;[1.6, 1.8]$ \\
+$2^{35}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 29 & 1 & $145.6\;[142.7, 147.1]$ & $764.6\;[759.4, 766.8]$ & $910.5\;[903.2, 912.2]$ & $1.4\;[1.4, 1.4]$ \\
+$2^{35}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 128-bit RBR & multilinear & $2^{64}-2^{32}+1$ & 29 & 8 & $24.7\;[24.5, 25.0]$ & $116.6\;[116.1, 117.2]$ & $141.3\;[140.7, 141.9]$ & $1.4\;[1.4, 1.4]$ \\
+$2^{35}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 30 & 1 & $67.8\;[66.2, 68.0]$ & $6.04\;[5.95, 6.07]$ & $73.8\;[72.3, 74.0]$ & $32.0\;[31.4, 32.2]$ \\
+$2^{35}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 100-bit UDR query & multilinear & $2^{31}-2^{24}+1$ & 30 & 8 & $67.7\;[67.3, 67.8]$ & $5.51\;[5.42, 5.61]$ & $73.2\;[72.9, 73.3]$ & $31.7\;[31.5, 32.0]$ \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize
+\noindent$^{(1)}$ pinned Akita fp32-dense-recursive catalog row for nv=22 has no setup-prefix edges\\
+\noindent$^{(2)}$ pinned Akita fp64-dense-recursive catalog row for nv=21 has no setup-prefix edges\\
+\noindent$^{(3)}$ pinned Akita fp128-dense-recursive catalog row for nv=20 has no setup-prefix edges\\
+\noindent$^{(4)}$ pinned Akita fp64-dense-recursive catalog row for nv=23 has no setup-prefix edges\\
+\noindent$^{(5)}$ pinned Akita fp128-dense-recursive catalog row for nv=22 has no setup-prefix edges\\
+\noindent$^{(6)}$ KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.\\
+\noindent$^{(7)}$ pinned Akita fp128-dense-recursive catalog row for nv=24 has no setup-prefix edges\\
+\noindent$^{(8)}$ WHIR uses unique decoding at this size so its 128-bit round-by-round target remains feasible on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.\\
+}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\caption[Communication and memory comparison with hash-based PCSs]{Proof
+communication, prover memory, and reusable preprocessing for the workloads in
+\Cref{tab:eval-hash-time}. Total sent includes commitment, separately transmitted
+evaluation, and proof; excluded verifier context is shown separately.}
+\label{tab:eval-hash-resources}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrrrrrr@{}}
+\toprule
+Nominal payload & Scheme & Commitment (B) & Evaluation (B) & Proof (B) & Total sent (B) & Excl. context (B)
+& \multicolumn{2}{c}{Peak RSS (GiB)} & Prep. (s) & State (GiB) \\
+\cmidrule(lr){8-9}
+& & & & & & & 1 thread & 8 threads & & \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 61306 & 61450 & 214 & 0.129 & 0.137 & 0.0081 & 0.0020 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(1)}$} & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 65796 & 65940 & 214 & 0.122 & 0.131 & 0.0108 & 0.0028 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(2)}$} & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ & \evalunsupported$^{(2)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 65747 & 65891 & 214 & 0.125 & 0.140 & 0.0174 & 0.0049 \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(3)}$} & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ & \evalunsupported$^{(3)}$ \\
+$2^{27}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & 520 & 16 & 87968 & 88504 & 0 & 2.79 & 2.79 & 0.0000 & 0.0000 \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI} & 32 & 20 & 462174 & 462226 & 0 & 1.75 & 1.75 & 0.0268 & \textit{unknown} \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR} & 34 & 20 & 177788 & 177842 & 0 & 1.41 & 1.41 & 0.0267 & \textit{unknown} \\
+$2^{27}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 32 & 0 & 91354 & 91386 & 0 & 0.179 & 0.178 & 0.0013 & \textit{unknown} \\
+$2^{27}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 32 & 16 & 308640 & 308688 & 0 & 0.0917 & 0.0914 & 0.0040 & \textit{unknown} \\
+$2^{27}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 4136 & 16 & 408856 & 413008 & 0 & 0.0912 & 0.0912 & 0.0001 & 0.0000 \\
+$2^{27}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 56 & 24 & 196640 & 196720 & 0 & 0.174 & 0.181 & 0.0002 & 0.0000 \\
+$2^{27}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 16 & 1179448 & 1179496 & 0 & 1.33 & 1.33 & 0.0001 & \textit{unknown} \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 61791 & 61935 & 214 & 0.254 & 0.262 & 0.0083 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 66165 & 66309 & 214 & 0.253 & 0.262 & 0.0294 & 0.0020 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 66233 & 66377 & 214 & 0.220 & 0.232 & 0.0162 & 0.0044 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(4)}$} & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ & \evalunsupported$^{(4)}$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 66564 & 66708 & 214 & 0.216 & 0.228 & 0.0206 & 0.0059 \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(5)}$} & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ & \evalunsupported$^{(5)}$ \\
+$2^{29}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & 520 & 16 & 106472 & 107008 & 0 & 11.2 & 11.2 & 0.0000 & 0.0000 \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 32 & 40 & 512330 & 512402 & 0 & 3.57 & 3.57 & 0.0588 & \textit{unknown} \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 34 & 40 & 190380 & 190454 & 0 & 2.88 & 2.88 & 0.0616 & \textit{unknown} \\
+$2^{29}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 32 & 0 & 103390 & 103422 & 0 & 0.703 & 0.703 & 0.0054 & \textit{unknown} \\
+$2^{29}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 32 & 16 & 390368 & 390416 & 0 & 0.357 & 0.357 & 0.0164 & \textit{unknown} \\
+$2^{29}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 4136 & 16 & 340832 & 344984 & 0 & 0.373 & 0.372 & 0.0002 & 0.0000 \\
+$2^{29}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 56 & 24 & 221568 & 221648 & 0 & 0.685 & 0.720 & 0.0002 & 0.0000 \\
+$2^{29}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 16 & 1182520 & 1182568 & 0 & 1.56 & 1.56 & 0.0001 & \textit{unknown} \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 63065 & 63209 & 214 & 0.695 & 0.704 & 0.0199 & 0.0049 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 66308 & 66452 & 214 & 0.699 & 0.706 & 0.0711 & 0.0039 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 66669 & 66813 & 214 & 0.486 & 0.501 & 0.0212 & 0.0059 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 73635 & 73779 & 214 & 0.520 & 0.537 & 0.0686 & 0.0078 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 68336 & 68480 & 214 & 0.811 & 0.833 & 0.0526 & 0.0156 \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)$^{(7)}$} & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ & \evalunsupported$^{(7)}$ \\
+$2^{31}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & 520 & 16 & 117608 & 118144 & 0 & 44.6 & 44.6 & 0.0000 & 0.0000 \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 32 & 160 & 520682 & 520874 & 0 & 3.94 & 3.94 & 0.0584 & \textit{unknown} \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 34 & 160 & 192388 & 192582 & 0 & 3.25 & 3.25 & 0.0619 & \textit{unknown} \\
+$2^{31}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)} & 32 & 0 & 113580 & 113612 & 0 & 2.80 & 2.80 & 0.0277 & \textit{unknown} \\
+$2^{31}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 32 & 16 & 472832 & 472880 & 0 & 1.42 & 1.42 & 0.0666 & \textit{unknown} \\
+$2^{31}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 4136 & 16 & 494632 & 498784 & 0 & 1.37 & 1.37 & 0.0002 & 0.0000 \\
+$2^{31}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 56 & 24 & 256856 & 256936 & 0 & 2.73 & 2.85 & 0.0002 & 0.0000 \\
+$2^{31}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 16 & 1194808 & 1194856 & 0 & 2.50 & 2.50 & 0.0001 & \textit{unknown} \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 64477 & 64621 & 214 & 1.38 & 1.39 & 0.0384 & 0.0098 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 66881 & 67025 & 214 & 1.42 & 1.43 & 0.220 & 0.0156 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 67626 & 67770 & 214 & 1.50 & 1.53 & 0.0539 & 0.0156 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 70561 & 70705 & 214 & 1.50 & 1.54 & 0.257 & 0.0156 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 68887 & 69031 & 214 & 1.58 & 1.61 & 0.104 & 0.0313 \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 71217 & 71361 & 214 & 1.60 & 1.63 & 0.368 & 0.0313 \\
+$2^{33}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 32 & 640 & 528650 & 529322 & 0 & 5.44 & 5.44 & 0.0618 & \textit{unknown} \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 34 & 640 & 200548 & 201222 & 0 & 4.75 & 4.75 & 0.0616 & \textit{unknown} \\
+$2^{33}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)$^{(8)}$} & 32 & 0 & 590648 & 590680 & 0 & 9.60 & 9.60 & 0.0633 & \textit{unknown} \\
+$2^{33}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 32 & 16 & 569408 & 569456 & 0 & 5.67 & 5.67 & 0.265 & \textit{unknown} \\
+$2^{33}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 4136 & 16 & 524840 & 528992 & 0 & 5.41 & 5.42 & 0.0002 & 0.0000 \\
+$2^{33}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 56 & 24 & 281464 & 281544 & 0 & 10.9 & 10.9 & 0.0002 & 0.0000 \\
+$2^{33}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 16 & 1243960 & 1244008 & 0 & 6.25 & 6.25 & 0.0001 & \textit{unknown} \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 64595 & 64739 & 214 & 4.69 & 4.71 & 0.0745 & 0.0195 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 67322 & 67466 & 214 & 4.71 & 4.74 & 0.442 & 0.0313 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 68494 & 68638 & 214 & 4.83 & 4.90 & 0.107 & 0.0313 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 71841 & 71985 & 214 & 4.87 & 4.95 & 0.452 & 0.0313 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128 & 16 & 69121 & 69265 & 214 & 5.00 & 5.05 & 0.204 & 0.0625 \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128 & 16 & 72003 & 72147 & 214 & 5.06 & 5.15 & 0.819 & 0.0625 \\
+$2^{35}$ & \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{Plonky2 FRI} & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom & \evaloom \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 FRI$^{(6)}$} & 32 & 2562 & 570206 & 572800 & 0 & 12.2 & 12.2 & 0.0603 & \textit{unknown} \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{Plonky3 STIR$^{(6)}$} & 34 & 2562 & 233468 & 236064 & 0 & 12.2 & 12.2 & 0.0594 & \textit{unknown} \\
+$2^{35}$ & \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{WHIR (Plonky3)$^{(8)}$} & 32 & 0 & 690886 & 690918 & 0 & 17.1 & 17.1 & 0.0628 & \textit{unknown} \\
+$2^{35}$ & \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{Binius64 BaseFold} & 32 & 16 & 666720 & 666768 & 0 & 22.7 & 22.7 & 1.02 & \textit{unknown} \\
+$2^{35}$ & \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{Flock Ligerito} & 4136 & 16 & 570464 & 574616 & 0 & 21.6 & 21.7 & 0.0002 & 0.0000 \\
+$2^{35}$ & \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{WHIR (WorldFnd)} & 56 & 24 & 317408 & 317488 & 0 & 43.4 & 43.4 & 0.0002 & 0.0000 \\
+$2^{35}$ & \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{BaseFold (SP1)} & 32 & 16 & 1440568 & 1440616 & 0 & 21.3 & 21.3 & 0.0001 & \textit{unknown} \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize
+\noindent$^{(1)}$ pinned Akita fp32-dense-recursive catalog row for nv=22 has no setup-prefix edges\\
+\noindent$^{(2)}$ pinned Akita fp64-dense-recursive catalog row for nv=21 has no setup-prefix edges\\
+\noindent$^{(3)}$ pinned Akita fp128-dense-recursive catalog row for nv=20 has no setup-prefix edges\\
+\noindent$^{(4)}$ pinned Akita fp64-dense-recursive catalog row for nv=23 has no setup-prefix edges\\
+\noindent$^{(5)}$ pinned Akita fp128-dense-recursive catalog row for nv=22 has no setup-prefix edges\\
+\noindent$^{(6)}$ KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.\\
+\noindent$^{(7)}$ pinned Akita fp128-dense-recursive catalog row for nv=24 has no setup-prefix edges\\
+\noindent$^{(8)}$ WHIR uses unique decoding at this size so its 128-bit round-by-round target remains feasible on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.\\
+}
+\end{table}
+
+
+\medskip
+\noindent\textbf{Measured commits.}
+\begin{itemize}\setlength{\itemsep}{0pt}
+\item Akita: \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{\texttt{c0cb822f}}
+\item Akita (offload): \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{\texttt{c0cb822f}}
+\item Akita: \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{\texttt{c0cb822f}}
+\item Akita (offload): \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{\texttt{c0cb822f}}
+\item Akita: \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{\texttt{c0cb822f}}
+\item Akita (offload): \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{\texttt{c0cb822f}}
+\item Plonky2 FRI: \href{https://github.com/elliottech/plonky2/commit/e1c2d35450948b88fca6a7e69e2643c3ecad3caa}{\texttt{e1c2d354}}
+\item Plonky3 FRI: \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{\texttt{3da160d0}}
+\item Plonky3 STIR: \href{https://github.com/Plonky3/Plonky3/commit/3da160d09d1c6a878adaa5b339939fcdccda5d36}{\texttt{3da160d0}}
+\item WHIR (Plonky3): \href{https://github.com/Plonky3/Plonky3/commit/9d496524560f3c699473906c6f50fca7cf343730}{\texttt{9d496524}}
+\item Binius64 BaseFold: \href{https://github.com/binius-zk/binius64/commit/6e75a2d1d2e716578ae3ccb62806413fb1615176}{\texttt{6e75a2d1}}
+\item Flock Ligerito: \href{https://github.com/succinctlabs/flock/commit/43f0eee06d887d87ad25d72614cbc2b17fe91430}{\texttt{43f0eee0}}
+\item WHIR (WorldFnd): \href{https://github.com/worldfnd/whir/commit/8804e80e8e890d01bb585f2bd5e5b564ac0fd80d}{\texttt{8804e80e}}
+\item BaseFold (SP1): \href{https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86}{\texttt{0f2a1e13}}
+\end{itemize}
+
+
+\medskip
+\noindent\textbf{Reproduction template.}
+Machine, ISA, compiler, executable, lockfile, command, and timestamp provenance
+for this dataset are recorded with each observation. The infrastructure
+toolchain pin is Rust 1.95 (\texttt{rust-toolchain.toml}).
+The exact runner command is recorded in the JSONL; the commands below are a
+template, not reconstructed provenance.
+Workers are built from checked-in lockfiles before sampling. Every timed worker
+is a fresh process wrapped in \texttt{scripts/with-memlimit.sh} under a
+109~GiB virtual-address-space ceiling (\texttt{ulimit -v}).
+Raw records
+identify warmup and measured processes separately. Recorded RUSTFLAGS:
+\texttt{{-C target-cpu=native}}. Checked-in numbers live in
+\texttt{results/hash-x86\_64/}.
+\begin{verbatim}
+# On an AVX-512 Linux x86_64 host
+source "$HOME/.cargo/env"   # if cargo is not on PATH
+cd /path/to/akita-benchmark
+
+export CARGO_NET_GIT_FETCH_WITH_CLI=true
+export RUSTFLAGS="-C target-cpu=native"
+
+./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 + offload catalogs
+
+# Full 140-cell matrix (14 schemes × 5 payloads × {1,8} threads)
+./scripts/hash-eval.sh run --out results/hash-x86_64
+
+# Rebuild Markdown + LaTeX from the JSONL already in that directory
+cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \
+  results/hash-x86_64 --out-dir results/hash-x86_64
+\end{verbatim}
+\noindent Sanity-check the harness before a full run.
+\texttt{hash-eval matrix} prints the 140-cell plan.
+A single supported cell should verify and emit JSON with \texttt{status: ok}.
+\begin{verbatim}
+export RUSTFLAGS="-C target-cpu=native"
+
+cargo test -p pcs-bench-core -p pcs-bench-runner --locked
+cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
+
+# One measured sample of a supported cell (payload 2^31, log2 N = 26, 1 thread)
+./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp64 --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp128 --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-offload --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp64-offload --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme whir --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme basefold --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme plonky2-fri --payload 27 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme plonky3-fri --payload 27 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme flock --payload 27 --threads 1 --runs 1 --warmups 0
+\end{verbatim}

@@ -1,4 +1,4 @@
-# Isolated ProveKit WHIR worker (worldfnd/whir Goldilocks3).
+# Isolated WorldFnd WHIR worker (worldfnd/whir Goldilocks3).
 [workspace]
 
 [package]
@@ -9,7 +9,7 @@ rust-version = "1.95"
 license = "Apache-2.0"
 repository = "https://github.com/LayerZero-Labs/pcs-benchmarks"
 publish = false
-description = "ProveKit / worldfnd whir adapter for the hash PCS comparison"
+description = "WorldFnd WHIR adapter for the hash PCS comparison"
 
 [[bin]]
 name = "hash-eval"

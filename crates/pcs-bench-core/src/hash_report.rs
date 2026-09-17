@@ -16,8 +16,9 @@ pub fn render_markdown_hash_eval_report(records: &[HashRecord]) -> String {
     let timing = aggregate_hash_timing_rows(records);
     let resources = aggregate_hash_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         markdown_prose(&provenance, homogeneous_machine),
+        markdown_security_table(),
         render_markdown_hash_timing_table(&timing),
         render_markdown_hash_resource_table(&resources),
         markdown_pins(records),
@@ -33,8 +34,9 @@ pub fn render_latex_hash_eval_report(records: &[HashRecord]) -> String {
     let timing = aggregate_hash_timing_rows(records);
     let resources = aggregate_hash_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         latex_prose(&provenance, homogeneous_machine),
+        latex_security_table(),
         render_latex_hash_timing_table(&timing),
         render_latex_hash_resource_table(&resources),
         latex_pins(records),
@@ -121,25 +123,14 @@ fn markdown_prose(provenance: &Provenance, homogeneous_machine: bool) -> String 
         "{}\n\n\
          Our second experiment compares Akita with other high-performance hash-based PCSs\n\
          on the same nominal dense payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
-         This is a native-configuration survey, not an equivalent-security PCS ranking.\n\
+         This is a measured-configuration survey, not an equivalent-security PCS ranking.\n\
          Nominal payload is field-capacity accounting, not a claim about sampled input entropy.\n\
-         Each scheme uses its **native** security target, hash, field, and rate rather than a\n\
-         common 128-bit retune, so cells are **not** $\\lambda$-comparable.\n\
-         Akita is measured with uniform full-field coefficients and uniform extension-field\n\
-         opening points at its native 32-, 64-, and 128-bit primes. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
-         WHIR is Plonky3 `p3-whir` at `security_level=128`. Capacity bound at rate $1/2$ is used\n\
-         when that instance fits a 30-bit KoalaBear grind ($\\log_2 N \\le 26$);\n\
-         unique decoding at rate $1/2$ is used at $\\log_2 N=28$ and $30$, where list-decoding\n\
-         bounds on KoalaBear cannot close 128 bits within that grind limit. BaseFold (SP1) is\n\
-         SLOP stacked BaseFold with FRI parameters `log_blowup=1`, 112 queries, and\n\
-         16 bits of grinding (conjectured soundness $1\\cdot 112+16=128$).\n\
-         Plonky2 FRI, Plonky3 FRI/STIR, Binius64 BaseFold, and Flock Ligerito Fast use native\n\
-         **100-bit** targets. ProveKit WHIR uses Johnson-bound **133-bit** Goldilocks degree-3\n\
-         challenges with base-field coefficients. KoalaBear univariate FRI/STIR pack into a\n\
+         The table below records the accepted native profile and security accounting for every scheme.\n\
+         KoalaBear univariate FRI/STIR pack into a\n\
          $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$ (two-adicity 24 at rate $1/2$).\n\
          Timing cells report the median and, when supported by the sample count, a\n\
          conservative distribution-free 95% confidence interval at **1 and 8 threads**. Scheme names link to the exact git commit\n\
-         that was measured. Unmeasured roster cells are `pending`.\n\n\
+         that was measured. Unmeasured roster cells are pending.\n\n\
          The timing comparison separates commitment, opening, and verification, while the\n\
          cold total includes setup plus commitment and opening. Point-dependent claim and\n\
          transcript work supplied to proving is included in opening.\n\
@@ -155,22 +146,10 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
         "{}\n\n\
          Our second experiment compares Akita with other high-performance hash-based PCSs\n\
          on the same nominal dense payload ladder ($2^{{27}}$ through $2^{{35}}$ bits).\n\
-         This is a native-configuration survey, not an equivalent-security PCS ranking.\n\
+         This is a measured-configuration survey, not an equivalent-security PCS ranking.\n\
          Nominal payload is field-capacity accounting, not a claim about sampled input entropy.\n\
-         Each scheme uses its native security target, hash, field, and rate rather than a\n\
-         common 128-bit retune, so cells are not $\\lambda$-comparable.\n\
-         Akita is measured with uniform full-field coefficients and uniform extension-field\n\
-         opening points at its native 32-, 64-, and 128-bit primes. Akita, Plonky3 WHIR, and SP1 BaseFold stay at the 128-bit transcript-error target:\n\
-         WHIR is Plonky3 \\texttt{{p3-whir}} at \\texttt{{security\\_level=128}}. Capacity bound at\n\
-         rate $1/2$ is used when that instance fits a 30-bit KoalaBear grind\n\
-         ($\\log_2 N \\le 26$); unique decoding at rate $1/2$ is used at $\\log_2 N=28$\n\
-         and $30$, where list-decoding bounds on KoalaBear cannot close 128 bits within\n\
-         that grind limit. BaseFold (SP1) is SLOP stacked BaseFold with FRI parameters\n\
-         $\\log_2(1/\\rho)=1$, 112 queries, and 16 bits of grinding (conjectured soundness\n\
-         $1\\cdot 112+16=128$). Plonky2 FRI, Plonky3 FRI/STIR, Binius64 BaseFold, and Flock\n\
-         Ligerito Fast use native 100-bit targets. ProveKit WHIR uses Johnson-bound 133-bit\n\
-         Goldilocks degree-3 challenges with base-field coefficients. KoalaBear univariate\n\
-         FRI/STIR pack into a $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$. Timing cells\n\
+         The table below records the accepted native profile and security accounting for every scheme.\n\
+         KoalaBear univariate FRI/STIR pack into a $2^{{23}}\\times 2^{{n-23}}$ matrix when $\\log_2 N>23$. Timing cells\n\
          report the median and, when supported by the sample count, a conservative distribution-free 95\\% confidence interval,\n\
          at 1 and 8 threads. Scheme names are hyperlinks to the exact git commit that was\n\
          measured. Unmeasured roster cells are \\evalpending{{}}.\n\n\
@@ -178,10 +157,47 @@ fn latex_prose(provenance: &Provenance, homogeneous_machine: bool) -> String {
          opening, and verification; cold total includes setup, commitment, and opening.\n\
          Point-dependent claim and transcript work supplied to proving is included in opening.\n\
          \\Cref{{tab:eval-hash-resources}} reports\n\
-         communication, memory, and preprocessing.  An \\evaloom{{}} entry {oom}.",
+         communication, memory, and preprocessing. An \\evaloom{{}} entry {oom}.",
         machine_sentence(provenance, true, homogeneous_machine),
         oom = oom_clause(provenance, true),
     )
+}
+
+fn markdown_security_table() -> &'static str {
+    "### Security and accepted profiles\n\n\
+| Scheme | Accepted profile | Security accounting |\n\
+| --- | --- | --- |\n\
+| Akita | Planner-selected direct/offloaded schedules at each native prime | 128-bit Module-SIS and 128-bit classical-ROM transcript target |\n\
+| Plonky2 FRI | Standard recursion: rate 1/8, 28 queries, 16 work bits | Approximately 100-bit conjectural FRI estimate |\n\
+| Plonky3 FRI | Upstream new_benchmark: rate 1/2, 100 queries, 16 query-PoW bits | 113.744-bit conjectural random-words estimate |\n\
+| Plonky3 STIR | Upstream PCS benchmark: rate 1/2, fold 4 throughout, at most 20 work bits per phase | 100-bit aggregate capacity/MCA target |\n\
+| Plonky3 WHIR | Closest feasible upstream PCS benchmark profile; capacity through $\\log_2N=26$, unique decoding after | 128-bit round-by-round target under the pinned model |\n\
+| Binius64 BaseFold | Product default: rate 1/2, 232 queries, SHA-256 | 96-bit unique-decoding query target |\n\
+| Flock Ligerito | Default Fast: rate 1/2, Johnson, two OOD checks, SHA-256 | 128-bit round-by-round target |\n\
+| WorldFnd WHIR | CLI defaults: rate 1/2, fold 4, Johnson, BLAKE3 | 128-bit round-by-round target |\n\
+| SP1 BaseFold | Product default: rate 1/4, 124 queries, 16 work bits, stacking height 21 | 100-bit unique-decoding query target |"
+}
+
+fn latex_security_table() -> &'static str {
+    "\\begin{table}[t]\n\
+\\centering\n\
+\\caption{Security accounting and accepted native profiles. RBR denotes round-by-round soundness; UDR denotes unique decoding.}\n\
+\\begin{tabularx}{\\linewidth}{@{}lXX@{}}\n\
+\\toprule\n\
+Scheme & Accepted profile & Security accounting \\\\\n\
+\\midrule\n\
+Akita & Planner-selected schedules at each native prime & 128-bit Module-SIS and classical-ROM target \\\\\n\
+Plonky2 FRI & Rate $1/8$, 28 queries, 16 work bits & $\\sim$100-bit conjectural FRI \\\\\n\
+Plonky3 FRI & Rate $1/2$, 100 queries, 16 query-PoW bits & 113.744-bit conjectural random-words \\\\\n\
+Plonky3 STIR & Rate $1/2$, fold 4 throughout, at most 20 work bits per phase & 100-bit aggregate capacity/MCA \\\\\n\
+Plonky3 WHIR & Capacity through $\\log_2N=26$, then unique decoding & 128-bit RBR under pinned model \\\\\n\
+Binius64 & Rate $1/2$, 232 queries, SHA-256 & 96-bit UDR query target \\\\\n\
+Flock & Default \\texttt{Fast}, SHA-256 & 128-bit RBR \\\\\n\
+WorldFnd & Rate $1/2$, fold 4, Johnson, BLAKE3 & 128-bit RBR \\\\\n\
+SP1 & Rate $1/4$, 124 queries, 16 work bits, height 21 & 100-bit UDR query target \\\\\n\
+\\bottomrule\n\
+\\end{tabularx}\n\
+\\end{table}"
 }
 
 fn markdown_pins(records: &[HashRecord]) -> String {
@@ -297,7 +313,7 @@ warmup and measured processes separately; warmup rows are stored with
 `vary`/`fixed` seed mode are recorded per observation. Recorded worker flags
 for this dataset: `{RUSTFLAGS}`. Isolated Cargo trees under `benchmarks/`
 fetch the pinned git revisions (Plonky3, SP1, plonky2, Binius64, Flock,
-ProveKit/whir) so they do not unify with the lattice workspace. Cargo fetches
+WorldFnd/WHIR) so they do not unify with the lattice workspace. Cargo fetches
 those revisions on first build.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`
@@ -327,9 +343,9 @@ cd /path/to/akita-benchmark
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS=\"-C target-cpu=native\"
 
-./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 catalogs
+./scripts/fetch-vendors.sh --akita   # Akita pin + nv=22/24 + fp64/fp128 + offload catalogs
 
-# Full 110-cell matrix (11 schemes × 5 payloads × {1,8} threads)
+# Full 140-cell matrix (14 schemes × 5 payloads × {1,8} threads)
 ./scripts/hash-eval.sh run --out results/hash-x86_64
 
 # Rebuild Markdown + LaTeX from the JSONL already in that directory
@@ -339,13 +355,13 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval compare \\
 
 const SANITY_PROSE_MARKDOWN: &str = "\
 **Sanity-check the harness before trusting a full run.** `hash-eval matrix`
-prints the 110-cell plan. A single supported cell should verify and emit JSON
+prints the 140-cell plan. A single supported cell should verify and emit JSON
 with `status: ok`. Each sample the runner launches is equivalent to the worker
 commands below (still under the 90%-of-RAM cap).";
 
 const SANITY_PROSE_LATEX: &str = "\
 \\noindent Sanity-check the harness before a full run.
-\\texttt{hash-eval matrix} prints the 110-cell plan.
+\\texttt{hash-eval matrix} prints the 140-cell plan.
 A single supported cell should verify and emit JSON with \\texttt{status: ok}.";
 
 const SANITY_COMMANDS: &str = "\
@@ -358,6 +374,8 @@ cargo run -p pcs-bench-runner --bin pcs-bench -- hash-eval matrix
 ./scripts/hash-eval.sh run --scheme akita --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme akita-fp64 --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme akita-fp128 --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-offload --payload 31 --threads 1 --runs 1 --warmups 0
+./scripts/hash-eval.sh run --scheme akita-fp64-offload --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme whir --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme basefold --payload 31 --threads 1 --runs 1 --warmups 0
 ./scripts/hash-eval.sh run --scheme plonky2-fri --payload 27 --threads 1 --runs 1 --warmups 0
@@ -425,7 +443,11 @@ mod tests {
         assert!(report.contains("unique decoding"));
         assert!(report.contains("WHIR"));
         assert!(report.contains("BaseFold"));
-        assert!(report.contains("110-cell"));
+        assert!(report.contains("113.744-bit conjectural random-words"));
+        assert!(report.contains("96-bit unique-decoding query target"));
+        assert!(report.contains("WorldFnd WHIR | CLI defaults: rate 1/2"));
+        assert!(!report.contains("133-bit round-by-round"));
+        assert!(report.contains("140-cell"));
         assert!(report.contains("results/hash-x86_64"));
         assert!(report.contains("Linux x86_64"));
         assert!(!report.contains("leopard"));

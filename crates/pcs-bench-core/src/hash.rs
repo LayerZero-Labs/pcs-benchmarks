@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 /// Thread counts in the hash timing table.
 pub const HASH_THREADS: [u32; 2] = [1, 8];
 
-/// Schemes in roster order (Akita fp32/fp64/fp128 through BaseFold SP1).
-pub const HASH_SCHEME_COUNT: usize = 11;
+/// Schemes in roster order (Akita fp32/fp64/fp128, each direct then offload, through BaseFold SP1).
+pub const HASH_SCHEME_COUNT: usize = 14;
 
-/// Headline hash matrix size: 5 payloads × 11 schemes × 2 thread counts.
-pub const HASH_CELL_COUNT: usize = 110;
+/// Headline hash matrix size: 5 payloads × 14 schemes × 2 thread counts.
+pub const HASH_CELL_COUNT: usize = 140;
 
 /// KoalaBear prime `2^31 - 2^24 + 1`.
 pub const KOALA_BEAR: FieldSpec = FieldSpec {
@@ -63,43 +63,74 @@ pub const BINIUS64_REVISION: &str = "6e75a2d1d2e716578ae3ccb62806413fb1615176";
 /// Pinned [Flock](https://github.com/succinctlabs/flock) revision.
 pub const FLOCK_REVISION: &str = "43f0eee06d887d87ad25d72614cbc2b17fe91430";
 
-/// Pinned [worldfnd/whir](https://github.com/worldfnd/whir) revision used by ProveKit WHIR.
-pub const WHIR_PROVEKIT_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
+/// Pinned [WorldFnd WHIR](https://github.com/worldfnd/whir) revision.
+pub const WORLDFND_WHIR_REVISION: &str = "8804e80e8e890d01bb585f2bd5e5b564ac0fd80d";
 
-/// Common transcript-error target for Akita, Plonky3 WHIR, and SP1 BaseFold, in bits.
+// Security labels in this benchmark use round-by-round (RBR) soundness:
+// eps_rbr = max_i eps_i, hence lambda_rbr = min_i(-log2(eps_i)). Do not sum
+// rounds when computing this RBR parameter. For one state-restoration move,
+// the active-round cases form a partition, so their weighted error is bounded
+// by max_i eps_i; the later union bound is over state-restoration moves.
+// Ordinary interactive soundness is a separate sum over rounds. See
+// Chiesa--Yogev v1.2, Def. 31.1.2, Claim 31.1.3, and Thm. 31.2.1:
+// https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L23560-L23587
+//
+/// Common 128-bit configuration target used by several adapters.
 pub const HASH_SECURITY_BITS: u32 = 128;
 
-/// Native 100-bit target used by Plonky2 FRI, Plonky3 FRI/STIR, and Binius64.
+/// 100-bit target used by Plonky2 FRI, Plonky3 STIR, and SP1 BaseFold.
 pub const HASH_SECURITY_BITS_100: u32 = 100;
 
-/// ProveKit WHIR internal target (Johnson bound).
-pub const PROVEKIT_SECURITY_BITS: u32 = 133;
+/// Binius64's product-default FRI query-phase target.
+const BINIUS64_SECURITY_BITS: u32 = 96;
 
-/// BaseFold interleaved height. Domain `2^{height+1}` fits KoalaBear two-adicity 24.
-pub const BASEFOLD_LOG_STACKING_HEIGHT: u32 = 20;
+/// WorldFnd WHIR CLI-default round-by-round target (Johnson bound).
+pub const WORLDFND_SECURITY_BITS: u32 = 128;
 
-/// FRI log-inverse rate for BaseFold (`rho = 1/2`).
-pub const BASEFOLD_FRI_LOG_BLOWUP: usize = 1;
+/// SP1 core's product-default BaseFold stacking height.
+pub const BASEFOLD_LOG_STACKING_HEIGHT: u32 = 21;
 
-/// FRI queries for 128-bit conjectured soundness: `log_blowup * queries + pow = 128`.
-pub const BASEFOLD_FRI_QUERIES: usize = 112;
+/// SP1 core's product-default BaseFold FRI log-inverse rate (`rho = 1/4`).
+pub const BASEFOLD_FRI_LOG_BLOWUP: usize = 2;
 
-/// FRI query proof-of-work bits for BaseFold.
+/// SP1 core's product-default unique-decoding query count at its 100-bit target.
+pub const BASEFOLD_FRI_QUERIES: usize = 124;
+
+/// SP1 core's product-default FRI query proof-of-work bits.
 pub const BASEFOLD_FRI_POW_BITS: usize = 16;
+
+/// Canonical result identity for Binius64's product-default BaseFold profile.
+const BINIUS64_NATIVE_PARAM: &str = "binius64-basefold-udr-96";
+
+/// Canonical result identity for SP1's product-default core BaseFold profile.
+const BASEFOLD_NATIVE_PARAM: &str = "sp1-core-basefold-udr-100";
 
 /// Plonky3 FRI/STIR log-inverse rate (`rho = 1/2`).
 pub const PLONKY3_UNI_LOG_BLOWUP: u32 = 1;
 
-/// Plonky3 FRI grinding budget.
-pub const PLONKY3_FRI_POW_BITS: usize = 20;
+/// Plonky3 FRI queries in the pinned upstream `FriParameters::new_benchmark` preset.
+pub const PLONKY3_FRI_QUERIES: usize = 100;
 
-/// Plonky3 FRI query count: `(100 - 20) / 1 = 80`.
-pub const PLONKY3_FRI_QUERIES: usize = 80;
+/// Plonky3 FRI query-phase grinding in the pinned upstream benchmark preset.
+pub const PLONKY3_FRI_POW_BITS: usize = 16;
+
+/// Random-words estimate for the pinned Plonky3 FRI benchmark preset over the
+/// 155-bit KoalaBear quintic challenge field.
+///
+/// This is `100 * -log2(rho + eta) + 16`, where `rho = 1/2` and
+/// `eta = log2(e / rho) * rho / 155`.
+const PLONKY3_FRI_RANDOM_WORDS_BITS: f64 = 113.744_139_402_344_4;
+
+/// Canonical result identity for the pinned upstream Plonky3 FRI benchmark preset.
+const PLONKY3_FRI_NATIVE_PARAM: &str = "plonky3-fri-new-benchmark-r1-f2-q100-qp16-rw113744";
+
+/// Canonical result identity for the fold-4 Plonky3 STIR benchmark profile.
+const PLONKY3_STIR_NATIVE_PARAM: &str = "plonky3-stir-cap100-r1-f4-maxpow20";
 
 /// Plonky2 FRI log-inverse rate (`rho = 1/8`).
 pub const PLONKY2_FRI_RATE_BITS: usize = 3;
 
-/// Plonky2 FRI queries at the native 100-bit conjectural target.
+/// Plonky2 FRI queries at its standard approximately 100-bit conjectural target.
 pub const PLONKY2_FRI_QUERIES: usize = 28;
 
 /// Plonky2 FRI grinding bits.
@@ -124,11 +155,11 @@ pub const WHIR_MAX_POW_BITS: usize = 30;
 /// WHIR direct-send threshold (matches `p3-whir` `MAX_NUM_VARIABLES_TO_SEND_COEFFS`).
 pub const WHIR_DIRECT_SEND_VARS: usize = 6;
 
-/// ProveKit WHIR starting log-inverse rate (`rho = 1/4`).
-pub const PROVEKIT_WHIR_LOG_INV_RATE: usize = 2;
+/// WorldFnd WHIR CLI-default starting log-inverse rate (`rho = 1/2`).
+pub const WORLDFND_WHIR_LOG_INV_RATE: usize = 1;
 
-/// ProveKit WHIR folding factor.
-pub const PROVEKIT_WHIR_FOLD: usize = 8;
+/// WorldFnd WHIR CLI-default folding factor.
+pub const WORLDFND_WHIR_FOLD: usize = 4;
 
 /// Flock packing: `m` bit-variables become `m - 7` packed \(\mathbb F_{2^{128}}\) variables.
 pub const FLOCK_LOG_PACKING: u32 = 7;
@@ -139,10 +170,17 @@ pub const FLOCK_LOG_PACKING: u32 = 7;
 pub enum HashSchemeId {
     /// Akita at the pinned `main` commit, same direct fp32-dense catalog as lattice-eval.
     Akita,
+    /// Same pin and field as [`Self::Akita`], `fp32-dense-offload` catalog: the
+    /// recursive planner schedule that offloads setup.
+    AkitaOffload,
     /// Same pin as [`Self::Akita`], fp64-dense catalog (`q = 2^{64}-59`).
     AkitaFp64,
+    /// [`Self::AkitaFp64`] with the `fp64-dense-offload` setup-offload catalog.
+    AkitaFp64Offload,
     /// Same pin as [`Self::Akita`], fp128-dense catalog (`q = 2^{128}-2^{32}+22537`).
     AkitaFp128,
+    /// [`Self::AkitaFp128`] with the `fp128-dense-offload` setup-offload catalog.
+    AkitaFp128Offload,
     /// Plonky2 univariate FRI over Goldilocks (`elliottech/plonky2`).
     Plonky2Fri,
     /// Plonky3 univariate FRI over KoalaBear.
@@ -155,7 +193,7 @@ pub enum HashSchemeId {
     Binius64,
     /// Flock Ligerito bit-multilinear PCS (Fast profile).
     FlockLigerito,
-    /// worldfnd/whir via ProveKit, Goldilocks degree-3 challenges, base-field coeffs.
+    /// WorldFnd WHIR, with Goldilocks degree-3 challenges and base-field coefficients.
     WhirProvekit,
     /// SP1 SLOP stacked BaseFold (`slop-basefold`).
     Basefold,
@@ -167,13 +205,16 @@ impl HashSchemeId {
     pub const fn display_name(self) -> &'static str {
         match self {
             Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => "Akita",
+            Self::AkitaOffload | Self::AkitaFp64Offload | Self::AkitaFp128Offload => {
+                "Akita (offload)"
+            }
             Self::Plonky2Fri => "Plonky2 FRI",
             Self::Plonky3Fri => "Plonky3 FRI",
             Self::Plonky3Stir => "Plonky3 STIR",
             Self::Whir => "WHIR (Plonky3)",
             Self::Binius64 => "Binius64 BaseFold",
             Self::FlockLigerito => "Flock Ligerito",
-            Self::WhirProvekit => "WHIR (ProveKit)",
+            Self::WhirProvekit => "WHIR (WorldFnd)",
             Self::Basefold => "BaseFold (SP1)",
         }
     }
@@ -189,15 +230,20 @@ impl HashSchemeId {
     pub fn parse_token(token: &str) -> Option<Self> {
         match token {
             "akita" => Some(Self::Akita),
+            "akita-offload" | "akita_offload" => Some(Self::AkitaOffload),
             "akita-fp64" | "akita_fp64" => Some(Self::AkitaFp64),
+            "akita-fp64-offload" | "akita_fp64_offload" => Some(Self::AkitaFp64Offload),
             "akita-fp128" | "akita_fp128" => Some(Self::AkitaFp128),
+            "akita-fp128-offload" | "akita_fp128_offload" => Some(Self::AkitaFp128Offload),
             "plonky2" | "plonky2-fri" => Some(Self::Plonky2Fri),
             "plonky3-fri" | "p3-fri" => Some(Self::Plonky3Fri),
             "plonky3-stir" | "p3-stir" | "stir" => Some(Self::Plonky3Stir),
             "whir" => Some(Self::Whir),
             "binius64" | "binius" => Some(Self::Binius64),
             "flock" | "ligerito" | "flock-ligerito" => Some(Self::FlockLigerito),
-            "whir-provekit" | "provekit" | "whir-goldilocks" => Some(Self::WhirProvekit),
+            "worldfnd" | "worldfnd-whir" | "whir-provekit" | "provekit" | "whir-goldilocks" => {
+                Some(Self::WhirProvekit)
+            }
             "basefold" | "base-fold" => Some(Self::Basefold),
             _ => None,
         }
@@ -208,15 +254,18 @@ impl HashSchemeId {
     pub const fn token(self) -> &'static str {
         match self {
             Self::Akita => "akita",
+            Self::AkitaOffload => "akita-offload",
             Self::AkitaFp64 => "akita-fp64",
+            Self::AkitaFp64Offload => "akita-fp64-offload",
             Self::AkitaFp128 => "akita-fp128",
+            Self::AkitaFp128Offload => "akita-fp128-offload",
             Self::Plonky2Fri => "plonky2-fri",
             Self::Plonky3Fri => "plonky3-fri",
             Self::Plonky3Stir => "plonky3-stir",
             Self::Whir => "whir",
             Self::Binius64 => "binius64",
             Self::FlockLigerito => "flock",
-            Self::WhirProvekit => "whir-provekit",
+            Self::WhirProvekit => "worldfnd",
             Self::Basefold => "basefold",
         }
     }
@@ -226,8 +275,11 @@ impl HashSchemeId {
     pub const fn all() -> [Self; HASH_SCHEME_COUNT] {
         [
             Self::Akita,
+            Self::AkitaOffload,
             Self::AkitaFp64,
+            Self::AkitaFp64Offload,
             Self::AkitaFp128,
+            Self::AkitaFp128Offload,
             Self::Plonky2Fri,
             Self::Plonky3Fri,
             Self::Plonky3Stir,
@@ -243,9 +295,12 @@ impl HashSchemeId {
     #[must_use]
     pub const fn source_repo(self) -> &'static str {
         match self {
-            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => {
-                "https://github.com/LayerZero-Labs/akita"
-            }
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload => "https://github.com/LayerZero-Labs/akita",
             Self::Plonky2Fri => "https://github.com/elliottech/plonky2",
             Self::Plonky3Fri | Self::Plonky3Stir | Self::Whir => {
                 "https://github.com/Plonky3/Plonky3"
@@ -261,13 +316,18 @@ impl HashSchemeId {
     #[must_use]
     pub const fn revision(self) -> &'static str {
         match self {
-            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 => crate::lattice::AKITA_REVISION,
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload => crate::lattice::AKITA_REVISION,
             Self::Plonky2Fri => PLONKY2_REVISION,
             Self::Plonky3Fri | Self::Plonky3Stir => PLONKY3_FRI_STIR_REVISION,
             Self::Whir => PLONKY3_REVISION,
             Self::Binius64 => BINIUS64_REVISION,
             Self::FlockLigerito => FLOCK_REVISION,
-            Self::WhirProvekit => WHIR_PROVEKIT_WHIR_REVISION,
+            Self::WhirProvekit => WORLDFND_WHIR_REVISION,
             Self::Basefold => SP1_REVISION,
         }
     }
@@ -282,9 +342,9 @@ impl HashSchemeId {
     #[must_use]
     pub const fn akita_field_arg(self) -> Option<&'static str> {
         match self {
-            Self::Akita => Some("fp32"),
-            Self::AkitaFp64 => Some("fp64"),
-            Self::AkitaFp128 => Some("fp128"),
+            Self::Akita | Self::AkitaOffload => Some("fp32"),
+            Self::AkitaFp64 | Self::AkitaFp64Offload => Some("fp64"),
+            Self::AkitaFp128 | Self::AkitaFp128Offload => Some("fp128"),
             _ => None,
         }
     }
@@ -296,19 +356,41 @@ impl HashSchemeId {
         sha.get(..8).unwrap_or(sha)
     }
 
-    /// Native transcript-error target used by the benchmark configuration.
+    /// Round-by-round or implementation-specific soundness target used by the benchmark configuration.
     #[must_use]
     pub const fn security_bits(self) -> u32 {
         match self {
-            Self::Plonky2Fri
-            | Self::Plonky3Fri
-            | Self::Plonky3Stir
-            | Self::Binius64
-            | Self::FlockLigerito => HASH_SECURITY_BITS_100,
-            Self::WhirProvekit => PROVEKIT_SECURITY_BITS,
-            Self::Akita | Self::AkitaFp64 | Self::AkitaFp128 | Self::Whir | Self::Basefold => {
-                HASH_SECURITY_BITS
-            }
+            Self::Binius64 => BINIUS64_SECURITY_BITS,
+            Self::Plonky3Fri => PLONKY3_FRI_RANDOM_WORDS_BITS as u32,
+            Self::Plonky2Fri | Self::Plonky3Stir | Self::Basefold => HASH_SECURITY_BITS_100,
+            Self::WhirProvekit => WORLDFND_SECURITY_BITS,
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload
+            | Self::Whir
+            | Self::FlockLigerito => HASH_SECURITY_BITS,
+        }
+    }
+
+    /// Concise security notion shown beside each measured timing row.
+    #[must_use]
+    pub const fn security_label(self) -> &'static str {
+        match self {
+            Self::Akita
+            | Self::AkitaOffload
+            | Self::AkitaFp64
+            | Self::AkitaFp64Offload
+            | Self::AkitaFp128
+            | Self::AkitaFp128Offload => "128-bit Module-SIS/ROM",
+            Self::Plonky2Fri => "approx. 100-bit conjectural",
+            Self::Plonky3Fri => "113.744-bit random-words conjectural",
+            Self::Plonky3Stir => "100-bit capacity",
+            Self::Whir | Self::FlockLigerito | Self::WhirProvekit => "128-bit RBR",
+            Self::Binius64 => "96-bit UDR query",
+            Self::Basefold => "100-bit UDR query",
         }
     }
 
@@ -319,8 +401,11 @@ impl HashSchemeId {
             Self::Plonky2Fri | Self::Plonky3Fri | Self::Plonky3Stir => "univariate",
             Self::FlockLigerito => "packed F128 MLE",
             Self::Akita
+            | Self::AkitaOffload
             | Self::AkitaFp64
+            | Self::AkitaFp64Offload
             | Self::AkitaFp128
+            | Self::AkitaFp128Offload
             | Self::Whir
             | Self::Binius64
             | Self::WhirProvekit
@@ -457,7 +542,7 @@ pub fn whir_round_log_inv_rates_with_rate(log2_n: u32, starting_log_inv_rate: us
     rates
 }
 
-/// The headline hash matrix (5 payloads × 11 schemes × 2 thread counts).
+/// The headline hash matrix (5 payloads × 14 schemes × 2 thread counts).
 #[must_use]
 pub fn hash_matrix() -> Vec<HashCase> {
     let mut cases = Vec::with_capacity(HASH_CELL_COUNT);
@@ -479,33 +564,45 @@ pub fn hash_case(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Optio
     })
 }
 
+/// The six Akita roster entries differ only by field and catalog, so build them
+/// in one place instead of six near-identical match arms.
+fn akita_hash_case(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Option<HashCase> {
+    let (field, native_param) = match scheme {
+        HashSchemeId::Akita => (AKITA_FP32, "fp32-dense"),
+        HashSchemeId::AkitaOffload => (AKITA_FP32, "fp32-dense-offload"),
+        HashSchemeId::AkitaFp64 => (AKITA_FP64, "fp64-dense"),
+        HashSchemeId::AkitaFp64Offload => (AKITA_FP64, "fp64-dense-offload"),
+        HashSchemeId::AkitaFp128 => (AKITA_FP128, "fp128-dense"),
+        HashSchemeId::AkitaFp128Offload => (AKITA_FP128, "fp128-dense-offload"),
+        _ => return None,
+    };
+    let log2_n = if field.log2_bits == AKITA_FP32.log2_bits {
+        log2_n_for_32bit_payload(payload_log2).unwrap_or(0)
+    } else {
+        log2_n_for_payload_bits(payload_log2, field.log2_bits)
+    };
+    Some(HashCase {
+        payload_log2,
+        scheme,
+        field,
+        log2_n,
+        threads,
+        native_param,
+    })
+}
+
 fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> HashCase {
+    if let Some(case) = akita_hash_case(payload_log2, scheme, threads) {
+        return case;
+    }
     let log2_n_32 = log2_n_for_32bit_payload(payload_log2).unwrap_or(0);
     match scheme {
-        HashSchemeId::Akita => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP32,
-            log2_n: log2_n_32,
-            threads,
-            native_param: "fp32-dense",
-        },
-        HashSchemeId::AkitaFp64 => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP64,
-            log2_n: log2_n_for_payload_bits(payload_log2, 64),
-            threads,
-            native_param: "fp64-dense",
-        },
-        HashSchemeId::AkitaFp128 => HashCase {
-            payload_log2,
-            scheme,
-            field: AKITA_FP128,
-            log2_n: log2_n_for_payload_bits(payload_log2, 128),
-            threads,
-            native_param: "fp128-dense",
-        },
+        HashSchemeId::Akita
+        | HashSchemeId::AkitaOffload
+        | HashSchemeId::AkitaFp64
+        | HashSchemeId::AkitaFp64Offload
+        | HashSchemeId::AkitaFp128
+        | HashSchemeId::AkitaFp128Offload => unreachable!("Akita cases handled above"),
         HashSchemeId::Plonky2Fri => HashCase {
             payload_log2,
             scheme,
@@ -520,7 +617,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: KOALA_BEAR,
             log2_n: log2_n_32,
             threads,
-            native_param: "plonky3-fri-100",
+            native_param: PLONKY3_FRI_NATIVE_PARAM,
         },
         HashSchemeId::Plonky3Stir => HashCase {
             payload_log2,
@@ -528,7 +625,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: KOALA_BEAR,
             log2_n: log2_n_32,
             threads,
-            native_param: "plonky3-stir-100",
+            native_param: PLONKY3_STIR_NATIVE_PARAM,
         },
         HashSchemeId::Whir => HashCase {
             payload_log2,
@@ -544,7 +641,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: BINARY_128,
             log2_n: log2_n_for_payload_bits(payload_log2, 128),
             threads,
-            native_param: "binius64-basefold-100",
+            native_param: BINIUS64_NATIVE_PARAM,
         },
         HashSchemeId::FlockLigerito => HashCase {
             payload_log2,
@@ -560,7 +657,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: GOLDILOCKS,
             log2_n: log2_n_for_payload_bits(payload_log2, 64),
             threads,
-            native_param: "whir-provekit-goldilocks3-133",
+            native_param: "worldfnd-whir-cli-default-128",
         },
         HashSchemeId::Basefold => HashCase {
             payload_log2,
@@ -568,7 +665,7 @@ fn hash_case_inner(payload_log2: u32, scheme: HashSchemeId, threads: u32) -> Has
             field: KOALA_BEAR,
             log2_n: log2_n_32,
             threads,
-            native_param: "basefold-fri-128",
+            native_param: BASEFOLD_NATIVE_PARAM,
         },
     }
 }
@@ -578,20 +675,90 @@ mod tests {
     use super::{
         hash_matrix, log2_n_for_payload_bits, plonky3_is_packed, plonky3_log_height,
         plonky3_log_width, whir_first_fold, HashSchemeId, BASEFOLD_FRI_LOG_BLOWUP,
-        BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES, HASH_CELL_COUNT, HASH_SCHEME_COUNT,
-        HASH_SECURITY_BITS, HASH_THREADS, KOALA_BEAR, KOALA_BEAR_TWO_ADICITY, PLONKY3_FRI_QUERIES,
-        PLONKY3_UNI_LOG_BLOWUP,
+        BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES, BASEFOLD_LOG_STACKING_HEIGHT,
+        BASEFOLD_NATIVE_PARAM, BINIUS64_NATIVE_PARAM, BINIUS64_SECURITY_BITS, HASH_CELL_COUNT,
+        HASH_SCHEME_COUNT, HASH_SECURITY_BITS, HASH_SECURITY_BITS_100, HASH_THREADS, KOALA_BEAR,
+        KOALA_BEAR_TWO_ADICITY, PLONKY3_FRI_NATIVE_PARAM, PLONKY3_FRI_POW_BITS,
+        PLONKY3_FRI_QUERIES, PLONKY3_FRI_RANDOM_WORDS_BITS, PLONKY3_STIR_NATIVE_PARAM,
+        PLONKY3_UNI_LOG_BLOWUP, WORLDFND_SECURITY_BITS, WORLDFND_WHIR_FOLD,
+        WORLDFND_WHIR_LOG_INV_RATE,
     };
     use crate::lattice::{log2_n_for_32bit_payload, PAYLOAD_LOG2};
 
     #[test]
     fn security_targets_match_the_roster() {
         assert_eq!(HASH_SECURITY_BITS, 128);
+        assert_eq!(BINIUS64_SECURITY_BITS, 96);
+        assert_eq!(HashSchemeId::Binius64.security_bits(), 96);
+        assert_eq!(HashSchemeId::Binius64.security_label(), "96-bit UDR query");
         assert_eq!(
-            BASEFOLD_FRI_LOG_BLOWUP * BASEFOLD_FRI_QUERIES + BASEFOLD_FRI_POW_BITS,
-            HASH_SECURITY_BITS as usize
+            HashSchemeId::Basefold.security_bits(),
+            HASH_SECURITY_BITS_100
         );
-        assert_eq!(PLONKY3_FRI_QUERIES, 80);
+        assert_eq!(HashSchemeId::Basefold.security_label(), "100-bit UDR query");
+        assert_eq!(BASEFOLD_FRI_LOG_BLOWUP, 2);
+        assert_eq!(BASEFOLD_FRI_QUERIES, 124);
+        assert_eq!(BASEFOLD_FRI_POW_BITS, 16);
+        assert_eq!(BASEFOLD_LOG_STACKING_HEIGHT, 21);
+        assert_eq!(PLONKY3_FRI_QUERIES, 100);
+        assert_eq!(PLONKY3_FRI_POW_BITS, 16);
+        assert!((PLONKY3_FRI_RANDOM_WORDS_BITS - 113.744).abs() < 0.001);
+        assert_eq!(HashSchemeId::Plonky3Fri.security_bits(), 113);
+        assert_eq!(WORLDFND_SECURITY_BITS, 128);
+        assert_eq!(WORLDFND_WHIR_LOG_INV_RATE, 1);
+        assert_eq!(WORLDFND_WHIR_FOLD, 4);
+        assert_eq!(HashSchemeId::WhirProvekit.security_bits(), 128);
+    }
+
+    #[test]
+    fn worldfnd_uses_cli_default_identity_and_public_token() {
+        let case = hash_matrix()
+            .into_iter()
+            .find(|case| case.scheme == HashSchemeId::WhirProvekit)
+            .expect("WorldFnd case");
+        assert_eq!(case.native_param, "worldfnd-whir-cli-default-128");
+        assert_eq!(HashSchemeId::WhirProvekit.token(), "worldfnd");
+        assert_eq!(
+            HashSchemeId::parse_token("whir-provekit"),
+            Some(HashSchemeId::WhirProvekit)
+        );
+        assert_ne!(case.native_param, "whir-provekit-goldilocks3-133");
+    }
+
+    #[test]
+    fn product_default_profiles_have_distinct_record_identities() {
+        let matrix = hash_matrix();
+        let binius = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Binius64)
+            .expect("Binius64 case");
+        let basefold = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Basefold)
+            .expect("SP1 BaseFold case");
+
+        assert_eq!(binius.native_param, BINIUS64_NATIVE_PARAM);
+        assert_eq!(basefold.native_param, BASEFOLD_NATIVE_PARAM);
+        assert_ne!(BINIUS64_NATIVE_PARAM, "binius64-basefold-100");
+        assert_ne!(BASEFOLD_NATIVE_PARAM, "basefold-fri-128");
+    }
+
+    #[test]
+    fn plonky3_profiles_have_parameter_complete_record_identities() {
+        let matrix = hash_matrix();
+        let fri = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Plonky3Fri)
+            .expect("Plonky3 FRI case");
+        let stir = matrix
+            .iter()
+            .find(|case| case.scheme == HashSchemeId::Plonky3Stir)
+            .expect("Plonky3 STIR case");
+
+        assert_eq!(fri.native_param, PLONKY3_FRI_NATIVE_PARAM);
+        assert_eq!(stir.native_param, PLONKY3_STIR_NATIVE_PARAM);
+        assert_ne!(PLONKY3_FRI_NATIVE_PARAM, "plonky3-fri-100");
+        assert_ne!(PLONKY3_STIR_NATIVE_PARAM, "plonky3-stir-100");
     }
 
     #[test]
@@ -707,14 +874,27 @@ mod tests {
     }
 
     #[test]
-    fn matrix_is_five_payloads_times_eleven_schemes_times_two_threads() {
+    fn matrix_is_five_payloads_times_fourteen_schemes_times_two_threads() {
         let matrix = hash_matrix();
         assert_eq!(matrix.len(), HASH_CELL_COUNT);
         assert_eq!(HashSchemeId::all().len(), HASH_SCHEME_COUNT);
         assert_eq!(HASH_THREADS, [1, 8]);
         assert_eq!(HashSchemeId::Akita.akita_field_arg(), Some("fp32"));
+        assert_eq!(HashSchemeId::AkitaOffload.akita_field_arg(), Some("fp32"));
         assert_eq!(HashSchemeId::AkitaFp64.akita_field_arg(), Some("fp64"));
+        assert_eq!(
+            HashSchemeId::AkitaFp64Offload.akita_field_arg(),
+            Some("fp64")
+        );
         assert_eq!(HashSchemeId::AkitaFp128.akita_field_arg(), Some("fp128"));
+        assert_eq!(
+            HashSchemeId::AkitaFp128Offload.akita_field_arg(),
+            Some("fp128")
+        );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-offload"),
+            Some(HashSchemeId::AkitaOffload)
+        );
         assert_eq!(
             HashSchemeId::parse_token("akita-fp64"),
             Some(HashSchemeId::AkitaFp64)
@@ -723,15 +903,36 @@ mod tests {
             HashSchemeId::parse_token("akita-fp128"),
             Some(HashSchemeId::AkitaFp128)
         );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-fp64-offload"),
+            Some(HashSchemeId::AkitaFp64Offload)
+        );
+        assert_eq!(
+            HashSchemeId::parse_token("akita-fp128-offload"),
+            Some(HashSchemeId::AkitaFp128Offload)
+        );
         for (payload_index, payload) in PAYLOAD_LOG2.iter().enumerate() {
             let base = payload_index * HASH_SCHEME_COUNT * HASH_THREADS.len();
             assert_eq!(matrix[base].scheme, HashSchemeId::Akita);
             assert_eq!(matrix[base].threads, 1);
-            assert_eq!(matrix[base + 2].scheme, HashSchemeId::AkitaFp64);
-            assert_eq!(matrix[base + 4].scheme, HashSchemeId::AkitaFp128);
-            assert_eq!(matrix[base + 6].scheme, HashSchemeId::Plonky2Fri);
-            assert_eq!(matrix[base + 12].scheme, HashSchemeId::Whir);
-            assert_eq!(matrix[base + 20].scheme, HashSchemeId::Basefold);
+            assert_eq!(matrix[base + 2].scheme, HashSchemeId::AkitaOffload);
+            assert_eq!(
+                matrix[base + 2].native_param,
+                "fp32-dense-offload",
+                "offload rows use the recursive setup-offload catalog"
+            );
+            assert_eq!(matrix[base + 2].log2_n, matrix[base].log2_n);
+            assert_eq!(matrix[base + 4].scheme, HashSchemeId::AkitaFp64);
+            assert_eq!(matrix[base + 6].scheme, HashSchemeId::AkitaFp64Offload);
+            assert_eq!(matrix[base + 6].native_param, "fp64-dense-offload");
+            assert_eq!(matrix[base + 6].log2_n, matrix[base + 4].log2_n);
+            assert_eq!(matrix[base + 8].scheme, HashSchemeId::AkitaFp128);
+            assert_eq!(matrix[base + 10].scheme, HashSchemeId::AkitaFp128Offload);
+            assert_eq!(matrix[base + 10].native_param, "fp128-dense-offload");
+            assert_eq!(matrix[base + 10].log2_n, matrix[base + 8].log2_n);
+            assert_eq!(matrix[base + 12].scheme, HashSchemeId::Plonky2Fri);
+            assert_eq!(matrix[base + 18].scheme, HashSchemeId::Whir);
+            assert_eq!(matrix[base + 26].scheme, HashSchemeId::Basefold);
             assert!(matrix[base..base + HASH_SCHEME_COUNT * HASH_THREADS.len()]
                 .iter()
                 .all(|case| case.payload_log2 == *payload));

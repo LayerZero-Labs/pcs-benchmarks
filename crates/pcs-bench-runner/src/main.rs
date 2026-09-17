@@ -111,7 +111,7 @@ struct RunArgs {
 
 #[derive(clap::Args)]
 struct HashRunArgs {
-    /// Comma-separated schemes: akita,akita-fp64,akita-fp128,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,whir-provekit,basefold (default: all).
+    /// Comma-separated schemes: akita,akita-offload,akita-fp64,akita-fp64-offload,akita-fp128,akita-fp128-offload,plonky2-fri,plonky3-fri,plonky3-stir,whir,binius64,flock,worldfnd,basefold (default: all).
     #[arg(long, value_delimiter = ',')]
     scheme: Vec<String>,
     /// Comma-separated payload exponents (default: 27,29,31,33,35).
@@ -257,7 +257,7 @@ fn compare_lattice(args: CompareArgs) -> Result<()> {
     if records.is_empty() {
         bail!("no lattice records in {}", args.input.display());
     }
-    validate_cohort("lattice", records.iter().map(|record| &record.provenance))?;
+    validate_lattice_cohorts(&records)?;
     let out_dir = args.out_dir.unwrap_or_else(|| {
         args.input
             .parent()
@@ -294,7 +294,7 @@ fn write_tables(out_dir: &Path, records: &[LatticeRecord]) -> Result<()> {
     validate_lattice_records(records, Path::new("in-memory lattice records"))?;
     validate_lattice_seed_schedule(records)?;
     validate_lattice_build_identities(records)?;
-    validate_cohort("lattice", records.iter().map(|record| &record.provenance))?;
+    validate_lattice_cohorts(records)?;
     let rows = aggregate_timing_rows(records);
     let resources = aggregate_resource_rows(records);
     fs::write(
@@ -469,6 +469,54 @@ fn validate_cohort<'a>(
     Ok(())
 }
 
+fn validate_lattice_cohorts(records: &[LatticeRecord]) -> Result<()> {
+    validate_environment("lattice", records.iter().map(|record| &record.provenance))?;
+    for scheme in SchemeId::all() {
+        validate_cohort(
+            &format!("lattice {}", scheme.token()),
+            records
+                .iter()
+                .filter(|record| record.scheme == scheme)
+                .map(|record| &record.provenance),
+        )?;
+    }
+    Ok(())
+}
+
+/// Hash records may combine several runs on one machine, but a single scheme's
+/// rows must all come from one run. This mirrors [`validate_lattice_cohorts`];
+/// without it, adding one scheme would force re-measuring the whole matrix.
+fn validate_hash_cohorts(records: &[HashRecord]) -> Result<()> {
+    validate_environment("hash", records.iter().map(|record| &record.provenance))?;
+    for scheme in HashSchemeId::all() {
+        validate_cohort(
+            &format!("hash {}", scheme.token()),
+            records
+                .iter()
+                .filter(|record| record.scheme == scheme)
+                .map(|record| &record.provenance),
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_environment<'a>(
+    label: &str,
+    mut provenances: impl Iterator<Item = &'a pcs_bench_core::Provenance>,
+) -> Result<()> {
+    let Some(expected) = provenances.next() else {
+        return Ok(());
+    };
+    for candidate in provenances {
+        if let Some(field) = environment_mismatch(expected, candidate) {
+            bail!(
+                "{label} records were not measured in one comparable environment: `{field}` differs"
+            );
+        }
+    }
+    Ok(())
+}
+
 fn cohort_mismatch(
     expected: &pcs_bench_core::Provenance,
     candidate: &pcs_bench_core::Provenance,
@@ -479,7 +527,16 @@ fn cohort_mismatch(
         Some("timestamp_utc")
     } else if expected.run_command != candidate.run_command {
         Some("run_command")
-    } else if expected.rustc_version != candidate.rustc_version {
+    } else {
+        environment_mismatch(expected, candidate)
+    }
+}
+
+fn environment_mismatch(
+    expected: &pcs_bench_core::Provenance,
+    candidate: &pcs_bench_core::Provenance,
+) -> Option<&'static str> {
+    if expected.rustc_version != candidate.rustc_version {
         Some("rustc_version")
     } else if expected.target != candidate.target {
         Some("target")
@@ -517,7 +574,7 @@ fn compare_hash(args: CompareArgs) -> Result<()> {
     if records.is_empty() {
         bail!("no hash records in {}", args.input.display());
     }
-    validate_cohort("hash", records.iter().map(|record| &record.provenance))?;
+    validate_hash_cohorts(&records)?;
     let out_dir = args.out_dir.unwrap_or_else(|| {
         args.input
             .parent()
@@ -542,7 +599,7 @@ fn write_hash_tables(out_dir: &Path, records: &[HashRecord]) -> Result<()> {
     validate_hash_records(records, Path::new("in-memory hash records"))?;
     validate_hash_seed_schedule(records)?;
     validate_hash_build_identities(records)?;
-    validate_cohort("hash", records.iter().map(|record| &record.provenance))?;
+    validate_hash_cohorts(records)?;
     write_hash_markdown(out_dir, records)?;
     write_hash_latex(out_dir, records)?;
     Ok(())
@@ -1092,10 +1149,16 @@ fn validate_hash_build_identities(records: &[HashRecord]) -> Result<()> {
         .iter()
         .filter(|record| record.status == pcs_bench_core::RunStatus::Ok)
         .map(|record| {
+            // Every Akita row, direct or setup-offload and whatever the field,
+            // is produced by the one shared `lattice-eval` worker binary, so
+            // they must all come from the same build to stay comparable.
             let group = match record.scheme {
-                HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128 => {
-                    "akita".to_owned()
-                }
+                HashSchemeId::Akita
+                | HashSchemeId::AkitaOffload
+                | HashSchemeId::AkitaFp64
+                | HashSchemeId::AkitaFp64Offload
+                | HashSchemeId::AkitaFp128
+                | HashSchemeId::AkitaFp128Offload => "akita".to_owned(),
                 other => other.token().to_owned(),
             };
             (
@@ -1150,7 +1213,8 @@ fn validate_record_seed(
 #[cfg(test)]
 mod tests {
     use super::{
-        validate_build_identity_groups, validate_cohort, validate_hash_record_case,
+        validate_build_identity_groups, validate_cohort, validate_environment,
+        validate_hash_build_identities, validate_hash_cohorts, validate_hash_record_case,
         validate_record_seed, validate_record_timings, validate_unique_hash_records, workload_seed,
         BuildIdentity, SeedMode,
     };
@@ -1166,6 +1230,16 @@ mod tests {
         let error =
             validate_cohort("test", [&one, &two].into_iter()).expect_err("must reject mismatch");
         assert!(error.to_string().contains("cpu_model"));
+    }
+
+    #[test]
+    fn accepts_distinct_runs_in_the_same_environment() {
+        let one = Provenance::test_fixture();
+        let mut two = one.clone();
+        two.harness_revision = "refreshed".into();
+        two.timestamp_utc = Some("later".into());
+        two.run_command = Some("lattice-eval run --scheme rokoko".into());
+        validate_environment("test", [&one, &two].into_iter()).expect("same environment");
     }
 
     #[test]
@@ -1234,6 +1308,114 @@ mod tests {
 
         provenance.workload_seed = Some(workload_seed(SeedMode::Vary, 27, 3));
         validate_record_seed(27, 3, &provenance, "test").expect("scheduled seed");
+    }
+
+    #[test]
+    fn hash_cohort_allows_per_scheme_runs_but_not_a_split_scheme() {
+        let hash_record = |scheme: HashSchemeId, run: &str| {
+            let mut provenance = Provenance::test_fixture();
+            provenance.harness_revision = run.into();
+            provenance.run_command = Some(format!("hash-eval run --scheme {}", scheme.token()));
+            HashRecord {
+                status: RunStatus::Ok,
+                status_detail: None,
+                scheme,
+                implementation_revision: scheme.revision().into(),
+                payload_log2: 33,
+                log2_n: Some(28),
+                field: "2^{32}-99".into(),
+                native_param: None,
+                threads: 1,
+                sample: 0,
+                warmup: false,
+                timings_ns: BTreeMap::from([
+                    ("commit".into(), 1),
+                    ("open".into(), 2),
+                    ("verify".into(), 3),
+                ]),
+                proof_bytes: None,
+                commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
+                state_bytes: None,
+                peak_rss_bytes: None,
+                provenance,
+            }
+        };
+
+        // Different schemes measured by different runs on one machine merge.
+        let merged = [
+            hash_record(HashSchemeId::Whir, "run-a"),
+            hash_record(HashSchemeId::AkitaOffload, "run-b"),
+        ];
+        validate_hash_cohorts(&merged).expect("per-scheme runs may be merged");
+
+        // One scheme split across two runs is not comparable.
+        let mut split_second = hash_record(HashSchemeId::Whir, "run-b");
+        split_second.sample = 1;
+        let split = [hash_record(HashSchemeId::Whir, "run-a"), split_second];
+        let error = validate_hash_cohorts(&split)
+            .expect_err("a single scheme spanning two runs must be rejected");
+        assert!(error.to_string().contains("hash whir"));
+
+        // A different machine is still rejected outright.
+        let mut other_machine = hash_record(HashSchemeId::Whir, "run-a");
+        other_machine.provenance.cpu_model = "different machine".into();
+        other_machine.sample = 1;
+        let cross = [hash_record(HashSchemeId::Whir, "run-a"), other_machine];
+        let error = validate_hash_cohorts(&cross).expect_err("cross-machine must be rejected");
+        assert!(error.to_string().contains("cpu_model"));
+    }
+
+    #[test]
+    fn rejects_akita_offload_measured_with_a_different_worker_build() {
+        // Direct and offload Akita rows share one `lattice-eval` binary, so a
+        // merged cohort that mixes two builds of it is not comparable.
+        let akita_record = |scheme: HashSchemeId, sha: &str| {
+            let mut provenance = Provenance::test_fixture();
+            provenance.executable_sha256 = Some(sha.into());
+            HashRecord {
+                status: RunStatus::Ok,
+                status_detail: None,
+                scheme,
+                implementation_revision: scheme.revision().into(),
+                payload_log2: 33,
+                log2_n: Some(28),
+                field: "2^{32}-99".into(),
+                native_param: None,
+                threads: 1,
+                sample: 0,
+                warmup: false,
+                timings_ns: BTreeMap::from([
+                    ("commit".into(), 1),
+                    ("open".into(), 2),
+                    ("verify".into(), 3),
+                ]),
+                proof_bytes: None,
+                commitment_bytes: None,
+                evaluation_bytes: None,
+                public_context_bytes: None,
+                state_bytes: None,
+                peak_rss_bytes: None,
+                provenance,
+            }
+        };
+        let mixed = [
+            akita_record(HashSchemeId::Akita, "old-build"),
+            akita_record(HashSchemeId::AkitaOffload, "new-build"),
+        ];
+        let error = validate_hash_build_identities(&mixed)
+            .expect_err("offload measured with a different worker build must be rejected");
+        assert!(error
+            .to_string()
+            .contains("multiple implementation/build identities"));
+
+        let consistent = [
+            akita_record(HashSchemeId::Akita, "one-build"),
+            akita_record(HashSchemeId::AkitaOffload, "one-build"),
+            akita_record(HashSchemeId::AkitaFp64Offload, "one-build"),
+        ];
+        validate_hash_build_identities(&consistent).expect("one build is comparable");
     }
 
     #[test]

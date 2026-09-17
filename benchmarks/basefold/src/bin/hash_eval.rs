@@ -6,6 +6,7 @@ use pcs_bench_core::{
 };
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use rayon::prelude::*;
 use slop_algebra::extension::BinomialExtensionField;
 use slop_algebra::AbstractField;
 use slop_basefold::{BasefoldVerifier, FriConfig};
@@ -28,6 +29,7 @@ type PcsProver = BasefoldProver<GC, Poseidon2KoalaBear16Prover>;
 
 const INPUT_SEED: u64 = 0xDEAD_BEEF;
 const POINT_SEED: u64 = 0xCAFE_BABE;
+const PROFILE_ID: &str = "sp1-core-basefold-udr-100";
 
 fn main() -> ExitCode {
     let threads = parse_u32_flag("--threads").unwrap_or(1).max(1);
@@ -70,10 +72,12 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
     let batch_size = 1usize << (log2_n - log_stacking_height);
 
     let evals = dense_evaluations(num_variables);
-    let mle = Mle::<F>::from(evals);
     let point = opening_point(num_variables);
-    let messages: Message<Mle<F>> = Message::from(mle);
-    let claim_source = messages[0].clone();
+    // Correctness only: the pinned prover ignores its evaluation-claim argument.
+    // Check the original witness before transferring ownership, without retaining
+    // a witness copy or allocating a full-size extension-field equality table.
+    let expected_evaluation = independent_evaluation(&evals, &point);
+    let messages: Message<Mle<F>> = Message::from(Mle::<F>::from(evals));
 
     let t0 = Instant::now();
     let fri_config = FriConfig::new(
@@ -99,17 +103,31 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
     prover_data_rounds.push(prover_data);
 
     let t0 = Instant::now();
-    let evaluation_claim = claim_source.eval_at(&point)[0];
-    drop(claim_source);
     let proof = prover
         .prove_trusted_evaluation(
             point.clone(),
-            evaluation_claim,
+            EF::zero(), // Ignored by the pinned upstream prover.
             prover_data_rounds,
             &mut prover_challenger,
         )
         .map_err(|error| error.to_string())?;
+    // Opening returns the evaluation as well as the proof. Charge the small
+    // interpolation of the prover's batch evaluations to opening time.
+    let (batch_point, _) = point.split_at(num_variables - log_stacking_height as usize);
+    let batch_evaluations = proof
+        .batch_evaluations
+        .iter()
+        .flatten()
+        .copied()
+        .collect::<Mle<EF>>();
+    let evaluation_claim = batch_evaluations.eval_at(&batch_point)[0];
     let open_ns = elapsed_ns(t0);
+
+    if evaluation_claim != expected_evaluation {
+        return Err(
+            "BaseFold proof evaluation differs from the independent witness evaluation".into(),
+        );
+    }
 
     let t0 = Instant::now();
     let mut verifier_challenger = GC::default_challenger();
@@ -155,10 +173,9 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
 
     Ok(WorkerOutput {
         status: RunStatus::Ok,
-        status_detail: Some(
-            "statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform"
-                .into(),
-        ),
+        status_detail: Some(format!(
+            "profile={PROFILE_ID},statement=multilinear,distribution=full-field-uniform,point=full-extension-uniform,rate=1/4,queries={BASEFOLD_FRI_QUERIES},pow_bits={BASEFOLD_FRI_POW_BITS},log_stacking_height={BASEFOLD_LOG_STACKING_HEIGHT}"
+        )),
         log2_n: Some(log2_n),
         timings_ns,
         proof_bytes: Some(proof_bytes),
@@ -173,6 +190,26 @@ fn timed_basefold(log2_n: u32) -> Result<WorkerOutput, String> {
 fn dense_evaluations(num_vars: usize) -> Vec<F> {
     let mut rng = StdRng::seed_from_u64(configured_seed(INPUT_SEED));
     (0..(1usize << num_vars)).map(|_| rng.gen()).collect()
+}
+
+/// Evaluate the original witness with two factored equality tables. Auxiliary
+/// storage is O(sqrt(N)), so this untimed oracle does not dominate process RSS.
+fn independent_evaluation(evals: &[F], point: &Point<EF>) -> EF {
+    let (high_point, low_point) = point.split_at(point.dimension() / 2);
+    let high_weights = Mle::<EF>::partial_lagrange(&high_point);
+    let low_weights = Mle::<EF>::partial_lagrange(&low_point);
+    let low_weights = low_weights.guts().as_slice();
+    evals
+        .par_chunks(low_weights.len())
+        .zip(high_weights.guts().as_slice().par_iter())
+        .map(|(chunk, &high_weight)| {
+            let low_evaluation = chunk
+                .iter()
+                .zip(low_weights)
+                .fold(EF::zero(), |sum, (&value, &weight)| sum + weight * value);
+            high_weight * low_evaluation
+        })
+        .sum()
 }
 
 fn opening_point(num_vars: usize) -> Point<EF> {
@@ -235,4 +272,35 @@ fn peak_rss_bytes() -> Option<u64> {
         return Some(kb.saturating_mul(1024));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        BASEFOLD_FRI_LOG_BLOWUP, BASEFOLD_FRI_POW_BITS, BASEFOLD_FRI_QUERIES,
+        BASEFOLD_LOG_STACKING_HEIGHT, PROFILE_ID,
+    };
+
+    #[test]
+    fn factored_oracle_matches_dense_evaluation() {
+        use super::{independent_evaluation, Mle, Point, EF, F};
+        use rand::{rngs::StdRng, Rng, SeedableRng};
+
+        let mut rng = StdRng::seed_from_u64(42);
+        for num_vars in 0..=8 {
+            let evals: Vec<F> = (0..1usize << num_vars).map(|_| rng.gen()).collect();
+            let point = Point::<EF>::rand(&mut rng, num_vars);
+            let expected = Mle::from(evals.clone()).eval_at(&point)[0];
+            assert_eq!(independent_evaluation(&evals, &point), expected);
+        }
+    }
+
+    #[test]
+    fn product_default_core_profile_is_pinned() {
+        assert_eq!(BASEFOLD_FRI_LOG_BLOWUP, 2);
+        assert_eq!(BASEFOLD_FRI_QUERIES, 124);
+        assert_eq!(BASEFOLD_FRI_POW_BITS, 16);
+        assert_eq!(BASEFOLD_LOG_STACKING_HEIGHT, 21);
+        assert_eq!(PROFILE_ID, "sp1-core-basefold-udr-100");
+    }
 }

@@ -1,4 +1,4 @@
-//! Single-shot Binius64 BaseFold worker (unique decoding, 100-bit, SHA-256).
+//! Single-shot Binius64 BaseFold worker (product-default 96-bit UDR, SHA-256).
 
 use binius_compute::GlobalAllocator;
 use binius_field::{arch::OptimalPackedB128, Field};
@@ -17,7 +17,7 @@ use binius_math::ntt::{domain_context::GaoMateerPreExpanded, NeighborsLastMultiT
 use binius_math::test_utils::{random_field_buffer, random_scalars};
 use binius_transcript::fiat_shamir::HasherChallenger;
 use binius_transcript::ProverTranscript;
-use pcs_bench_core::{RunStatus, WorkerOutput, HASH_SECURITY_BITS_100};
+use pcs_bench_core::{RunStatus, WorkerOutput};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use std::collections::BTreeMap;
@@ -29,6 +29,8 @@ type F = binius_field::Ghash128b;
 type P = OptimalPackedB128;
 type StdChallenger = HasherChallenger<StdDigest>;
 const LOG_INV_RATE: usize = 1;
+const SECURITY_BITS: usize = 96;
+const PROFILE_ID: &str = "binius64-basefold-udr-96";
 
 fn main() -> ExitCode {
     let threads = parse_u32_flag("--threads").unwrap_or(1).max(1);
@@ -60,7 +62,7 @@ fn run(threads: u32) -> Result<(), String> {
 
 fn timed_basefold(log2_n: u32, threads: u32) -> Result<WorkerOutput, String> {
     let n_vars = log2_n as usize;
-    let n_test_queries = calculate_n_test_queries(HASH_SECURITY_BITS_100 as usize, LOG_INV_RATE);
+    let n_test_queries = calculate_n_test_queries(SECURITY_BITS, LOG_INV_RATE);
     let mut rng = StdRng::seed_from_u64(configured_seed(0));
     let witness = random_field_buffer::<P>(&mut rng, n_vars);
     let evaluation_point: Vec<F> = random_scalars(&mut rng, n_vars);
@@ -183,7 +185,7 @@ fn timed_basefold(log2_n: u32, threads: u32) -> Result<WorkerOutput, String> {
     Ok(WorkerOutput {
         status: RunStatus::Ok,
         status_detail: Some(format!(
-            "binius64-basefold-udr-100,statement=multilinear,distribution=full-field-uniform,point=full-field-uniform,rate=1/2,queries={n_test_queries},hash=std,packed=arch-optimal,ntt=multithread,shares={}",
+            "profile={PROFILE_ID},statement=multilinear,distribution=full-field-uniform,point=full-field-uniform,rate=1/2,queries={n_test_queries},hash=std,packed=arch-optimal,ntt=multithread,shares={}",
             1u32 << log_num_shares
         )),
         log2_n: Some(log2_n),
@@ -254,4 +256,17 @@ fn peak_rss_bytes() -> Option<u64> {
         return Some(kb.saturating_mul(1024));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{calculate_n_test_queries, LOG_INV_RATE, PROFILE_ID, SECURITY_BITS};
+
+    #[test]
+    fn product_default_profile_uses_232_queries() {
+        assert_eq!(SECURITY_BITS, 96);
+        assert_eq!(LOG_INV_RATE, 1);
+        assert_eq!(calculate_n_test_queries(SECURITY_BITS, LOG_INV_RATE), 232);
+        assert_eq!(PROFILE_ID, "binius64-basefold-udr-96");
+    }
 }

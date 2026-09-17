@@ -170,7 +170,12 @@ pub(crate) fn prepare_lattice_case(case: &LatticeCase) -> Result<()> {
 
 pub(crate) fn prepare_hash_case(case: &HashCase) -> Result<()> {
     match case.scheme {
-        HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128 => build_akita(),
+        HashSchemeId::Akita
+        | HashSchemeId::AkitaOffload
+        | HashSchemeId::AkitaFp64
+        | HashSchemeId::AkitaFp128
+        | HashSchemeId::AkitaFp64Offload
+        | HashSchemeId::AkitaFp128Offload => build_akita(),
         HashSchemeId::Whir => {
             build_isolated_hash("benchmarks/whir", "hash-eval", &[], "WHIR (Plonky3)")
         }
@@ -208,7 +213,7 @@ pub(crate) fn prepare_hash_case(case: &HashCase) -> Result<()> {
             "benchmarks/whir-provekit",
             "hash-eval",
             &[],
-            "WHIR (ProveKit)",
+            "WHIR (WorldFnd)",
         ),
     }
 }
@@ -240,7 +245,7 @@ fn attach_lattice_build_identity(case: &LatticeCase, provenance: &mut Provenance
                 &root.join(format!("target/rokoko-{feature}/release/rokoko")),
                 Some(&root.join("third_party/rokoko/Cargo.lock")),
                 &format!(
-                    "CARGO_TARGET_DIR=target/rokoko-{feature} cargo {ROKOKO_TOOLCHAIN} build --release --locked --no-default-features --features incomplete-rexl,unsafe-sumcheck,{feature}"
+                    "CARGO_TARGET_DIR=target/rokoko-{feature} cargo {ROKOKO_TOOLCHAIN} build --release --locked --features {feature}"
                 ),
             )?;
             provenance.worker_compiler_version =
@@ -254,7 +259,12 @@ fn attach_hash_build_identity(case: &HashCase, provenance: &mut Provenance) -> R
     let root = workspace_root()?;
     if matches!(
         case.scheme,
-        HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128
+        HashSchemeId::Akita
+            | HashSchemeId::AkitaOffload
+            | HashSchemeId::AkitaFp64
+            | HashSchemeId::AkitaFp128
+            | HashSchemeId::AkitaFp64Offload
+            | HashSchemeId::AkitaFp128Offload
     ) {
         return attach_build_identity(
             provenance,
@@ -272,7 +282,12 @@ fn attach_hash_build_identity(case: &HashCase, provenance: &mut Provenance) -> R
         HashSchemeId::Binius64 => ("benchmarks/binius64", "hash-eval", ""),
         HashSchemeId::FlockLigerito => ("benchmarks/flock-ligerito", "hash-eval", ""),
         HashSchemeId::WhirProvekit => ("benchmarks/whir-provekit", "hash-eval", ""),
-        HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128 => {
+        HashSchemeId::Akita
+        | HashSchemeId::AkitaOffload
+        | HashSchemeId::AkitaFp64
+        | HashSchemeId::AkitaFp128
+        | HashSchemeId::AkitaFp64Offload
+        | HashSchemeId::AkitaFp128Offload => {
             unreachable!("Akita handled above")
         }
     };
@@ -505,7 +520,6 @@ fn build_rokoko(case: &LatticeCase) -> Result<()> {
         );
     }
     let target_dir = root.join(format!("target/rokoko-{feature}"));
-    let features = format!("incomplete-rexl,unsafe-sumcheck,{feature}");
     let status = Command::new("cargo")
         .current_dir(&rokoko_root)
         .args([
@@ -513,9 +527,8 @@ fn build_rokoko(case: &LatticeCase) -> Result<()> {
             "build",
             "--release",
             "--locked",
-            "--no-default-features",
             "--features",
-            &features,
+            feature,
         ])
         .env("CARGO_TARGET_DIR", &target_dir)
         .env("RAYON_NUM_THREADS", "1")
@@ -556,9 +569,12 @@ fn run_akita(case: &LatticeCase, mem_limit: u64, seed: u64, offload: bool) -> Re
 
 fn spawn_hash_worker(case: &HashCase, mem_limit: u64, seed: u64) -> Result<WorkerOutput> {
     match case.scheme {
-        HashSchemeId::Akita | HashSchemeId::AkitaFp64 | HashSchemeId::AkitaFp128 => {
-            run_akita_hash(case, mem_limit, seed)
-        }
+        HashSchemeId::Akita
+        | HashSchemeId::AkitaOffload
+        | HashSchemeId::AkitaFp64
+        | HashSchemeId::AkitaFp128
+        | HashSchemeId::AkitaFp64Offload
+        | HashSchemeId::AkitaFp128Offload => run_akita_hash(case, mem_limit, seed),
         HashSchemeId::Whir => run_isolated_hash(
             case,
             mem_limit,
@@ -637,7 +653,7 @@ fn spawn_hash_worker(case: &HashCase, mem_limit: u64, seed: u64) -> Result<Worke
             &[],
             &[],
             seed,
-            "WHIR (ProveKit)",
+            "WHIR (WorldFnd)",
         ),
     }
 }
@@ -658,6 +674,14 @@ fn run_akita_hash(case: &HashCase, mem_limit: u64, seed: u64) -> Result<WorkerOu
         "--field",
         &field,
     ]);
+    if matches!(
+        case.scheme,
+        HashSchemeId::AkitaOffload
+            | HashSchemeId::AkitaFp64Offload
+            | HashSchemeId::AkitaFp128Offload
+    ) {
+        command.arg("--offload");
+    }
     command.env("RAYON_NUM_THREADS", &threads);
     command.env("PCS_BENCH_SEED", seed.to_string());
     if case.threads <= 1 {

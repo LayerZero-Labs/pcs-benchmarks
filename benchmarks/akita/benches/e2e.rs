@@ -48,6 +48,7 @@ fn prover_claims<'a, Cfg, P>(
     polynomials: &'a [&'a P],
     commitment: &'a CommittedGroup<Cfg::Field>,
     hint: AkitaCommitmentHint<Cfg::Field>,
+    schedules: &akita_config::TrustedScheduleCatalog<Cfg>,
 ) -> SelectedProverOpeningData<'a, F, akita_prover::PreparedProverGroup<'a, P>, Cfg::Field>
 where
     Cfg: CommitmentConfig<ExtField = F>,
@@ -60,8 +61,13 @@ where
     )
     .expect("benchmark claims are valid");
     let claims = OpeningClaims::from_groups(vec![group]).expect("benchmark claim group is valid");
-    SelectedProverOpeningData::from_committed_claims::<Cfg>(claims, vec![hint], vec![polynomials])
-        .expect("benchmark prover data is valid")
+    SelectedProverOpeningData::from_committed_claims::<Cfg>(
+        claims,
+        vec![hint],
+        vec![polynomials],
+        schedules,
+    )
+    .expect("benchmark prover data is valid")
 }
 
 fn verifier_claims<'a>(
@@ -81,6 +87,9 @@ fn bench_dense<Cfg>(criterion: &mut Criterion, num_vars: usize)
 where
     Cfg: CommitmentConfig<Field = F, ExtField = F>,
 {
+    let scheme = AkitaCommitmentScheme::<Cfg>::new(
+        pcs_bench_akita::schedule_catalog::<Cfg>(num_vars).expect("pinned upstream catalog"),
+    );
     let evaluations = dense_evaluations::<Cfg>(num_vars);
     let polynomial =
         DensePoly::<F>::from_field_evals(num_vars, &evaluations).expect("valid dense polynomial");
@@ -96,13 +105,14 @@ where
     group.bench_function("setup", |bencher| {
         bencher.iter(|| {
             black_box(
-                AkitaCommitmentScheme::<Cfg>::setup_prover(black_box(num_vars), black_box(1))
+                scheme
+                    .setup_prover(black_box(num_vars), black_box(1))
                     .expect("setup succeeds"),
             )
         });
     });
 
-    let setup = AkitaCommitmentScheme::<Cfg>::setup_prover(num_vars, 1).expect("setup succeeds");
+    let setup = scheme.setup_prover(num_vars, 1).expect("setup succeeds");
     let prepared = CpuBackend::DEFAULT
         .prepare_setup(&setup)
         .expect("setup preparation succeeds");
@@ -116,53 +126,60 @@ where
     group.bench_function("commit", |bencher| {
         bencher.iter(|| {
             black_box(
-                AkitaCommitmentScheme::<Cfg>::commit::<_, _>(
-                    &setup,
-                    black_box(std::slice::from_ref(&polynomial)),
-                    &stack,
-                    akita_prover::GroupContext::scheduler_without_precommitted_groups(),
-                )
-                .expect("commit succeeds"),
+                scheme
+                    .commit::<_, _>(
+                        &setup,
+                        black_box(std::slice::from_ref(&polynomial)),
+                        stack.commitment(),
+                        akita_prover::GroupContext::scheduler_without_precommitted_groups(),
+                    )
+                    .expect("commit succeeds"),
             )
         });
     });
 
-    let output = AkitaCommitmentScheme::<Cfg>::commit::<_, _>(
-        &setup,
-        std::slice::from_ref(&polynomial),
-        &stack,
-        akita_prover::GroupContext::scheduler_without_precommitted_groups(),
-    )
-    .expect("commit succeeds");
+    let output = scheme
+        .commit::<_, _>(
+            &setup,
+            std::slice::from_ref(&polynomial),
+            stack.commitment(),
+            akita_prover::GroupContext::scheduler_without_precommitted_groups(),
+        )
+        .expect("commit succeeds");
     let polynomial_refs = [&polynomial];
-    let selection = Cfg::resolve_catalog_row_for_profiles(&CommittedGroupBatchProfile {
-        final_group: *output.committed_group.profile(),
-        precommitteds: Vec::new(),
-    })
-    .expect("generated schedule contains benchmark case")
-    .selection();
-    let verifier_setup =
-        AkitaCommitmentScheme::<Cfg>::setup_verifier(&setup).expect("verifier setup succeeds");
+    let selection = scheme
+        .schedules()
+        .resolve_profiles(&CommittedGroupBatchProfile {
+            final_group: *output.committed_group.profile(),
+            precommitteds: Vec::new(),
+        })
+        .expect("generated schedule contains benchmark case")
+        .selection();
+    let verifier_setup = scheme
+        .setup_verifier(&setup)
+        .expect("verifier setup succeeds");
 
     group.bench_function("prove", |bencher| {
         bencher.iter_batched(
-            || output.hint.clone(),
+            || output.prover_state.clone(),
             |hint| {
                 let mut transcript = AkitaTranscript::<F>::new(b"pcs-benchmark/v1");
                 black_box(
-                    AkitaCommitmentScheme::<Cfg>::batched_prove::<_, _, _>(
-                        &setup,
-                        prover_claims::<Cfg, _>(
-                            &point,
-                            &polynomial_refs,
-                            &output.committed_group,
-                            hint,
-                        ),
-                        &stack,
-                        &mut transcript,
-                        BasisMode::Lagrange,
-                    )
-                    .expect("proving succeeds"),
+                    scheme
+                        .batched_prove::<_, _, _, _>(
+                            &setup,
+                            prover_claims::<Cfg, _>(
+                                &point,
+                                &polynomial_refs,
+                                &output.committed_group,
+                                hint,
+                                scheme.schedules(),
+                            ),
+                            &stack,
+                            &mut transcript,
+                            BasisMode::Lagrange,
+                        )
+                        .expect("proving succeeds"),
                 )
             },
             BatchSize::LargeInput,
@@ -170,36 +187,39 @@ where
     });
 
     let mut prover_transcript = AkitaTranscript::<F>::new(b"pcs-benchmark/v1");
-    let proof = AkitaCommitmentScheme::<Cfg>::batched_prove::<_, _, _>(
-        &setup,
-        prover_claims::<Cfg, _>(
-            &point,
-            &polynomial_refs,
-            &output.committed_group,
-            output.hint.clone(),
-        ),
-        &stack,
-        &mut prover_transcript,
-        BasisMode::Lagrange,
-    )
-    .expect("proving succeeds");
+    let proof = scheme
+        .batched_prove::<_, _, _, _>(
+            &setup,
+            prover_claims::<Cfg, _>(
+                &point,
+                &polynomial_refs,
+                &output.committed_group,
+                output.prover_state.clone(),
+                scheme.schedules(),
+            ),
+            &stack,
+            &mut prover_transcript,
+            BasisMode::Lagrange,
+        )
+        .expect("proving succeeds");
 
     group.bench_function("verify", |bencher| {
         bencher.iter(|| {
             let mut transcript = AkitaTranscript::<F>::new(b"pcs-benchmark/v1");
-            AkitaCommitmentScheme::<Cfg>::batched_verify(
-                black_box(&proof),
-                black_box(&verifier_setup),
-                &mut transcript,
-                black_box(verifier_claims(
-                    selection,
-                    &point,
-                    &[opening],
-                    &output.committed_group,
-                )),
-                BasisMode::Lagrange,
-            )
-            .expect("verification succeeds");
+            scheme
+                .batched_verify(
+                    black_box(&proof),
+                    black_box(&verifier_setup),
+                    &mut transcript,
+                    black_box(verifier_claims(
+                        selection,
+                        &point,
+                        &[opening],
+                        &output.committed_group,
+                    )),
+                    BasisMode::Lagrange,
+                )
+                .expect("verification succeeds");
         });
     });
 

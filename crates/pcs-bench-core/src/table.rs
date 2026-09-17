@@ -298,7 +298,7 @@ fn timing_row_from_samples(
         };
     }
 
-    let status = aggregate_gap_status(samples);
+    let status = aggregate_gap_status(scheme, samples);
     TimingTableRow {
         payload_log2,
         scheme,
@@ -397,7 +397,7 @@ fn resource_row_from_samples(
         };
     }
 
-    let status = aggregate_gap_status(samples);
+    let status = aggregate_gap_status(scheme, samples);
     ResourceTableRow {
         payload_log2,
         scheme,
@@ -415,14 +415,21 @@ fn resource_row_from_samples(
     }
 }
 
-fn aggregate_gap_status(samples: &[&LatticeRecord]) -> RunStatus {
+fn aggregate_gap_status(scheme: SchemeId, samples: &[&LatticeRecord]) -> RunStatus {
     if samples.iter().any(|record| {
         record.status == RunStatus::Oom || looks_like_oom(record.status_detail.as_deref())
     }) {
         RunStatus::Oom
-    } else if samples
-        .iter()
-        .any(|record| record.status == RunStatus::Unsupported)
+    } else if (scheme == SchemeId::AkitaOffload
+        && samples.iter().any(|record| {
+            record
+                .status_detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("no setup-prefix"))
+        }))
+        || samples
+            .iter()
+            .any(|record| record.status == RunStatus::Unsupported)
     {
         RunStatus::Unsupported
     } else {
@@ -465,7 +472,6 @@ fn gap_note(scheme: SchemeId, status: RunStatus, samples: &[&LatticeRecord]) -> 
         return Some(GapNote::GreyhoundSis);
     }
     if scheme == SchemeId::AkitaOffload
-        && status == RunStatus::Error
         && samples.iter().any(|record| {
             record
                 .status_detail
@@ -508,13 +514,13 @@ impl GapNote {
                 "The recursive `fp32-dense` planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.".into()
             }
             Self::RokokoNative => {
-                "RoKoKo ships only native sets `p-26`, `p-28`, and `p-30`; no instance matches this payload.".into()
+                "RoKoKo ships only native sets `p-22`, `p-24`, `p-26`, `p-28`, and `p-30`; no instance matches this payload.".into()
             }
             Self::GreyhoundSis => {
                 "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the `l2-quantum128-adps16` policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
             }
             Self::WhirUniqueDecoding => {
-                "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
+                "WHIR uses unique decoding at this size so its 128-bit round-by-round target remains feasible on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
             }
             Self::PackedUnivariate => {
                 "KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.".into()
@@ -535,13 +541,13 @@ impl GapNote {
                 "The recursive \\texttt{fp32-dense} planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.".into()
             }
             Self::RokokoNative => {
-                "RoKoKo ships only native sets \\texttt{p-26}, \\texttt{p-28}, and \\texttt{p-30}; no instance matches this payload.".into()
+                "RoKoKo ships only native sets \\texttt{p-22}, \\texttt{p-24}, \\texttt{p-26}, \\texttt{p-28}, and \\texttt{p-30}; no instance matches this payload.".into()
             }
             Self::GreyhoundSis => {
                 "Greyhound cannot make the Ajtai commitments SIS-secure at this size under the \\texttt{l2-quantum128-adps16} policy (ADPS16 quantum core-SVP). This is not an out-of-memory failure.".into()
             }
             Self::WhirUniqueDecoding => {
-                "WHIR uses unique decoding at this size so the 128-bit transcript-error target still holds on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
+                "WHIR uses unique decoding at this size so its 128-bit round-by-round target remains feasible on KoalaBear. Capacity bound and Johnson bound need more than 30 bits of grinding, which the field cannot support. The larger proof is the unique-decoding query schedule.".into()
             }
             Self::PackedUnivariate => {
                 "KoalaBear two-adicity is 24, so a rate-$1/2$ univariate cannot be a single degree-$2^{n}$ polynomial when $\\log_2 N>23$. The worker packs the $2^{n}$ coefficients into a trace matrix of height $2^{23}$ and width $2^{n-23}$. That is batched univariate FRI/STIR, not one tall polynomial.".into()
@@ -865,16 +871,17 @@ pub(crate) fn timing_millis_cell(
 pub fn render_markdown_timing_table(rows: &[TimingTableRow]) -> String {
     let notes = unique_gap_notes_timing(rows);
     let mut out = String::from(
-        "| Nominal payload | Scheme | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |\n",
+        "| Nominal payload | Scheme | Security | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |\n",
     );
-    out.push_str("| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |\n");
+    out.push_str("| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |\n");
     for row in rows {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         let _ = writeln!(
             out,
-            "| 2^{{{}}} | {} | ${}$ | {} | {} | {} | {} | {} |",
+            "| 2^{{{}}} | {} | {} | ${}$ | {} | {} | {} | {} | {} |",
             row.payload_log2,
             scheme_cell(row.scheme, row.implementation_revision.as_deref(), false),
+            row.scheme.security_label(),
             row.field,
             log2_n_cell(row, false, mark),
             cell(
@@ -973,18 +980,19 @@ pub fn render_latex_timing_table(rows: &[TimingTableRow]) -> String {
          \\label{tab:eval-lattice-time}\n\
          \\scriptsize\n\
          \\setlength{\\tabcolsep}{4pt}\n\
-         \\begin{tabular}{@{}llccrrrr@{}}\n\
+         \\begin{tabular}{@{}lllccrrrr@{}}\n\
          \\toprule\n\
-         Nominal payload & Scheme & Field & $\\log_2 N$\n\
+         Nominal payload & Scheme & Security & Field & $\\log_2 N$\n\
          & Commit (s) & Open (s) & Cold total (s) & Verify (ms) \\\\\n\
          \\midrule\n",
     );
     append_payload_groups(&mut out, rows, |row| {
         let mark = footnote_index(&notes, row.gap_note.as_ref());
         format!(
-            "$2^{{{}}}$ & {} & ${}$ & {} & {} & {} & {} & {} \\\\",
+            "$2^{{{}}}$ & {} & {} & ${}$ & {} & {} & {} & {} & {} \\\\",
             row.payload_log2,
             scheme_cell(row.scheme, row.implementation_revision.as_deref(), true),
+            row.scheme.security_label().replace('<', r"$<$"),
             row.field,
             log2_n_cell(row, true, mark),
             cell(
@@ -1222,7 +1230,7 @@ mod tests {
         ];
         let rows = aggregate_timing_rows(&records);
         let latex = render_latex_timing_table(&rows);
-        assert!(latex.contains(r"\href{https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b}{Akita}"));
+        assert!(latex.contains(r"\href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita}"));
         assert!(latex.contains("0.159"));
         assert!(latex.contains("2.07"));
         assert!(latex.contains(r"\evalunsupported"));
@@ -1337,10 +1345,10 @@ mod tests {
             .iter()
             .find(|row| row.payload_log2 == 27 && row.scheme == SchemeId::AkitaOffload)
             .expect("row");
-        assert_eq!(row.status, RunStatus::Error);
+        assert_eq!(row.status, RunStatus::Unsupported);
         assert_eq!(row.gap_note, Some(GapNote::AkitaOffloadNoPrefix));
         let markdown = render_markdown_timing_table(std::slice::from_ref(row));
-        assert!(markdown.contains("err(1)"));
+        assert!(markdown.contains("—(1)"));
         assert!(markdown.contains("no setup-prefix edge"));
         let latex = render_latex_timing_table(std::slice::from_ref(row));
         assert!(latex.contains(r"\evalunsupported$^{(1)}$"));

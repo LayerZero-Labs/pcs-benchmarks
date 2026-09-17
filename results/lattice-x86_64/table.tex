@@ -1,0 +1,49 @@
+\begin{table}[H]
+\centering
+\caption[Timing comparison with lattice-based PCSs]{Commitment, opening, and
+verification time for Akita (direct and setup-offload) and prior lattice-based PCSs on dense
+polynomial openings. Nominal payload is the target value of
+$N\log_2|\mathbb F|$.  A dash denotes an unsupported input; numbered
+footnotes give the reason.
+Timing cells are the median of fresh processes after warmup, followed by
+a conservative distribution-free 95\% confidence interval when the sample count supports one.
+Scheme names link to the exact git commit that was measured.}
+\label{tab:eval-lattice-time}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lllccrrrr@{}}
+\toprule
+Nominal payload & Scheme & Security & Field & $\log_2 N$
+& Commit (s) & Open (s) & Cold total (s) & Verify (ms) \\
+\midrule
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit target & $2^{32}-99$ & 22 & $0.097\;[0.096, 0.098]$ & $0.999\;[0.998, 1.00]$ & $1.10\;[1.10, 1.11]$ & $7.5\;[7.5, 7.6]$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit target & $2^{32}-99$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ & \evalunsupported$^{(1)}$ \\
+$2^{27}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af}{Greyhound} & 128-bit SIS target & $2^{32}-99$ & 22 & $0.110\;[0.109, 0.114]$ & $0.183\;[0.180, 0.191]$ & $0.296\;[0.292, 0.301]$ & $75.0\;[74.7, 75.2]$ \\
+$2^{27}$ & \href{https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee}{RoKoKo} & $<$ 100 bits & $2^{50}-2687$ & 22 & $0.037\;[0.036, 0.037]$ & $0.158\;[0.155, 0.161]$ & $0.286\;[0.283, 0.288]$ & $4.0\;[4.0, 4.1]$ \\
+\addlinespace
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit target & $2^{32}-99$ & 24 & $0.333\;[0.330, 0.336]$ & $1.53\;[1.53, 1.54]$ & $1.87\;[1.87, 1.88]$ & $9.3\;[8.9, 9.4]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit target & $2^{32}-99$ & 24 & $0.329\;[0.328, 0.336]$ & $2.04\;[2.03, 2.04]$ & $2.40\;[2.39, 2.41]$ & $8.1\;[8.1, 8.3]$ \\
+$2^{29}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af}{Greyhound} & 128-bit SIS target & $2^{32}-99$ & 24 & $0.444\;[0.442, 0.450]$ & $0.396\;[0.394, 0.407]$ & $0.840\;[0.837, 0.857]$ & $155\;[155, 156]$ \\
+$2^{29}$ & \href{https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee}{RoKoKo} & $<$ 100 bits & $2^{50}-2687$ & 24 & $0.122\;[0.122, 0.124]$ & $0.275\;[0.266, 0.277]$ & $0.584\;[0.575, 0.586]$ & $4.3\;[4.2, 4.4]$ \\
+\addlinespace
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit target & $2^{32}-99$ & 26 & $1.25\;[1.24, 1.25]$ & $2.70\;[2.70, 2.70]$ & $3.96\;[3.96, 3.98]$ & $12.7\;[12.7, 12.8]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit target & $2^{32}-99$ & 26 & $1.24\;[1.23, 1.25]$ & $3.32\;[3.32, 3.33]$ & $4.63\;[4.63, 4.64]$ & $12.1\;[11.7, 12.2]$ \\
+$2^{31}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af}{Greyhound} & 128-bit SIS target & $2^{32}-99$ & 26 & $2.10\;[2.10, 2.11]$ & $1.06\;[1.04, 1.11]$ & $3.16\;[3.14, 3.21]$ & $334\;[332, 337]$ \\
+$2^{31}$ & \href{https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee}{RoKoKo} & $<$ 100 bits & $2^{50}-2687$ & 26 & $0.437\;[0.436, 0.439]$ & $0.726\;[0.717, 0.730]$ & $1.61\;[1.61, 1.62]$ & $5.0\;[4.8, 5.1]$ \\
+\addlinespace
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit target & $2^{32}-99$ & 28 & $6.02\;[5.97, 6.04]$ & $6.59\;[6.56, 6.59]$ & $12.7\;[12.6, 12.7]$ & $20.8\;[20.0, 21.4]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit target & $2^{32}-99$ & 28 & $6.02\;[5.99, 6.03]$ & $7.78\;[7.77, 7.78]$ & $14.0\;[14.0, 14.0]$ & $14.4\;[13.7, 14.6]$ \\
+$2^{33}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af}{Greyhound} & 128-bit SIS target & $2^{32}-99$ & 28 & $11.5\;[11.4, 11.5]$ & $4.50\;[4.46, 4.59]$ & $16.0\;[15.9, 16.1]$ & $676\;[673, 677]$ \\
+$2^{33}$ & \href{https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee}{RoKoKo} & $<$ 100 bits & $2^{50}-2687$ & 28 & $1.69\;[1.68, 1.69]$ & $1.48\;[1.47, 1.49]$ & $4.05\;[4.04, 4.07]$ & $4.9\;[4.8, 4.9]$ \\
+\addlinespace
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita} & 128-bit target & $2^{32}-99$ & 30 & $24.3\;[24.1, 25.0]$ & $16.1\;[16.1, 16.1]$ & $40.5\;[40.3, 41.1]$ & $32.5\;[32.4, 33.3]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516}{Akita (offload)} & 128-bit target & $2^{32}-99$ & 30 & $24.4\;[24.2, 24.5]$ & $18.4\;[18.4, 18.4]$ & $43.3\;[43.0, 43.3]$ & $15.9\;[15.7, 15.9]$ \\
+$2^{35}$ & \href{https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af}{Greyhound} & 128-bit SIS target & $2^{32}-99$ & 30 & $52.3\;[52.2, 52.6]$ & $19.2\;[18.9, 19.5]$ & $71.6\;[71.1, 72.2]$ & $1423\;[1421, 1427]$ \\
+$2^{35}$ & \href{https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee}{RoKoKo} & $<$ 100 bits & $2^{50}-2687$ & 30 & $8.27\;[8.21, 8.33]$ & $4.43\;[4.42, 4.45]$ & $14.8\;[14.8, 14.9]$ & $7.2\;[7.1, 7.6]$ \\
+\bottomrule
+\end{tabular}
+\smallskip
+{\footnotesize
+\noindent$^{(1)}$ The recursive \texttt{fp32-dense} planner produced a schedule for this $n_v$ with no setup-prefix edge, so the offload variant would not offload setup.\\
+}
+\end{table}

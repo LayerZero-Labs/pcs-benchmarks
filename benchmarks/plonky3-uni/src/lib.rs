@@ -15,7 +15,7 @@ use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
 use p3_whir::parameters::SecurityAssumption;
 use pcs_bench_core::{
     plonky3_log_height, plonky3_log_width, RunStatus, WorkerOutput, HASH_SECURITY_BITS_100,
-    PLONKY3_FRI_POW_BITS, PLONKY3_FRI_QUERIES, PLONKY3_UNI_LOG_BLOWUP,
+    PLONKY3_UNI_LOG_BLOWUP,
 };
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
@@ -37,6 +37,11 @@ type ChallengeMmcs = ExtensionMmcs<F, EF, ValMmcs>;
 type Challenger = DuplexChallenger<F, Poseidon16, 16, 8>;
 type FriPcsTy = TwoAdicFriPcs<F, Dft, ValMmcs, ChallengeMmcs>;
 type StirPcsTy = TwoAdicStirPcs<F, Dft, ValMmcs, ChallengeMmcs, EF, Challenger>;
+
+const FRI_PRESET: &str = "preset=p3-fri-new-benchmark,rate=1/2,fold=2,queries=100,query_pow_bits=16,security_model=random-words-conjecture,random_words_bits=113.744";
+const STIR_PRESET: &str = "preset=p3-stir-pcs-benchmark,rate=1/2,initial_fold=4,later_fold=4,security=100-capacity,max_phase_pow_bits=20,security_model=capacity-list-decoding+mutual-correlated-agreement";
+const STIR_LOG_FOLDING_FACTOR: usize = 2;
+const STIR_MAX_POW_BITS: usize = 20;
 
 /// Which univariate protocol to run.
 #[derive(Clone, Copy)]
@@ -97,16 +102,7 @@ fn timed_univariate(kind: UniKind, log2_n: u32) -> Result<WorkerOutput, String> 
 
     match kind {
         UniKind::Fri => {
-            let num_queries = PLONKY3_FRI_QUERIES;
-            let fri_params = FriParameters {
-                log_blowup,
-                log_final_poly_len: 0,
-                max_log_arity: 1,
-                num_queries,
-                commit_proof_of_work_bits: 0,
-                query_proof_of_work_bits: PLONKY3_FRI_POW_BITS,
-                mmcs: challenge_mmcs,
-            };
+            let fri_params = upstream_fri_parameters(challenge_mmcs);
             let dft = Dft::new(1 << (log_height + log_blowup));
             let pcs = FriPcsTy::new(dft, val_mmcs, fri_params);
             let setup_ns = elapsed_ns(setup_start);
@@ -122,19 +118,12 @@ fn timed_univariate(kind: UniKind, log2_n: u32) -> Result<WorkerOutput, String> 
                 setup_ns,
                 log2_n,
                 packed,
+                FRI_PRESET,
                 |ch, commit| ch.observe(commit.clone()),
             )
         }
         UniKind::Stir => {
-            let stir_params = StirParameters {
-                log_blowup,
-                log_folding_factor: 4,
-                log_starting_folding_factor: 2,
-                soundness_type: SecurityAssumption::CapacityBound,
-                security_level: HASH_SECURITY_BITS_100 as usize,
-                max_pow_bits: PLONKY3_FRI_POW_BITS,
-                mmcs: challenge_mmcs,
-            };
+            let stir_params = upstream_stir_parameters(challenge_mmcs);
             StirConfig::<F, EF, ChallengeMmcs, Challenger>::try_new(
                 log_height,
                 stir_params.clone(),
@@ -155,9 +144,26 @@ fn timed_univariate(kind: UniKind, log2_n: u32) -> Result<WorkerOutput, String> 
                 setup_ns,
                 log2_n,
                 packed,
+                STIR_PRESET,
                 |ch, commit| commit.iter().for_each(|root| ch.observe(root.clone())),
             )
         }
+    }
+}
+
+fn upstream_fri_parameters<M>(mmcs: M) -> FriParameters<M> {
+    FriParameters::new_benchmark(mmcs)
+}
+
+fn upstream_stir_parameters<M>(mmcs: M) -> StirParameters<M> {
+    StirParameters {
+        log_blowup: PLONKY3_UNI_LOG_BLOWUP as usize,
+        log_folding_factor: STIR_LOG_FOLDING_FACTOR,
+        log_starting_folding_factor: STIR_LOG_FOLDING_FACTOR,
+        soundness_type: SecurityAssumption::CapacityBound,
+        security_level: HASH_SECURITY_BITS_100 as usize,
+        max_pow_bits: STIR_MAX_POW_BITS,
+        mmcs,
     }
 }
 
@@ -170,6 +176,7 @@ fn timed_pcs<P>(
     setup_ns: u64,
     log2_n: u32,
     packed: bool,
+    preset: &str,
     observe: impl Fn(&mut Challenger, &P::Commitment),
 ) -> Result<WorkerOutput, String>
 where
@@ -257,12 +264,15 @@ where
         status: RunStatus::Ok,
         status_detail: Some(if packed {
             format!(
-                "statement=univariate-batch,distribution=full-field-uniform,point=transcript-extension,height={},width={}",
+                "statement=univariate-batch,distribution=full-field-uniform,point=transcript-extension,height={},width={},{}",
                 plonky3_log_height(log2_n),
-                1u32 << plonky3_log_width(log2_n)
+                1u32 << plonky3_log_width(log2_n),
+                preset
             )
         } else {
-            "statement=univariate,distribution=full-field-uniform,point=transcript-extension".into()
+            format!(
+                "statement=univariate,distribution=full-field-uniform,point=transcript-extension,{preset}"
+            )
         }),
         log2_n: Some(log2_n),
         timings_ns,
@@ -330,4 +340,41 @@ fn peak_rss_bytes() -> Option<u64> {
         return Some(kb.saturating_mul(1024));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        upstream_fri_parameters, upstream_stir_parameters, FRI_PRESET, STIR_LOG_FOLDING_FACTOR,
+        STIR_MAX_POW_BITS, STIR_PRESET,
+    };
+    use p3_stir::SecurityAssumption;
+    use pcs_bench_core::{
+        HASH_SECURITY_BITS_100, PLONKY3_FRI_POW_BITS, PLONKY3_FRI_QUERIES, PLONKY3_UNI_LOG_BLOWUP,
+    };
+
+    #[test]
+    fn fri_parameters_match_pinned_upstream_benchmark_preset() {
+        let params = upstream_fri_parameters(());
+        assert_eq!(params.log_blowup, PLONKY3_UNI_LOG_BLOWUP as usize);
+        assert_eq!(params.log_final_poly_len, 0);
+        assert_eq!(params.max_log_arity, 1);
+        assert_eq!(params.num_queries, PLONKY3_FRI_QUERIES);
+        assert_eq!(params.commit_proof_of_work_bits, 0);
+        assert_eq!(params.query_proof_of_work_bits, PLONKY3_FRI_POW_BITS);
+        assert!(FRI_PRESET.contains("random_words_bits=113.744"));
+    }
+
+    #[test]
+    fn stir_parameters_match_upstream_pcs_benchmark_profile_with_fold_four() {
+        let params = upstream_stir_parameters(());
+        assert_eq!(params.log_blowup, PLONKY3_UNI_LOG_BLOWUP as usize);
+        assert_eq!(params.log_starting_folding_factor, STIR_LOG_FOLDING_FACTOR);
+        assert_eq!(params.log_folding_factor, STIR_LOG_FOLDING_FACTOR);
+        assert_eq!(1 << params.log_folding_factor, 4);
+        assert_eq!(params.soundness_type, SecurityAssumption::CapacityBound);
+        assert_eq!(params.security_level, HASH_SECURITY_BITS_100 as usize);
+        assert_eq!(params.max_pow_bits, STIR_MAX_POW_BITS);
+        assert!(STIR_PRESET.contains("initial_fold=4,later_fold=4"));
+    }
 }
