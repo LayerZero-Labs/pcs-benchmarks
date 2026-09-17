@@ -42,24 +42,24 @@ These are reported security categories with different accounting scopes, not equ
 
 | Nominal payload | Scheme | Security | Field | log₂ N | Commit (s) | Open (s) | Cold total (s) | Verify (ms) |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 22 | 0.100 [0.098, 0.103] | 0.999 [0.996, 1.00] | 1.11 [1.10, 1.11] | 7.6 [7.6, 7.6] |
-| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | —(1) | —(1) | —(1) | —(1) | —(1) |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 22 | 0.097 [0.096, 0.098] | 0.999 [0.998, 1.00] | 1.10 [1.10, 1.11] | 7.5 [7.5, 7.6] |
+| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | —(1) | —(1) | —(1) | —(1) | —(1) |
 | 2^{27} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 128-bit SIS target | $2^{32}-99$ | 22 | 0.110 [0.109, 0.114] | 0.183 [0.180, 0.191] | 0.296 [0.292, 0.301] | 75.0 [74.7, 75.2] |
 | 2^{27} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | < 100 bits | $2^{50}-2687$ | 22 | 0.037 [0.036, 0.037] | 0.158 [0.155, 0.161] | 0.286 [0.283, 0.288] | 4.0 [4.0, 4.1] |
-| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 24 | 0.344 [0.343, 0.347] | 1.52 [1.52, 1.53] | 1.88 [1.87, 1.88] | 9.3 [9.2, 9.4] |
-| 2^{29} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 24 | 0.343 [0.341, 0.345] | 2.03 [2.02, 2.03] | 2.40 [2.40, 2.40] | 8.1 [8.0, 8.2] |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 24 | 0.333 [0.330, 0.336] | 1.53 [1.53, 1.54] | 1.87 [1.87, 1.88] | 9.3 [8.9, 9.4] |
+| 2^{29} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 24 | 0.329 [0.328, 0.336] | 2.04 [2.03, 2.04] | 2.40 [2.39, 2.41] | 8.1 [8.1, 8.3] |
 | 2^{29} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 128-bit SIS target | $2^{32}-99$ | 24 | 0.444 [0.442, 0.450] | 0.396 [0.394, 0.407] | 0.840 [0.837, 0.857] | 155 [155, 156] |
 | 2^{29} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | < 100 bits | $2^{50}-2687$ | 24 | 0.122 [0.122, 0.124] | 0.275 [0.266, 0.277] | 0.584 [0.575, 0.586] | 4.3 [4.2, 4.4] |
-| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 26 | 1.29 [1.29, 1.30] | 2.65 [2.65, 2.66] | 3.96 [3.96, 3.97] | 12.8 [12.7, 12.8] |
-| 2^{31} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 26 | 1.29 [1.29, 1.30] | 3.29 [3.29, 3.30] | 4.65 [4.65, 4.66] | 12.2 [11.7, 12.2] |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 26 | 1.25 [1.24, 1.25] | 2.70 [2.70, 2.70] | 3.96 [3.96, 3.98] | 12.7 [12.7, 12.8] |
+| 2^{31} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 26 | 1.24 [1.23, 1.25] | 3.32 [3.32, 3.33] | 4.63 [4.63, 4.64] | 12.1 [11.7, 12.2] |
 | 2^{31} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 128-bit SIS target | $2^{32}-99$ | 26 | 2.10 [2.10, 2.11] | 1.06 [1.04, 1.11] | 3.16 [3.14, 3.21] | 334 [332, 337] |
 | 2^{31} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | < 100 bits | $2^{50}-2687$ | 26 | 0.437 [0.436, 0.439] | 0.726 [0.717, 0.730] | 1.61 [1.61, 1.62] | 5.0 [4.8, 5.1] |
-| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 28 | 6.08 [6.04, 6.09] | 6.69 [6.68, 6.70] | 12.8 [12.8, 12.8] | 21.8 [21.1, 22.3] |
-| 2^{33} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 28 | 6.07 [6.03, 6.09] | 7.87 [7.82, 7.88] | 14.1 [14.1, 14.2] | 14.4 [13.4, 14.6] |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 28 | 6.02 [5.97, 6.04] | 6.59 [6.56, 6.59] | 12.7 [12.6, 12.7] | 20.8 [20.0, 21.4] |
+| 2^{33} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 28 | 6.02 [5.99, 6.03] | 7.78 [7.77, 7.78] | 14.0 [14.0, 14.0] | 14.4 [13.7, 14.6] |
 | 2^{33} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 128-bit SIS target | $2^{32}-99$ | 28 | 11.5 [11.4, 11.5] | 4.50 [4.46, 4.59] | 16.0 [15.9, 16.1] | 676 [673, 677] |
 | 2^{33} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | < 100 bits | $2^{50}-2687$ | 28 | 1.69 [1.68, 1.69] | 1.48 [1.47, 1.49] | 4.05 [4.04, 4.07] | 4.9 [4.8, 4.9] |
-| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 30 | 24.5 [24.4, 24.6] | 16.2 [16.1, 16.2] | 40.8 [40.6, 40.9] | 33.3 [31.4, 33.4] |
-| 2^{35} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128-bit target | $2^{32}-99$ | 30 | 24.5 [24.4, 24.6] | 18.7 [18.6, 18.7] | 43.6 [43.5, 43.7] | 16.0 [15.6, 16.6] |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 30 | 24.3 [24.1, 25.0] | 16.1 [16.1, 16.1] | 40.5 [40.3, 41.1] | 32.5 [32.4, 33.3] |
+| 2^{35} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128-bit target | $2^{32}-99$ | 30 | 24.4 [24.2, 24.5] | 18.4 [18.4, 18.4] | 43.3 [43.0, 43.3] | 15.9 [15.7, 15.9] |
 | 2^{35} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 128-bit SIS target | $2^{32}-99$ | 30 | 52.3 [52.2, 52.6] | 19.2 [18.9, 19.5] | 71.6 [71.1, 72.2] | 1423 [1421, 1427] |
 | 2^{35} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | < 100 bits | $2^{50}-2687$ | 30 | 8.27 [8.21, 8.33] | 4.43 [4.42, 4.45] | 14.8 [14.8, 14.9] | 7.2 [7.1, 7.6] |
 
@@ -68,24 +68,24 @@ These are reported security categories with different accounting scopes, not equ
 
 | Nominal payload | Scheme | Commitment (B) | Evaluation (B) | Proof (B) | Total sent (B) | Excluded context (B) | Peak RSS (GiB) | Prep. (s) | State (GiB) |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 61284 | 61428 | 214 | 0.125 | 0.0084 | 0.0020 |
-| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) |
+| 2^{27} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 61306 | 61450 | 214 | 0.128 | 0.0080 | 0.0020 |
+| 2^{27} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) | —(1) |
 | 2^{27} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 2048 | 8 | 60066 | 62122 | 0 | 0.330 | unknown | 0.0064 |
 | 2^{27} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | 775 | 776 | 109289 | 110840 | 0 | 0.852 | 0.0907 | 0.428 |
-| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 61787 | 61931 | 214 | 0.252 | 0.0083 | 0.0020 |
-| 2^{29} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66157 | 66301 | 214 | 0.244 | 0.0298 | 0.0020 |
+| 2^{29} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 61791 | 61935 | 214 | 0.254 | 0.0084 | 0.0020 |
+| 2^{29} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 66165 | 66309 | 214 | 0.253 | 0.0295 | 0.0020 |
 | 2^{29} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 2304 | 8 | 60630 | 62942 | 0 | 1.08 | unknown | 0.0133 |
 | 2^{29} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | 774 | 774 | 109359 | 110907 | 0 | 1.72 | 0.186 | 0.855 |
-| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 63055 | 63199 | 214 | 0.694 | 0.0198 | 0.0049 |
-| 2^{31} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66318 | 66462 | 214 | 0.715 | 0.0741 | 0.0039 |
+| 2^{31} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 63065 | 63209 | 214 | 0.696 | 0.0197 | 0.0049 |
+| 2^{31} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 66308 | 66452 | 214 | 0.699 | 0.0707 | 0.0039 |
 | 2^{31} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 2304 | 8 | 63261 | 65573 | 0 | 3.93 | unknown | 0.0290 |
 | 2^{31} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | 776 | 775 | 114812 | 116363 | 0 | 4.47 | 0.452 | 1.83 |
-| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 64475 | 64619 | 214 | 1.37 | 0.0387 | 0.0098 |
-| 2^{33} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 66872 | 67016 | 214 | 1.39 | 0.229 | 0.0156 |
+| 2^{33} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 64477 | 64621 | 214 | 1.38 | 0.0383 | 0.0098 |
+| 2^{33} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 66881 | 67025 | 214 | 1.42 | 0.219 | 0.0156 |
 | 2^{33} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 2304 | 8 | 64897 | 67209 | 0 | 20.7 | unknown | 0.0521 |
 | 2^{33} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | 774 | 776 | 114892 | 116442 | 0 | 12.3 | 0.893 | 3.66 |
-| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 64601 | 64745 | 214 | 4.69 | 0.0759 | 0.0195 |
-| 2^{35} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b) | 128 | 16 | 67307 | 67451 | 214 | 4.74 | 0.467 | 0.0313 |
+| 2^{35} | [Akita](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 64595 | 64739 | 214 | 4.69 | 0.0744 | 0.0195 |
+| 2^{35} | [Akita (offload)](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516) | 128 | 16 | 67322 | 67466 | 214 | 4.71 | 0.443 | 0.0313 |
 | 2^{35} | [Greyhound](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af) | 2560 | 8 | 67212 | 69780 | 0 | 92.6 | unknown | 0.104 |
 | 2^{35} | [RoKoKo](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee) | 774 | 774 | 114991 | 116539 | 0 | 36.9 | 2.10 | 8.56 |
 
@@ -94,8 +94,8 @@ These are reported security categories with different accounting scopes, not equ
 
 ### Measured commits
 
-- Akita [`d1b224d8`](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b)
-- Akita (offload) [`d1b224d8`](https://github.com/LayerZero-Labs/akita/commit/d1b224d809c7edc357b0dbab0f607e19b475910b)
+- Akita [`c0cb822f`](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516)
+- Akita (offload) [`c0cb822f`](https://github.com/LayerZero-Labs/akita/commit/c0cb822f28b7b9efe85b1924b029d36e13cdf516)
 - Greyhound [`672e7410`](https://github.com/LayerZero-Labs/greyhound-reference/commit/672e74100496f6ef698ba35e241cf7593e3d57af)
 - RoKoKo [`26d07c73`](https://github.com/lattice-arguments/rokoko/commit/26d07c73c54872b9e8d2b3200117a6a0a21b10ee)
 
@@ -105,7 +105,7 @@ These are reported security categories with different accounting scopes, not equ
 Machine, ISA, compiler, executable, lockfile, command, and timestamp provenance
 for this dataset are recorded with each observation. The infrastructure
 toolchain pin is Rust **1.95** (`rust-toolchain.toml`).
-Recorded runner command(s): `target/release/pcs-bench lattice-eval run --out /home/taghi/pcs-benchmarks-refresh.8wETs2/results-lattice-x86_64-final`. The commands below are a template,
+Recorded runner command(s): `target/release/pcs-bench lattice-eval run --out /home/taghi/pcs-benchmarks-refresh.8wETs2/results-lattice-x86_64-final; target/release/pcs-bench lattice-eval run --scheme akita,akita-offload --payload 27,29,31,33,35 --runs 10 --warmups 1 --seed-mode vary --out results/lattice-x86_64`. The commands below are a template,
 not reconstructed provenance.
 RoKoKo uses `rustup` **nightly-2026-09-03**. Workers are built before sampling;
 every timed execution is then a fresh process wrapped
@@ -117,10 +117,10 @@ and the `vary`/`fixed` seed mode are recorded per observation. Greyhound is
 and run with `LATTICE_DOGS_THREADS=1` and `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`.
 Proof sizes are contextual wire bytes. Recorded worker flags for this dataset:
 `-C target-cpu=native`.
-`./scripts/fetch-vendors.sh` clones the pinned implementations,
-installs planner-generated `fp32-dense` rows for `nv=22` and `nv=24`, installs
-the recursive `fp32-dense` setup-offload catalog, and
-patches RoKoKo so the executor prints commitment, CRS, and peak RSS.
+`./scripts/fetch-vendors.sh` clones the pinned implementations and patches
+RoKoKo so the executor prints commitment, CRS, and peak RSS. Akita embeds
+the pinned upstream schedule artifacts and committed supplemental direct rows;
+no Akita patches or schedule generation are needed.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`
 is required in that case. `CARGO_NET_GIT_FETCH_WITH_CLI=true` avoids libgit2 auth
@@ -137,8 +137,7 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS="-C target-cpu=native"
 export RAYON_NUM_THREADS=1
 
-./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
-./scripts/extend-akita-dense-offload.sh third_party/akita fp32   # once; fills the offload catalog
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, and Akita pins
 ./scripts/build-greyhound.sh
 
 # Full 20-cell matrix (Akita, Akita offload, Greyhound, RoKoKo)
@@ -182,4 +181,3 @@ CARGO_TARGET_DIR=target/akita cargo build --release --locked \
     --log2-n 26 --payload-log2 31 --offload
 ./scripts/with-memlimit.sh 117128687616 target/greyhound/lattice-eval --log2-n 26
 ```
-

@@ -346,10 +346,10 @@ and the `vary`/`fixed` seed mode are recorded per observation. Greyhound is
 and run with `LATTICE_DOGS_THREADS=1` and `LABRADOR_SIS_SECURITY=l2-quantum128-adps16`.
 Proof sizes are contextual wire bytes. Recorded worker flags for this dataset:
 `{RUSTFLAGS}`.
-`./scripts/fetch-vendors.sh` clones the pinned implementations,
-installs planner-generated `fp32-dense` rows for `nv=22` and `nv=24`, installs
-the recursive `fp32-dense` setup-offload catalog, and
-patches RoKoKo so the executor prints commitment, CRS, and peak RSS.
+`./scripts/fetch-vendors.sh` clones the pinned implementations and patches
+RoKoKo so the executor prints commitment, CRS, and peak RSS. Akita embeds
+the pinned upstream schedule artifacts and committed supplemental direct rows;
+no Akita patches or schedule generation are needed.
 
 Non-interactive shells may not put Cargo on `PATH`; `source ~/.cargo/env`
 is required in that case. `CARGO_NET_GIT_FETCH_WITH_CLI=true` avoids libgit2 auth
@@ -381,8 +381,7 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS=\"-C target-cpu=native\"
 export RAYON_NUM_THREADS=1
 
-./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
-./scripts/extend-akita-dense-offload.sh third_party/akita fp32   # once; fills the offload catalog
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, and Akita pins
 ./scripts/build-greyhound.sh
 
 # Full 20-cell matrix (Akita, Akita offload, Greyhound, RoKoKo)
@@ -494,7 +493,7 @@ mod tests {
         assert!(report.contains(&SchemeId::Akita.commit_url()));
         assert!(report.contains("Reproduction template"));
         assert!(report.contains("./scripts/fetch-vendors.sh"));
-        assert!(report.contains("./scripts/extend-akita-dense-offload.sh"));
+        assert!(!report.contains("./scripts/extend-akita-dense-offload.sh"));
         assert!(report.contains("./scripts/build-greyhound.sh"));
         assert!(report.contains("results/lattice-x86_64"));
         assert!(report.contains("Linux x86_64"));

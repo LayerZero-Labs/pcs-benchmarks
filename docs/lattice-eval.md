@@ -103,7 +103,7 @@ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 export RUSTFLAGS="-C target-cpu=native"
 export RAYON_NUM_THREADS=1
 
-./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, Akita pins + nv=22/24 + offload catalogs
+./scripts/fetch-vendors.sh          # Greyhound, RoKoKo, and Akita pins
 ./scripts/extend-akita-fp32-dense-offload.sh third_party/akita   # once; fills the offload catalog
 ./scripts/build-greyhound.sh        # AVX-512 host only; -march=native
 
