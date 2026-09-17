@@ -1,40 +1,27 @@
 Combined hash-x86_64 dataset
 records.jsonl is the authoritative per-observation provenance.
-Akita refreshed with upstream c0cb822f on 2026-09-16/17; other schemes retain their existing measurements.
+Akita refreshed on 2026-09-16/17; Plonky3 FRI/STIR, Binius64, SP1, and WorldFnd refreshed on 2026-09-17.
+Other schemes retain their existing measurements. All harness revisions are clean.
 No claim of contemporaneous measurement across cohorts.
 
 records=1540
-records_sha256=c62c5ebcef690dc17d001a16e64135bbf001ed8204be145cd8792b152aeafaed
+records_sha256=a7fe64aa8b2f1d25f28526f469ffd04e3b3f393709008ad29a45ac27a3915f0d
 
 [cohort 1]
-harness_revision=37a528a43333cd54d9b8a9a6fa0382676c636d98+dirty.1d0750363ab2
-timestamp_utc=2026-09-16T00:57:01Z
-run_command=target/release/pcs-bench hash-eval run --scheme plonky3-fri,plonky3-stir,binius64,worldfnd,basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
-schemes=binius64,plonky3_fri,plonky3_stir
-records=330
-
-[cohort 2]
 harness_revision=50ddf4db992358a2cf394b3d5c99e964d13e5c90
 timestamp_utc=2026-09-09T19:42:36Z
 run_command=target/release/pcs-bench hash-eval run --out results/hash-x86_64-clean
 schemes=flock_ligerito,plonky2_fri,whir
 records=330
 
+[cohort 2]
+harness_revision=815500d73fb79d3b69d68f23f412ad8eead77584
+timestamp_utc=2026-09-17T04:02:45Z
+run_command=target/release/pcs-bench hash-eval run --scheme plonky3-fri,plonky3-stir,binius64,basefold,worldfnd --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
+schemes=basefold,binius64,plonky3_fri,plonky3_stir,whir_provekit
+records=550
+
 [cohort 3]
-harness_revision=946c0a78c50ba9800a1c452ce0c27b73d0cce24a+dirty.e6c3243c86f9
-timestamp_utc=2026-09-16T16:23:58Z
-run_command=target/release/pcs-bench hash-eval run --scheme basefold --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
-schemes=basefold
-records=110
-
-[cohort 4]
-harness_revision=a5a6962520e7e174a0bd5cb93795c33ead2934cf+dirty.2fe6b7a25d43
-timestamp_utc=2026-09-16T18:26:52Z
-run_command=target/release/pcs-bench hash-eval run --scheme worldfnd --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64
-schemes=whir_provekit
-records=110
-
-[cohort 5]
 harness_revision=add6dc0eeee27d744ee72a78195d1eca5a7d1549
 timestamp_utc=2026-09-16T23:33:51Z
 run_command=target/release/pcs-bench hash-eval run --scheme akita,akita-offload,akita-fp64,akita-fp64-offload,akita-fp128,akita-fp128-offload --payload 27,29,31,33,35 --threads 1,8 --runs 10 --warmups 1 --seed-mode vary --out results/hash-x86_64

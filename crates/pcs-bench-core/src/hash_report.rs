@@ -16,13 +16,12 @@ pub fn render_markdown_hash_eval_report(records: &[HashRecord]) -> String {
     let timing = aggregate_hash_timing_rows(records);
     let resources = aggregate_hash_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         markdown_prose(&provenance, homogeneous_machine),
         markdown_security_table(),
         render_markdown_hash_timing_table(&timing),
         render_markdown_hash_resource_table(&resources),
         markdown_pins(records),
-        harness_provenance(records, false),
         markdown_reproduction(&provenance)
     )
 }
@@ -35,65 +34,14 @@ pub fn render_latex_hash_eval_report(records: &[HashRecord]) -> String {
     let timing = aggregate_hash_timing_rows(records);
     let resources = aggregate_hash_resource_rows(records);
     format!(
-        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n",
         latex_prose(&provenance, homogeneous_machine),
         latex_security_table(),
         render_latex_hash_timing_table(&timing),
         render_latex_hash_resource_table(&resources),
         latex_pins(records),
-        harness_provenance(records, true),
         latex_reproduction(&provenance)
     )
-}
-
-// Exact source-state fingerprints audited in docs/provenance.md.
-const RESULTS_ONLY_REVISIONS: [&str; 3] = [
-    "37a528a43333cd54d9b8a9a6fa0382676c636d98+dirty.1d0750363ab2",
-    "946c0a78c50ba9800a1c452ce0c27b73d0cce24a+dirty.e6c3243c86f9",
-    "a5a6962520e7e174a0bd5cb93795c33ead2934cf+dirty.2fe6b7a25d43",
-];
-
-fn displayed_harness_revision(revision: &str) -> &str {
-    if RESULTS_ONLY_REVISIONS.contains(&revision) {
-        revision
-            .split_once('+')
-            .map_or(revision, |(commit, _)| commit)
-    } else {
-        revision
-    }
-}
-
-fn harness_provenance(records: &[HashRecord], latex: bool) -> String {
-    let revisions: std::collections::BTreeSet<_> = records
-        .iter()
-        .map(|record| record.provenance.harness_revision.as_str())
-        .collect();
-    let mut text = if latex {
-        "\\paragraph{Harness provenance}\n".to_owned()
-    } else {
-        "### Harness provenance\n\n".to_owned()
-    };
-    text.push_str("Harness revisions represented in these records:\n\n");
-    for revision in revisions {
-        let display = displayed_harness_revision(revision);
-        if latex {
-            let _ = writeln!(text, "\\texttt{{{}}}\\par", escape_tex(display));
-        } else if display.len() == 40 && display.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            let _ = writeln!(
-                text,
-                "- [{display}](https://github.com/LayerZero-Labs/pcs-benchmarks/commit/{display})"
-            );
-        } else {
-            let _ = writeln!(text, "- `{display}`");
-        }
-    }
-    if records
-        .iter()
-        .any(|record| RESULTS_ONLY_REVISIONS.contains(&record.provenance.harness_revision.as_str()))
-    {
-        text.push_str("\nThree exact historical fingerprints were audited as result-file-only changes; their displayed revisions use the corresponding commits. Raw JSONL retains the original fingerprints. Unknown dirty revisions are preserved. See docs/provenance.md for the audit scope.\n");
-    }
-    text
 }
 
 fn first_provenance(records: &[HashRecord]) -> Provenance {
@@ -446,21 +394,10 @@ fn escape_tex(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::render_markdown_hash_eval_report;
-    use super::{displayed_harness_revision, RESULTS_ONLY_REVISIONS};
     use crate::hash::HashSchemeId;
     use crate::lattice::worker_memory_limit_bytes;
     use crate::observation::{HashRecord, Provenance, RunStatus};
     use std::collections::BTreeMap;
-
-    #[test]
-    fn only_audited_results_only_revisions_are_normalized() {
-        for revision in RESULTS_ONLY_REVISIONS {
-            assert_eq!(displayed_harness_revision(revision), &revision[..40]);
-        }
-        let unknown = "37a528a43333cd54d9b8a9a6fa0382676c636d98+dirty.unknown";
-        assert_eq!(displayed_harness_revision(unknown), unknown);
-        assert_eq!(displayed_harness_revision("clean"), "clean");
-    }
 
     #[test]
     fn hash_report_names_the_machine_and_omits_hostnames() {
@@ -518,21 +455,6 @@ mod tests {
         let host_ram = 121u64 * 1024 * 1024 * 1024;
         let _ = worker_memory_limit_bytes(host_ram);
         assert!(report.contains("90% of host RAM"));
-
-        let mut audited = record.clone();
-        audited.provenance.harness_revision = RESULTS_ONLY_REVISIONS[0].into();
-        let raw = serde_json::to_string(&audited).unwrap();
-        for rendered in [
-            render_markdown_hash_eval_report(std::slice::from_ref(&audited)),
-            super::render_latex_hash_eval_report(std::slice::from_ref(&audited)),
-        ] {
-            assert!(rendered.contains(&RESULTS_ONLY_REVISIONS[0][..40]));
-            assert!(!rendered.contains(RESULTS_ONLY_REVISIONS[0]));
-            assert!(rendered.contains("result-file-only"));
-        }
-        assert_eq!(serde_json::to_string(&audited).unwrap(), raw);
-        audited.provenance.harness_revision = "unknown+dirty.123".into();
-        assert!(render_markdown_hash_eval_report(&[audited]).contains("unknown+dirty.123"));
 
         let mut recorded_pin = record.clone();
         recorded_pin.implementation_revision = "2222222222222222222222222222222222222222".into();
