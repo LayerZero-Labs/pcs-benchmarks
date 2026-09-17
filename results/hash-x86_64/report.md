@@ -285,6 +285,19 @@ and preprocessing. An OOM entry is a confirmed allocation failure under the 109 
 - BaseFold (SP1) [`0f2a1e13`](https://github.com/succinctlabs/sp1/commit/0f2a1e1389747ac0dbee1c4d40243eed20baba86)
 
 
+### Harness provenance
+
+Harness revisions represented in these records:
+
+- [37a528a43333cd54d9b8a9a6fa0382676c636d98](https://github.com/LayerZero-Labs/pcs-benchmarks/commit/37a528a43333cd54d9b8a9a6fa0382676c636d98)
+- [50ddf4db992358a2cf394b3d5c99e964d13e5c90](https://github.com/LayerZero-Labs/pcs-benchmarks/commit/50ddf4db992358a2cf394b3d5c99e964d13e5c90)
+- [946c0a78c50ba9800a1c452ce0c27b73d0cce24a](https://github.com/LayerZero-Labs/pcs-benchmarks/commit/946c0a78c50ba9800a1c452ce0c27b73d0cce24a)
+- [a5a6962520e7e174a0bd5cb93795c33ead2934cf](https://github.com/LayerZero-Labs/pcs-benchmarks/commit/a5a6962520e7e174a0bd5cb93795c33ead2934cf)
+- [add6dc0eeee27d744ee72a78195d1eca5a7d1549](https://github.com/LayerZero-Labs/pcs-benchmarks/commit/add6dc0eeee27d744ee72a78195d1eca5a7d1549)
+
+Three exact historical fingerprints were audited as result-file-only changes; their displayed revisions use the corresponding commits. Raw JSONL retains the original fingerprints. Unknown dirty revisions are preserved. See docs/provenance.md for the audit scope.
+
+
 ### Reproduction template
 
 Machine, ISA, compiler, executable, lockfile, command, and timestamp provenance
